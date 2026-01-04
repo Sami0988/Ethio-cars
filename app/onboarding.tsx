@@ -115,12 +115,12 @@ export default function OnboardingScreen() {
 
   const skip = async () => {
     await webStorage.setItem("seen_onboarding", "yes");
-    router.replace("/(auth)/login");
+    router.replace("/(tabs)");
   };
 
   const handleGetStarted = async () => {
     await webStorage.setItem("seen_onboarding", "yes");
-    router.replace("/(auth)/login");
+    router.replace("/(tabs)");
   };
 
   const handleResetApp = async () => {

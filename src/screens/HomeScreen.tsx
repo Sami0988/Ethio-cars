@@ -1,310 +1,621 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
+  Animated,
   Dimensions,
   FlatList,
-  Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { Badge, Card, Chip, Surface, useTheme } from "react-native-paper";
+import {
+  Avatar,
+  Button,
+  Card,
+  Divider,
+  IconButton,
+  List,
+  Surface,
+  Text,
+  TextInput,
+  useTheme,
+} from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { CarListing, carService } from "../services/car.service";
-import { useAuthStore } from "../stores/auth.store";
+import { customColors } from "../constants/colors";
+import { useAuthStore } from "../features/auth/auth.store";
+import { useAllCarListings } from "../features/cars/car.hooks";
+import { CarListing } from "../features/cars/car.types";
+import { useThemeStore } from "../features/theme/theme.store";
 
 const { width } = Dimensions.get("window");
+const DRAWER_WIDTH = width * 0.75;
 
 const HomeScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  const { isDarkMode, toggleTheme } = useThemeStore();
+  const colors = customColors[isDarkMode ? "dark" : "light"];
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All Cars");
-  const [carListings, setCarListings] = useState<CarListing[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const translateX = useState(new Animated.Value(-DRAWER_WIDTH))[0];
 
-  const filters = ["All Cars", "Under 500k ETB", "Toyota", "2018"];
+  // Use the real car data hook
+  const {
+    data: carListingsData,
+    isLoading,
+    error,
+    refetch,
+    isFetching,
+  } = useAllCarListings(1, 20, {
+    search: searchQuery || undefined,
+  });
 
-  useEffect(() => {
-    loadCarListings();
-  }, []);
+  const carListings = carListingsData?.data?.listings || [];
 
-  const loadCarListings = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await carService.getListings();
-      if (result.success) {
-        setCarListings(result.data);
-      } else {
-        setError(result.message || "Failed to load listings");
-        // Fallback to dummy data if API fails
-        setCarListings(getDummyListings());
-      }
-    } catch (err) {
-      setError("Network error. Using sample data.");
-      // Fallback to dummy data
-      setCarListings(getDummyListings());
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getDummyListings = (): CarListing[] => [
-    {
-      id: "1",
-      image:
-        "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Toyota+Camry",
-      year: 2018,
-      make: "Toyota",
-      model: "Camry",
-      trim: "SE",
-      mileage: "45,000 km",
-      location: "Addis Ababa",
-      price: 850000,
-      badges: ["Verified Seller", "NEGOTIABLE"],
-      isVerified: true,
-      isNegotiable: true,
-    },
-    {
-      id: "2",
-      image:
-        "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Toyota+Corolla",
-      year: 2019,
-      make: "Toyota",
-      model: "Corolla",
-      trim: "LE",
-      mileage: "32,000 km",
-      location: "Bahir Dar",
-      price: 750000,
-      badges: ["Dealer", "FIXED PRICE"],
-      isDealer: true,
-      isFixedPrice: true,
-    },
-    {
-      id: "3",
-      image:
-        "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Honda+CR-V",
-      year: 2020,
-      make: "Honda",
-      model: "CR-V",
-      mileage: "28,000 km",
-      location: "Hawassa",
-      price: 1200000,
-      badges: ["URGENT"],
-      isUrgent: true,
-    },
-    {
-      id: "4",
-      image:
-        "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Hyundai+Elantra",
-      year: 2018,
-      make: "Hyundai",
-      model: "Elantra",
-      mileage: "55,000 km",
-      location: "Mekelle",
-      price: 650000,
-      badges: ["Verified Seller"],
-      isVerified: true,
-    },
+  const filters = [
+    { id: "all", label: "All Cars" },
+    { id: "budget", label: "Under 500k" },
+    { id: "toyota", label: "Toyota" },
+    { id: "recent", label: "2020+" },
   ];
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    // TODO: Implement search functionality
-  };
-
-  const handleFilterSelect = (filter: string) => {
-    setSelectedFilter(filter);
-    // TODO: Implement filter functionality
+  const handleRefresh = () => {
+    refetch();
   };
 
   const handleCallPress = (listing: CarListing) => {
-    Alert.alert(
-      "Contact Seller",
-      `Would you like to call the seller for the ${listing.year} ${listing.make} ${listing.model}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Call", onPress: () => console.log("Calling seller...") },
-      ]
-    );
+    console.log("Calling for:", listing.listing_id);
+  };
+
+  const handleMessagePress = (listing: CarListing) => {
+    console.log("Message for:", listing.listing_id);
+  };
+
+  const handleCarPress = (listing: CarListing) => {
+    router.push(`/car/${listing.listing_id}`);
+  };
+
+  // Drawer functions
+  const openDrawer = () => {
+    setIsDrawerOpen(true);
+    Animated.timing(translateX, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeDrawer = () => {
+    setIsDrawerOpen(false);
+    Animated.timing(translateX, {
+      toValue: -DRAWER_WIDTH,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleMenuPress = (item: string) => {
+    closeDrawer();
+
+    switch (item) {
+      case "profile":
+        router.push("/(tabs)/profile");
+        break;
+      case "messages":
+        router.push("/messages");
+        break;
+      case "myPosts":
+        router.push("/my-posts");
+        break;
+      case "createListing":
+        router.push("/create");
+        break;
+      case "saved":
+        router.push("/saved");
+        break;
+      case "settings":
+        router.push("/settings");
+        break;
+      case "help":
+        router.push("/help");
+        break;
+      case "about":
+        router.push("/about");
+        break;
+      case "logout":
+        // TODO: Implement logout
+        console.log("Logout pressed");
+        break;
+    }
   };
 
   const renderCarListing = ({ item }: { item: CarListing }) => (
-    <Card style={styles.listingCard} elevation={2}>
-      <View style={styles.listingContent}>
-        <Image source={{ uri: item.image }} style={styles.carImage} />
+    <Card
+      style={[styles.listingCard, { backgroundColor: theme.colors.surface }]}
+      onPress={() => handleCarPress(item)}
+      elevation={2}
+    >
+      {/* Car Image */}
+      <View style={styles.imageContainer}>
+        <View style={styles.imagePlaceholder}>
+          <MaterialCommunityIcons
+            name="car"
+            size={80}
+            color={theme.colors.onSurfaceVariant}
+          />
+        </View>
 
-        <View style={styles.listingDetails}>
-          <View style={styles.carInfo}>
-            <Text style={styles.carTitle}>
+        {/* Price Tag */}
+        <View
+          style={[styles.priceTag, { backgroundColor: theme.colors.primary }]}
+        >
+          <Text style={styles.priceTagText}>
+            ETB {item.price.toLocaleString()}
+          </Text>
+        </View>
+      </View>
+
+      {/* Car Content */}
+      <View style={styles.listingContent}>
+        <View style={styles.carHeader}>
+          <View style={styles.carTitleContainer}>
+            <Text style={[styles.carTitle, { color: theme.colors.onSurface }]}>
               {item.year} {item.make} {item.model}
             </Text>
-            {item.trim && <Text style={styles.carTrim}>{item.trim}</Text>}
-            <Text style={styles.carSpecs}>{item.mileage}</Text>
-            <Text style={styles.carLocation}>{item.location}</Text>
-          </View>
-
-          <View style={styles.priceSection}>
-            <Text style={styles.price}>ETB {item.price.toLocaleString()}</Text>
-            <TouchableOpacity
-              style={styles.callButton}
-              onPress={() => handleCallPress(item)}
-            >
-              <MaterialCommunityIcons name="phone" size={20} color="#fff" />
-            </TouchableOpacity>
+            <View style={styles.verifiedContainer}>
+              <MaterialCommunityIcons
+                name="check-circle"
+                size={16}
+                color="#10B981"
+              />
+            </View>
           </View>
         </View>
 
-        {item.badges && (
-          <View style={styles.badgesContainer}>
-            {item.badges.map((badge, index) => (
-              <Chip
-                key={index}
-                style={[
-                  styles.badge,
-                  {
-                    backgroundColor:
-                      badge === "URGENT"
-                        ? "#EF4444"
-                        : badge === "FIXED PRICE"
-                        ? "#10B981"
-                        : badge === "NEGOTIABLE"
-                        ? "#F59E0B"
-                        : badge === "Dealer"
-                        ? "#3B82F6"
-                        : badge === "Verified Seller"
-                        ? "#8B5CF6"
-                        : "#6B7280",
-                  },
-                ]}
-                textStyle={styles.badgeText}
-              >
-                {badge}
-              </Chip>
-            ))}
+        <View style={styles.carDetails}>
+          <View style={styles.detailItem}>
+            <MaterialCommunityIcons
+              name="speedometer"
+              size={16}
+              color={theme.colors.onSurfaceVariant}
+            />
+            <Text
+              style={[
+                styles.detailText,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              {item.mileage.toLocaleString()} km
+            </Text>
           </View>
-        )}
+          <View style={styles.detailItem}>
+            <MaterialCommunityIcons
+              name="map-marker"
+              size={16}
+              color={theme.colors.onSurfaceVariant}
+            />
+            <Text
+              style={[
+                styles.detailText,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Addis Ababa
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.actionButtons}>
+          <Button
+            mode="outlined"
+            style={[
+              styles.messageButton,
+              { borderColor: theme.colors.outline },
+            ]}
+            onPress={() => handleMessagePress(item)}
+            textColor={theme.colors.primary}
+          >
+            Message
+          </Button>
+          <IconButton
+            icon="phone"
+            mode="contained"
+            size={20}
+            style={[
+              styles.callButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            iconColor="#FFFFFF"
+            onPress={() => handleCallPress(item)}
+          />
+        </View>
       </View>
     </Card>
   );
 
-  return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
+  const renderHeader = () => (
+    <View>
       {/* Header */}
-      <Surface style={styles.header} elevation={4}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.appTitle}>EthioCars</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.notificationButton}>
-              <MaterialCommunityIcons
-                name="bell-outline"
-                size={24}
-                color={theme.colors.onSurface}
-              />
-              <Badge size={12} style={styles.notificationBadge} />
-            </TouchableOpacity>
-          </View>
+      <View style={styles.header}>
+        <IconButton
+          icon="menu"
+          size={24}
+          iconColor={theme.colors.onSurface}
+          onPress={openDrawer}
+        />
+        <View style={styles.brandContainer}>
+          <Text style={[styles.brandName, { color: theme.colors.onSurface }]}>
+            EthioCars
+          </Text>
+          <Text
+            style={[
+              styles.brandTagline,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            Drive Your Dreams
+          </Text>
         </View>
-      </Surface>
+      </View>
 
       {/* Search Bar */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchContainer}>
-          <MaterialCommunityIcons
-            name="magnify"
-            size={20}
-            color="#6B7280"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for cars..."
-            value={searchQuery}
-            onChangeText={handleSearch}
-            placeholderTextColor="#6B7280"
-          />
-        </View>
+      <View style={styles.searchContainer}>
+        <TextInput
+          mode="outlined"
+          placeholder="Search cars, makes, models..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          style={[
+            styles.searchInput,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          left={
+            <TextInput.Icon
+              icon="magnify"
+              color={theme.colors.onSurfaceVariant}
+            />
+          }
+          right={
+            <TextInput.Icon
+              icon="filter-variant"
+              color={theme.colors.onSurfaceVariant}
+            />
+          }
+        />
       </View>
 
       {/* Filter Chips */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
+        style={styles.filtersScroll}
+        contentContainerStyle={styles.filtersContainer}
       >
-        <View style={styles.filtersRow}>
-          {filters.map((filter) => (
-            <Chip
-              key={filter}
-              style={[
-                styles.filterChip,
-                selectedFilter === filter && styles.selectedFilterChip,
-              ]}
-              textStyle={[
-                styles.filterChipText,
-                selectedFilter === filter && styles.selectedFilterChipText,
-              ]}
-              onPress={() => handleFilterSelect(filter)}
-            >
-              {filter}
-            </Chip>
-          ))}
-        </View>
+        {filters.map((filter) => (
+          <Button
+            key={filter.id}
+            mode={selectedFilter === filter.label ? "contained" : "outlined"}
+            onPress={() => setSelectedFilter(filter.label)}
+            style={[
+              styles.filterChip,
+              selectedFilter === filter.label && {
+                backgroundColor: theme.colors.primary,
+              },
+            ]}
+            textColor={
+              selectedFilter === filter.label ? "#FFFFFF" : theme.colors.primary
+            }
+            compact
+          >
+            {filter.label}
+          </Button>
+        ))}
       </ScrollView>
 
-      {/* Fresh Listings Section */}
-      <View style={styles.listingsSection}>
-        <Text style={styles.sectionTitle}>Fresh Listings</Text>
+      {/* Stats Card */}
+      <Surface
+        style={[styles.statsSurface, { backgroundColor: theme.colors.surface }]}
+      >
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: theme.colors.onSurface }]}>
+            1,245+
+          </Text>
+          <Text
+            style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Cars Listed
+          </Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: theme.colors.onSurface }]}>
+            98%
+          </Text>
+          <Text
+            style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Verified
+          </Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: theme.colors.onSurface }]}>
+            24h
+          </Text>
+          <Text
+            style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Avg. Response
+          </Text>
+        </View>
+      </Surface>
+    </View>
+  );
 
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Loading cars...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <MaterialCommunityIcons
-              name="alert-circle"
-              size={24}
-              color="#EF4444"
-            />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={loadCarListings}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <FlatList
-            data={carListings}
-            renderItem={renderCarListing}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listingsContainer}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <MaterialCommunityIcons name="car" size={48} color="#9CA3AF" />
-                <Text style={styles.emptyText}>No cars available</Text>
-              </View>
+  return (
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      {/* Drawer Overlay */}
+      {isDrawerOpen && (
+        <Animated.View
+          style={[
+            styles.overlay,
+            {
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              opacity: translateX.interpolate({
+                inputRange: [-DRAWER_WIDTH, 0],
+                outputRange: [0, 1],
+              }),
+            },
+          ]}
+          onStartShouldSetResponder={() => true}
+          onResponderRelease={closeDrawer}
+        />
+      )}
+
+      {/* Drawer */}
+      <Animated.View
+        style={[
+          styles.drawer,
+          {
+            transform: [{ translateX }],
+            backgroundColor: theme.colors.surface,
+          },
+        ]}
+      >
+        <View style={styles.drawerHeader}>
+          <Avatar.Text
+            size={60}
+            label={
+              user?.first_name?.charAt(0) || user?.username?.charAt(0) || "U"
             }
+            style={{ backgroundColor: theme.colors.primary }}
           />
-        )}
-      </View>
+          <View style={styles.drawerUserInfo}>
+            <Text
+              style={[styles.drawerUserName, { color: theme.colors.onSurface }]}
+            >
+              {user?.first_name && user?.last_name
+                ? `${user.first_name} ${user.last_name}`
+                : user?.username || "User"}
+            </Text>
+            <Text
+              style={[
+                styles.drawerUserEmail,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              {user?.email || "user@example.com"}
+            </Text>
+          </View>
+          <IconButton
+            icon="close"
+            size={24}
+            iconColor={theme.colors.onSurfaceVariant}
+            onPress={closeDrawer}
+          />
+        </View>
+
+        <Divider style={styles.divider} />
+
+        <ScrollView style={styles.drawerContent}>
+          <List.Item
+            title="Profile"
+            description="View and edit your profile"
+            left={(props) => (
+              <List.Icon
+                {...props}
+                icon="account"
+                color={theme.colors.primary}
+              />
+            )}
+            onPress={() => handleMenuPress("profile")}
+          />
+          <List.Item
+            title="Messages"
+            description="View your conversations"
+            left={(props) => (
+              <List.Icon
+                {...props}
+                icon="message"
+                color={theme.colors.primary}
+              />
+            )}
+            onPress={() => handleMenuPress("messages")}
+          />
+          <List.Item
+            title="My Posts"
+            description="Manage your car listings"
+            left={(props) => (
+              <List.Icon
+                {...props}
+                icon="format-list-bulleted"
+                color={theme.colors.primary}
+              />
+            )}
+            onPress={() => handleMenuPress("myPosts")}
+          />
+          <List.Item
+            title="Create Listing"
+            description="Add a new car listing"
+            left={(props) => (
+              <List.Icon
+                {...props}
+                icon="plus-circle"
+                color={theme.colors.primary}
+              />
+            )}
+            onPress={() => handleMenuPress("createListing")}
+          />
+          <List.Item
+            title="Saved Cars"
+            description="View your saved listings"
+            left={(props) => (
+              <List.Icon {...props} icon="heart" color={theme.colors.primary} />
+            )}
+            onPress={() => handleMenuPress("saved")}
+          />
+          <Divider style={styles.divider} />
+          <List.Item
+            title="Theme"
+            description={`${isDarkMode ? "Light" : "Dark"} mode`}
+            left={(props) => (
+              <List.Icon
+                {...props}
+                icon={
+                  isDarkMode ? "white-balance-sunny" : "moon-waning-crescent"
+                }
+                color={theme.colors.primary}
+              />
+            )}
+            onPress={toggleTheme}
+          />
+          <List.Item
+            title="Settings"
+            description="App settings and preferences"
+            left={(props) => (
+              <List.Icon {...props} icon="cog" color={theme.colors.primary} />
+            )}
+            onPress={() => handleMenuPress("settings")}
+          />
+          <List.Item
+            title="Help"
+            description="Get help and support"
+            left={(props) => (
+              <List.Icon
+                {...props}
+                icon="help-circle"
+                color={theme.colors.primary}
+              />
+            )}
+            onPress={() => handleMenuPress("help")}
+          />
+          <List.Item
+            title="About"
+            description="App information"
+            left={(props) => (
+              <List.Icon
+                {...props}
+                icon="information"
+                color={theme.colors.primary}
+              />
+            )}
+            onPress={() => handleMenuPress("about")}
+          />
+          <Divider style={styles.divider} />
+          <List.Item
+            title="Logout"
+            description="Sign out of your account"
+            left={(props) => (
+              <List.Icon {...props} icon="logout" color={theme.colors.error} />
+            )}
+            onPress={() => handleMenuPress("logout")}
+          />
+        </ScrollView>
+      </Animated.View>
+
+      <FlatList
+        data={isLoading ? [] : carListings}
+        renderItem={renderCarListing}
+        keyExtractor={(item) => item.listing_id.toString()}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContainer}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              {[1, 2, 3].map((i) => (
+                <Card
+                  key={i}
+                  style={[
+                    styles.skeletonCard,
+                    { backgroundColor: theme.colors.surface },
+                  ]}
+                >
+                  <View style={styles.skeletonImage} />
+                  <View style={styles.skeletonContent}>
+                    <View style={styles.skeletonTitle} />
+                    <View style={styles.skeletonDetails} />
+                  </View>
+                </Card>
+              ))}
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <MaterialCommunityIcons
+                name="car-off"
+                size={64}
+                color={theme.colors.onSurfaceVariant}
+              />
+              <Text
+                style={[styles.errorTitle, { color: theme.colors.onSurface }]}
+              >
+                Couldn't load listings
+              </Text>
+              <Button
+                mode="contained"
+                onPress={handleRefresh}
+                style={styles.retryButton}
+              >
+                Try Again
+              </Button>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <MaterialCommunityIcons
+                name="car-search"
+                size={64}
+                color={theme.colors.onSurfaceVariant}
+              />
+              <Text
+                style={[styles.emptyTitle, { color: theme.colors.onSurface }]}
+              >
+                No cars found
+              </Text>
+              <Text
+                style={[
+                  styles.emptySubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Try adjusting your filters
+              </Text>
+            </View>
+          )
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
+      />
     </View>
   );
 };
@@ -314,209 +625,255 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-  },
-  headerContent: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 8,
   },
-  headerLeft: {
-    flex: 1,
+  brandContainer: {
+    flexDirection: "column",
+    marginLeft: 8,
   },
-  appTitle: {
+  brandName: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#1F2937",
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
+  brandTagline: {
+    fontSize: 12,
+    marginTop: 2,
   },
-  notificationButton: {
-    position: "relative",
-    padding: 4,
-  },
-  notificationBadge: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-  },
-  searchSection: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  searchIcon: {
-    marginRight: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#1F2937",
-  },
-  filtersContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  filtersRow: {
+  headerIcons: {
     flexDirection: "row",
     gap: 8,
   },
-  filterChip: {
-    backgroundColor: "#F3F4F6",
-  },
-  selectedFilterChip: {
-    backgroundColor: "#3B82F6",
-  },
-  filterChipText: {
-    color: "#6B7280",
-    fontSize: 12,
-  },
-  selectedFilterChipText: {
-    color: "#FFFFFF",
-  },
-  listingsSection: {
-    flex: 1,
+  searchContainer: {
     paddingHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1F2937",
     marginBottom: 16,
   },
-  listingsContainer: {
-    paddingBottom: 100, // Space for bottom nav
-  },
-  listingCard: {
-    marginBottom: 16,
+  searchInput: {
     borderRadius: 12,
-    overflow: "hidden",
   },
-  listingContent: {
-    padding: 12,
+  filtersScroll: {
+    marginBottom: 16,
   },
-  carImage: {
-    width: "100%",
-    height: 180,
-    borderRadius: 8,
-    marginBottom: 12,
-    backgroundColor: "#F3F4F6",
+  filtersContainer: {
+    paddingHorizontal: 16,
+    gap: 8,
   },
-  listingDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  carInfo: {
-    flex: 1,
-  },
-  carTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1F2937",
-    marginBottom: 2,
-  },
-  carTrim: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 4,
-  },
-  carSpecs: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginBottom: 2,
-  },
-  carLocation: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  priceSection: {
-    alignItems: "flex-end",
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#059669",
-    marginBottom: 8,
-  },
-  callButton: {
-    backgroundColor: "#059669",
+  filterChip: {
     borderRadius: 20,
-    width: 36,
-    height: 36,
-    justifyContent: "center",
-    alignItems: "center",
   },
-  badgesContainer: {
+  statsSurface: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    marginTop: 8,
-  },
-  badge: {
-    height: 24,
-  },
-  badgeText: {
-    fontSize: 10,
-    color: "#FFFFFF",
-    marginHorizontal: 0,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 40,
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    elevation: 2,
   },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#6B7280",
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  statLabel: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 16,
+  },
+  listContainer: {
+    paddingBottom: 100,
   },
   loadingContainer: {
+    paddingHorizontal: 16,
+    gap: 16,
+  },
+  skeletonCard: {
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+  skeletonImage: {
+    width: "100%",
+    height: 200,
+    backgroundColor: "#f0f0f0",
+  },
+  skeletonContent: {
+    padding: 16,
+  },
+  skeletonTitle: {
+    width: 150,
+    height: 20,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 4,
+    marginBottom: 12,
+  },
+  skeletonDetails: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  listingCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  imageContainer: {
+    position: "relative",
+    height: 200,
+  },
+  imagePlaceholder: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 40,
+    backgroundColor: "#f8f9fa",
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#6B7280",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  errorText: {
-    marginTop: 8,
-    fontSize: 16,
-    color: "#EF4444",
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: 16,
-    backgroundColor: "#3B82F6",
-    paddingHorizontal: 24,
-    paddingVertical: 8,
+  priceTag: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
   },
-  retryButtonText: {
-    color: "#FFFFFF",
+  priceTagText: {
+    color: "#FFF",
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "bold",
+  },
+  listingContent: {
+    padding: 16,
+  },
+  carHeader: {
+    marginBottom: 12,
+  },
+  carTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  carTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    flex: 1,
+  },
+  verifiedContainer: {
+    marginLeft: 8,
+  },
+  carDetails: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+  },
+  detailItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  detailText: {
+    fontSize: 14,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  messageButton: {
+    flex: 1,
+    borderRadius: 8,
+  },
+  callButton: {
+    borderRadius: 8,
+  },
+  errorContainer: {
+    alignItems: "center",
+    padding: 40,
+    marginHorizontal: 16,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    borderRadius: 8,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    padding: 60,
+    marginHorizontal: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  // Drawer styles
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  drawer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: DRAWER_WIDTH,
+    zIndex: 1001,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 2,
+      height: 0,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  drawerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    paddingTop: 50,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  drawerUserInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  drawerUserName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  drawerUserEmail: {
+    fontSize: 14,
+  },
+  divider: {
+    marginVertical: 8,
+  },
+  drawerContent: {
+    flex: 1,
+    paddingVertical: 8,
   },
 });
 

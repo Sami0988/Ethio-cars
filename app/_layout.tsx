@@ -1,11 +1,16 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Redirect, Stack } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
+import { ThemeProvider } from "../src/components/providers/ThemeProvider";
+import { useAuthStore } from "../src/features/auth/auth.store";
 import { SplashScreen as EthioSplash } from "../src/screens/SplashScreen";
-import { useAuthStore } from "../src/stores/auth.store";
 
 type InitialRoute = "/onboarding" | "/(auth)/login" | "/(tabs)";
+
+// Create a client
+const queryClient = new QueryClient();
 
 // Fallback for web platform
 const webStorage = {
@@ -38,9 +43,8 @@ export default function RootLayout() {
 
         if (!onboardingFlag) {
           setInitialRoute("/onboarding");
-        } else if (!isAuthenticated) {
-          setInitialRoute("/(auth)/login");
         } else {
+          // After onboarding, go directly to home tabs
           setInitialRoute("/(tabs)");
         }
       } catch (error) {
@@ -60,9 +64,11 @@ export default function RootLayout() {
 
   // After decision, render app stack and perform a single redirect
   return (
-    <>
-      <Stack screenOptions={{ headerShown: false }} />
-      <Redirect href={initialRoute} />
-    </>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+        <Redirect href={initialRoute} />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

@@ -6,6 +6,7 @@ import {
   Card,
   Chip,
   IconButton,
+  Surface,
   Text,
   useTheme,
 } from "react-native-paper";
@@ -13,7 +14,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { useCarListings } from "../../features/cars/car.hooks";
 import { CarListing } from "../../features/cars/car.types";
 
-const MyListingsScreen: React.FC = () => {
+const MyPostsScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -31,10 +32,10 @@ const MyListingsScreen: React.FC = () => {
   const listings = listingsData?.data?.listings || [];
 
   const statusFilters = [
-    { id: "all", label: "All Listings", icon: "car" },
-    { id: "Active", label: "Active", icon: "check-circle" },
-    { id: "Pending", label: "Pending", icon: "clock" },
-    { id: "Sold", label: "Sold", icon: "cash-check" },
+    { id: "all", label: "All Posts" },
+    { id: "Active", label: "Active" },
+    { id: "Pending", label: "Pending" },
+    { id: "Sold", label: "Sold" },
   ];
 
   const getStatusColor = (status: string) => {
@@ -141,7 +142,7 @@ const MyListingsScreen: React.FC = () => {
         color={theme.colors.primary}
       />
       <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
-        No listings found
+        No posts found
       </Text>
       <Text
         style={[styles.emptySubtitle, { color: theme.colors.onSurfaceVariant }]}
@@ -164,19 +165,22 @@ const MyListingsScreen: React.FC = () => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-          My Listings
-        </Text>
-        <Button
-          mode="contained"
-          onPress={() => router.push("/create")}
-          icon="plus"
-          style={styles.addButton}
-        >
-          Add New
-        </Button>
-      </View>
+      <Surface
+        style={[styles.header, { backgroundColor: theme.colors.surface }]}
+      >
+        <View style={styles.headerContent}>
+          <IconButton
+            icon="arrow-left"
+            size={24}
+            iconColor={theme.colors.onSurface}
+            onPress={() => router.back()}
+          />
+          <Text style={[styles.title, { color: theme.colors.onSurface }]}>
+            My Posts
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      </Surface>
 
       {/* Status Filters */}
       <View style={styles.filtersContainer}>
@@ -217,23 +221,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    elevation: 2,
+  },
+  headerContent: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
-    paddingBottom: 8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
+    flex: 1,
+    textAlign: "center",
   },
-  addButton: {
-    borderRadius: 8,
+  headerSpacer: {
+    width: 48,
   },
   filtersContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingVertical: 16,
     gap: 8,
   },
   filterChip: {
@@ -328,4 +335,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MyListingsScreen;
+export default MyPostsScreen;

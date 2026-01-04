@@ -23,7 +23,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { useAuthStore } from "../../stores/auth.store";
+import { useAuthStore } from "../../features/auth/auth.store";
 import {
   formatPhoneNumber,
   FullRegistrationFormData,
