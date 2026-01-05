@@ -55,6 +55,12 @@ const HomeScreen: React.FC = () => {
 
   const carListings = carListingsData?.data?.listings || [];
 
+  // Debug: Log API data
+  console.log("HomeScreen - carListingsData:", carListingsData);
+  console.log("HomeScreen - carListings:", carListings);
+  console.log("HomeScreen - isLoading:", isLoading);
+  console.log("HomeScreen - error:", error);
+
   const filters = [
     { id: "all", label: "All Cars" },
     { id: "budget", label: "Under 500k" },
@@ -576,6 +582,14 @@ const HomeScreen: React.FC = () => {
               >
                 Couldn't load listings
               </Text>
+              <Text
+                style={[
+                  styles.errorSubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                {error?.message || "Network error. Please try again."}
+              </Text>
               <Button
                 mode="contained"
                 onPress={handleRefresh}
@@ -803,7 +817,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     marginTop: 16,
+    marginBottom: 8,
+  },
+  errorSubtitle: {
+    fontSize: 14,
+    textAlign: "center",
     marginBottom: 24,
+    paddingHorizontal: 20,
   },
   retryButton: {
     borderRadius: 8,

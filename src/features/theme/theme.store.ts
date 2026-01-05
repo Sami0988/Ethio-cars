@@ -1,49 +1,44 @@
+// features/theme/theme.store.ts
 import * as SecureStore from "expo-secure-store";
-import { MD3DarkTheme, MD3LightTheme } from "react-native-paper";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-type ThemeMode = "light" | "dark" | "system";
+import { getTheme } from "./theme.service";
+import { ThemeMode } from "./theme.types";
 
 interface ThemeStore {
   themeMode: ThemeMode;
-  isDarkMode: boolean;
   setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
-  getTheme: () => typeof MD3LightTheme;
+  theme: ReturnType<typeof getTheme>;
+  isDarkMode: boolean;
 }
 
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set, get): ThemeStore => ({
       themeMode: "system" as ThemeMode,
-      isDarkMode: false,
+      theme: getTheme("system"),
+
+      get isDarkMode() {
+        const { themeMode } = get();
+        if (themeMode === "system") {
+          // For system mode, you might want to check the actual system preference
+          // For now, default to light mode for system
+          return false;
+        }
+        return themeMode === "dark";
+      },
 
       setThemeMode: (mode: ThemeMode) => {
-        let isDark = false;
-
-        if (mode === "dark") {
-          isDark = true;
-        } else if (mode === "light") {
-          isDark = false;
-        } else {
-          // system mode - check device preference
-          // For now, default to light, but you can use Appearance API here
-          isDark = false;
-        }
-
-        set({ themeMode: mode, isDarkMode: isDark });
+        const theme = getTheme(mode);
+        set({ themeMode: mode, theme });
       },
 
       toggleTheme: () => {
-        const { isDarkMode } = get();
-        const newMode = isDarkMode ? "light" : "dark";
-        get().setThemeMode(newMode);
-      },
-
-      getTheme: () => {
-        const { isDarkMode } = get();
-        return isDarkMode ? MD3DarkTheme : MD3LightTheme;
+        const { themeMode } = get();
+        const newMode = themeMode === "dark" ? "light" : "dark";
+        const theme = getTheme(newMode);
+        set({ themeMode: newMode, theme });
       },
     }),
     {

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { PaperProvider } from "react-native-paper";
 import { useThemeStore } from "../../features/theme/theme.store";
 
@@ -7,18 +7,11 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const { themeMode, setThemeMode, getTheme } = useThemeStore();
+  // Get the theme object from your store
+  const { theme } = useThemeStore();
 
-  useEffect(() => {
-    // Set initial theme based on stored preference
-    if (themeMode === "system") {
-      // You can use Appearance API here to detect system theme
-      // For now, default to light
-      setThemeMode("light");
-    }
-  }, [themeMode, setThemeMode]);
-
-  const theme = getTheme();
+  // No need for useEffect - the store already handles the theme mode
+  // The theme object is already computed based on themeMode
 
   return <PaperProvider theme={theme}>{children}</PaperProvider>;
 };

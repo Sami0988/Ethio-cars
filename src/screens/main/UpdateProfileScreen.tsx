@@ -1,8 +1,12 @@
+// screens/profile/EditProfileScreen.tsx
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Dimensions,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,6 +17,7 @@ import {
   Avatar,
   Chip,
   Divider,
+  Portal,
   Snackbar,
   Surface,
   Switch,
@@ -27,7 +32,11 @@ import {
   IconButton as CustomIconButton,
 } from "../../components/common/buttons";
 import { useAuthStore } from "../../features/auth/auth.store";
-import { useThemeStore } from "../../features/theme/theme.store";
+import { useAndroidBackHandler } from "../../hooks/useAndroidBackHandler";
+import { ImageType, useImagePicker } from "../../hooks/useImagePicker";
+import { isUnder10MB } from "../../utils/imageProcessor";
+
+const { width, height } = Dimensions.get("window");
 
 interface UserProfile {
   user_id: string;
@@ -55,14 +64,39 @@ interface UserProfile {
   phone_verified?: boolean;
 }
 
+interface UpdateProfileRequest {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  bio?: string;
+  city?: string;
+  region?: string;
+  is_dealer?: boolean;
+  dealer_company_name?: string;
+  dealer_address?: string;
+  dealer_city?: string;
+  dealer_region?: string;
+  dealer_license_number?: string;
+  telegram_username?: string;
+  facebook_profile?: string;
+  instagram_handle?: string;
+}
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  message: string;
+  data?: T;
+  error?: string;
+}
+
 const EditProfileScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const { user, updateUser } = useAuthStore();
-  const { isDarkMode } = useThemeStore();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [profile, setProfile] = useState<Partial<UserProfile>>({
     first_name: "",
     last_name: "",
@@ -82,6 +116,23 @@ const EditProfileScreen: React.FC = () => {
     phone_verified: false,
   });
 
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [showImagePickerSheet, setShowImagePickerSheet] = useState(false);
+  const sheetAnimation = useRef(new Animated.Value(height)).current;
+
+  // Use your image picker hook
+  const {
+    pickFromLibrary,
+    takePhoto,
+    reset: resetImagePicker,
+    pickedImage,
+    isPicking,
+    error: imageError,
+  } = useImagePicker();
+
+  const [initialProfile, setInitialProfile] = useState<Partial<UserProfile>>(
+    {}
+  );
   const [snackbar, setSnackbar] = useState({
     visible: false,
     message: "",
@@ -92,14 +143,54 @@ const EditProfileScreen: React.FC = () => {
     fetchProfile();
   }, []);
 
+  // Process picked image and upload it
+  useEffect(() => {
+    if (pickedImage?.payload) {
+      handleUploadProfilePhoto(pickedImage.payload);
+    }
+  }, [pickedImage]);
+
+  useEffect(() => {
+    if (imageError) {
+      showSnackbar(imageError, "error");
+    }
+  }, [imageError]);
+
   const fetchProfile = async () => {
     try {
-      const response = await apiClient.get("/user/profile");
-      if (response.data.success) {
-        setProfile(response.data.data);
+      setLoading(true);
+      const response =
+        await apiClient.get<ApiResponse<UserProfile>>("/user/profile");
+
+      if (response.data.success && response.data.data) {
+        const profileData = response.data.data;
+        setProfile(profileData);
+        setInitialProfile(profileData);
+        setProfileImage(profileData.profile_picture || null);
+
+        // Update auth store with full profile data
+        updateUser({
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          phone: profileData.phone,
+          is_dealer: profileData.is_dealer,
+          profile_picture: profileData.profile_picture,
+          is_verified: profileData.is_verified,
+          username: profileData.username,
+          email: profileData.email,
+        });
+      } else {
+        showSnackbar(
+          response.data.message || "Failed to load profile",
+          "error"
+        );
       }
-    } catch (error) {
-      showSnackbar("Failed to load profile", "error");
+    } catch (error: any) {
+      console.error("Fetch profile error:", error);
+      showSnackbar(
+        error.response?.data?.message || "Failed to load profile",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -107,6 +198,159 @@ const EditProfileScreen: React.FC = () => {
 
   const showSnackbar = (message: string, type: "success" | "error") => {
     setSnackbar({ visible: true, message, type });
+  };
+
+  // Upload profile photo to server
+  const handleUploadProfilePhoto = async (imagePayload: {
+    data: string;
+    type: ImageType;
+  }) => {
+    // Check if image is under 10MB
+    if (!isUnder10MB(imagePayload.data)) {
+      showSnackbar("Image is too large (max 10MB)", "error");
+      resetImagePicker();
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      // Your backend expects the image in { image: { data: "...", type: "..." } } format
+      const response = await apiClient.put<
+        ApiResponse<{ profile_picture: string }>
+      >("/user/profile/photo", {
+        image: {
+          data: imagePayload.data,
+          type: "profile", // Use "profile" type for profile photos
+        },
+      });
+
+      if (response.data.success && response.data.data) {
+        const newProfilePicture = response.data.data.profile_picture;
+        setProfileImage(newProfilePicture);
+
+        // Update auth store
+        updateUser({
+          profile_picture: newProfilePicture,
+        });
+
+        showSnackbar("Profile photo updated successfully!", "success");
+        resetImagePicker();
+      } else {
+        showSnackbar(
+          response.data.message || "Failed to upload photo",
+          "error"
+        );
+      }
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      showSnackbar(
+        error.response?.data?.error || "Failed to upload profile photo",
+        "error"
+      );
+    } finally {
+      setUploadingPhoto(false);
+      hideBottomSheet();
+    }
+  };
+
+  // Remove profile photo
+  const handleRemoveProfilePhoto = async () => {
+    setUploadingPhoto(true);
+    try {
+      const response = await apiClient.delete<ApiResponse>(
+        "/user/profile/photo"
+      );
+
+      if (response.data.success) {
+        setProfileImage(null);
+
+        // Update auth store
+        updateUser({
+          profile_picture: null,
+        });
+
+        showSnackbar("Profile photo removed successfully!", "success");
+      } else {
+        showSnackbar(
+          response.data.message || "Failed to remove photo",
+          "error"
+        );
+      }
+    } catch (error: any) {
+      console.error("Remove error:", error);
+      showSnackbar(
+        error.response?.data?.error || "Failed to remove profile photo",
+        "error"
+      );
+    } finally {
+      setUploadingPhoto(false);
+      hideBottomSheet();
+    }
+  };
+
+  // Bottom sheet animations
+  const showBottomSheet = () => {
+    setShowImagePickerSheet(true);
+    Animated.timing(sheetAnimation, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const hideBottomSheet = () => {
+    Animated.timing(sheetAnimation, {
+      toValue: height,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowImagePickerSheet(false);
+    });
+  };
+
+  // Take photo with camera using your hook
+  const handleTakePhoto = () => {
+    hideBottomSheet();
+    setTimeout(() => {
+      takePhoto("other"); // Use 'other' type for profile photos
+    }, 300);
+  };
+
+  // Choose from gallery using your hook
+  const handleChooseFromGallery = () => {
+    hideBottomSheet();
+    setTimeout(() => {
+      pickFromLibrary("other"); // Use 'other' type for profile photos
+    }, 300);
+  };
+
+  // View current photo
+  const handleViewPhoto = () => {
+    if (profileImage) {
+      // You can implement a full-screen image viewer here
+      Alert.alert(
+        "View Photo",
+        "Profile photo preview.\n\nTo implement full-screen viewer, add react-native-image-viewing library.",
+        [{ text: "OK" }]
+      );
+    }
+    hideBottomSheet();
+  };
+
+  // Remove current photo with confirmation
+  const handleRemovePhoto = () => {
+    Alert.alert(
+      "Remove Profile Photo",
+      "Are you sure you want to remove your profile photo?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: handleRemoveProfilePhoto,
+        },
+      ]
+    );
   };
 
   const handleSave = async () => {
@@ -117,7 +361,7 @@ const EditProfileScreen: React.FC = () => {
 
     setSaving(true);
     try {
-      const updateData: any = {
+      const updateData: UpdateProfileRequest = {
         first_name: profile.first_name?.trim(),
         last_name: profile.last_name?.trim(),
         phone: profile.phone?.trim(),
@@ -139,24 +383,45 @@ const EditProfileScreen: React.FC = () => {
           profile.dealer_license_number?.trim();
       }
 
-      const response = await apiClient.put("/user/profile", updateData);
+      const response = await apiClient.put<ApiResponse>(
+        "/user/profile",
+        updateData
+      );
 
       if (response.data.success) {
         showSnackbar("Profile updated successfully", "success");
-        if (user) {
-          updateUser({
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-            phone: profile.phone,
-            is_dealer: profile.is_dealer,
-          });
-        }
+        setInitialProfile(profile);
+
+        // Update auth store with new values
+        updateUser({
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          phone: profile.phone,
+          is_dealer: profile.is_dealer,
+          ...(profile.is_dealer && {
+            dealer_company_name: profile.dealer_company_name || undefined,
+            dealer_address: profile.dealer_address || undefined,
+            dealer_city: profile.dealer_city || undefined,
+            dealer_region: profile.dealer_region || undefined,
+            dealer_license_number: profile.dealer_license_number || undefined,
+          }),
+        });
+
         setTimeout(() => {
           router.back();
         }, 1500);
+      } else {
+        showSnackbar(
+          response.data.message || "Failed to update profile",
+          "error"
+        );
       }
-    } catch (error) {
-      showSnackbar("Failed to update profile", "error");
+    } catch (error: any) {
+      console.error("Save error:", error);
+      showSnackbar(
+        error.response?.data?.error || "Failed to update profile",
+        "error"
+      );
     } finally {
       setSaving(false);
     }
@@ -212,22 +477,366 @@ const EditProfileScreen: React.FC = () => {
   };
 
   const handleChangeProfilePhoto = () => {
-    Alert.alert("Change Profile Photo", "Select an option", [
+    showBottomSheet();
+  };
+
+  const handlePickBusinessLicense = async () => {
+    // You can use the same image picker hook for business license
+    Alert.alert("Business License", "Upload your business license document", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Take Photo",
-        onPress: () => console.log("Take photo"),
+        onPress: () => {
+          takePhoto("document");
+          showSnackbar("Processing business license...", "success");
+        },
       },
       {
         text: "Choose from Gallery",
-        onPress: () => console.log("Choose from gallery"),
+        onPress: () => {
+          pickFromLibrary("document");
+          showSnackbar("Processing business license...", "success");
+        },
       },
     ]);
   };
 
-  const handlePickBusinessLicense = () => {
-    showSnackbar("Open business license picker", "success");
-  };
+  // check if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    const compare = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
+    return !compare(initialProfile, profile) || !!pickedImage;
+  }, [initialProfile, profile, pickedImage]);
+
+  // Android back handler: confirm leaving if unsaved changes
+  useAndroidBackHandler(() => {
+    if (!hasUnsavedChanges) return false;
+
+    Alert.alert(
+      "Discard changes?",
+      "You have unsaved changes. Are you sure you want to go back?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: () => router.back(),
+        },
+      ]
+    );
+    return true;
+  });
+
+  // Image Picker Bottom Sheet Component
+  const ImagePickerBottomSheet = () => (
+    <Portal>
+      <Modal
+        visible={showImagePickerSheet}
+        transparent
+        animationType="none"
+        onRequestClose={hideBottomSheet}
+      >
+        <TouchableOpacity
+          style={styles.bottomSheetOverlay}
+          activeOpacity={1}
+          onPress={hideBottomSheet}
+        >
+          <Animated.View
+            style={[
+              styles.bottomSheetContainer,
+              {
+                backgroundColor: theme.colors.surface,
+                transform: [{ translateY: sheetAnimation }],
+              },
+            ]}
+          >
+            {/* Handle */}
+            <View style={styles.bottomSheetHandle}>
+              <View
+                style={[
+                  styles.bottomSheetHandleBar,
+                  {
+                    backgroundColor: theme.colors.onSurfaceVariant,
+                  },
+                ]}
+              />
+            </View>
+
+            {/* Header */}
+            <View style={styles.bottomSheetHeader}>
+              <Text
+                style={[
+                  styles.bottomSheetTitle,
+                  { color: theme.colors.onSurface },
+                ]}
+              >
+                Profile Photo
+              </Text>
+              <Text
+                style={[
+                  styles.bottomSheetSubtitle,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Choose how to update your profile picture
+              </Text>
+            </View>
+
+            {/* Loading indicator for photo upload */}
+            {(isPicking || uploadingPhoto) && (
+              <View style={styles.uploadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text
+                  style={[
+                    styles.uploadingText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  {uploadingPhoto
+                    ? "Uploading photo..."
+                    : "Processing image..."}
+                </Text>
+              </View>
+            )}
+
+            {/* Current Photo Preview */}
+            {!isPicking && !uploadingPhoto && (
+              <View style={styles.currentPhotoSection}>
+                <Avatar.Image
+                  size={80}
+                  source={
+                    pickedImage?.uri
+                      ? { uri: pickedImage.uri }
+                      : profileImage
+                        ? { uri: profileImage }
+                        : profile.profile_picture
+                          ? { uri: profile.profile_picture }
+                          : require("../../../assets/images/profile.jpg")
+                  }
+                  style={styles.currentPhotoAvatar}
+                />
+                <View style={styles.currentPhotoInfo}>
+                  <Text
+                    style={[
+                      styles.currentPhotoLabel,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Current Photo
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={handleViewPhoto}
+                  >
+                    <MaterialCommunityIcons
+                      name="eye-outline"
+                      size={16}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.viewButtonText,
+                        { color: theme.colors.primary },
+                      ]}
+                    >
+                      View
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Options (only show when not uploading) */}
+            {!isPicking && !uploadingPhoto && (
+              <>
+                <View style={styles.optionsContainer}>
+                  {/* Take Photo Option */}
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
+                    onPress={handleTakePhoto}
+                    disabled={isPicking}
+                  >
+                    <View style={styles.optionIconContainer}>
+                      <View
+                        style={[
+                          styles.optionIconBackground,
+                          { backgroundColor: theme.colors.surface },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="camera"
+                          size={24}
+                          color={theme.colors.onSurface}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text
+                        style={[
+                          styles.optionTitle,
+                          { color: theme.colors.onSurface },
+                        ]}
+                      >
+                        Take Photo
+                      </Text>
+                      <Text
+                        style={[
+                          styles.optionDescription,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        Use your camera
+                      </Text>
+                    </View>
+                    <MaterialCommunityIcons
+                      name="chevron-right"
+                      size={24}
+                      color={theme.colors.onSurfaceVariant}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Choose from Gallery Option */}
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
+                    onPress={handleChooseFromGallery}
+                    disabled={isPicking}
+                  >
+                    <View style={styles.optionIconContainer}>
+                      <View
+                        style={[
+                          styles.optionIconBackground,
+                          { backgroundColor: theme.colors.surface },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="image-multiple"
+                          size={24}
+                          color={theme.colors.onSurface}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text
+                        style={[
+                          styles.optionTitle,
+                          { color: theme.colors.onSurface },
+                        ]}
+                      >
+                        Choose from Gallery
+                      </Text>
+                      <Text
+                        style={[
+                          styles.optionDescription,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        Select from your photos
+                      </Text>
+                    </View>
+                    <MaterialCommunityIcons
+                      name="chevron-right"
+                      size={24}
+                      color={theme.colors.onSurfaceVariant}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Remove Photo Option (if has photo) */}
+                  {(profileImage || profile.profile_picture) && (
+                    <TouchableOpacity
+                      style={[
+                        styles.optionButton,
+                        { backgroundColor: theme.colors.surfaceVariant },
+                      ]}
+                      onPress={handleRemovePhoto}
+                      disabled={uploadingPhoto}
+                    >
+                      <View style={styles.optionIconContainer}>
+                        <View
+                          style={[
+                            styles.optionIconBackground,
+                            { backgroundColor: theme.colors.surface },
+                          ]}
+                        >
+                          <MaterialCommunityIcons
+                            name="trash-can-outline"
+                            size={24}
+                            color={theme.colors.onSurface}
+                          />
+                        </View>
+                      </View>
+                      <View style={styles.optionTextContainer}>
+                        <Text
+                          style={[
+                            styles.optionTitle,
+                            { color: theme.colors.onSurface },
+                          ]}
+                        >
+                          Remove Photo
+                        </Text>
+                        <Text
+                          style={[
+                            styles.optionDescription,
+                            { color: theme.colors.onSurfaceVariant },
+                          ]}
+                        >
+                          Delete current photo
+                        </Text>
+                      </View>
+                      <MaterialCommunityIcons
+                        name="chevron-right"
+                        size={24}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Cancel Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.cancelButton,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                  onPress={hideBottomSheet}
+                >
+                  <Text
+                    style={[
+                      styles.cancelButtonText,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Tips */}
+                <View style={styles.tipsContainer}>
+                  <MaterialCommunityIcons
+                    name="lightbulb-outline"
+                    size={16}
+                    color={theme.colors.onSurface}
+                  />
+                  <Text
+                    style={[
+                      styles.tipsText,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Recommended: Square photo, at least 400×400 pixels
+                  </Text>
+                </View>
+              </>
+            )}
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
+    </Portal>
+  );
 
   if (loading) {
     return (
@@ -244,10 +853,19 @@ const EditProfileScreen: React.FC = () => {
     );
   }
 
+  const avatarSource = profileImage
+    ? { uri: profileImage }
+    : profile.profile_picture
+      ? { uri: profile.profile_picture }
+      : require("../../../assets/images/profile.jpg");
+
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
+      {/* Image Picker Bottom Sheet */}
+      <ImagePickerBottomSheet />
+
       {/* Header */}
       <Surface
         style={[styles.header, { backgroundColor: theme.colors.background }]}
@@ -258,7 +876,24 @@ const EditProfileScreen: React.FC = () => {
             icon="chevron-left"
             variant="ghost"
             size="md"
-            onPress={() => router.back()}
+            onPress={() => {
+              if (hasUnsavedChanges) {
+                Alert.alert(
+                  "Discard changes?",
+                  "You have unsaved changes. Are you sure you want to go back?",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Discard",
+                      style: "destructive",
+                      onPress: () => router.back(),
+                    },
+                  ]
+                );
+              } else {
+                router.back();
+              }
+            }}
             iconStyle={{
               color: theme.colors.onBackground,
             }}
@@ -286,34 +921,39 @@ const EditProfileScreen: React.FC = () => {
             styles.profileSection,
             { backgroundColor: theme.colors.surface },
           ]}
-          elevation={isDarkMode ? 0 : 1}
+          elevation={theme.dark ? 0 : 1}
         >
           <View style={styles.profileHeader}>
             <TouchableOpacity
               style={styles.avatarContainer}
               onPress={handleChangeProfilePhoto}
+              disabled={isPicking || uploadingPhoto}
             >
               <Avatar.Image
                 size={96}
-                source={
-                  profile.profile_picture
-                    ? { uri: profile.profile_picture }
-                    : require("../../../assets/images/icon.png")
-                }
+                source={avatarSource}
                 style={[styles.avatar, { borderColor: theme.colors.surface }]}
               />
               <View
                 style={[
                   styles.avatarOverlay,
-                  { borderColor: theme.colors.surface },
+                  {
+                    backgroundColor: theme.colors.primary,
+                    borderColor: theme.colors.surface,
+                  },
                 ]}
               >
                 <MaterialCommunityIcons
                   name="camera"
                   size={18}
-                  color="#FFFFFF"
+                  color={theme.colors.onPrimary}
                 />
               </View>
+              {(isPicking || uploadingPhoto) && (
+                <View style={styles.avatarLoadingOverlay}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                </View>
+              )}
             </TouchableOpacity>
             <View style={styles.profileInfo}>
               <Text
@@ -334,27 +974,46 @@ const EditProfileScreen: React.FC = () => {
                   style={[
                     styles.verifiedBadge,
                     {
-                      backgroundColor: isDarkMode ? "#14532D" : "#DCFCE7",
+                      backgroundColor: theme.colors.surfaceVariant,
                     },
                   ]}
                 >
                   <MaterialCommunityIcons
                     name="check-decagram"
                     size={14}
-                    color="#16A34A"
+                    color={theme.colors.onSurface}
                   />
-                  <Text style={styles.verifiedText}>Verified Seller</Text>
+                  <Text
+                    style={[
+                      styles.verifiedText,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    Verified Seller
+                  </Text>
                 </View>
               )}
             </View>
           </View>
           <Button
-            label="Change Profile Photo"
+            label={
+              uploadingPhoto
+                ? "Uploading..."
+                : isPicking
+                  ? "Processing..."
+                  : "Change Profile Photo"
+            }
             variant="outline"
-            icon="camera"
+            icon={uploadingPhoto ? "loading" : "camera"}
             size="sm"
             onPress={handleChangeProfilePhoto}
-            style={styles.changePhotoButton}
+            style={[
+              styles.changePhotoButton,
+              { borderColor: theme.colors.primary },
+            ]}
+            labelStyle={{ color: theme.colors.primary }}
+            disabled={isPicking || uploadingPhoto}
+            loading={uploadingPhoto}
           />
         </Surface>
 
@@ -364,13 +1023,13 @@ const EditProfileScreen: React.FC = () => {
             styles.sectionCard,
             { backgroundColor: theme.colors.surface },
           ]}
-          elevation={isDarkMode ? 0 : 1}
+          elevation={theme.dark ? 0 : 1}
         >
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons
               name="account"
               size={18}
-              color={theme.colors.error}
+              color={theme.colors.primary}
             />
             <Text
               style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
@@ -510,26 +1169,6 @@ const EditProfileScreen: React.FC = () => {
               placeholderTextColor={theme.colors.onSurfaceVariant}
             />
           </View>
-
-          {/* Inline Discard / Save */}
-          <View style={styles.inlineButtonsRow}>
-            <Button
-              label="Discard"
-              variant="outline"
-              size="md"
-              style={styles.inlineButton}
-              onPress={() => router.back()}
-            />
-            <Button
-              label="Save Changes"
-              variant="primary"
-              size="md"
-              style={styles.inlineButton}
-              onPress={handleSave}
-              loading={saving}
-              disabled={saving}
-            />
-          </View>
         </Surface>
 
         {/* Phone Number */}
@@ -538,13 +1177,13 @@ const EditProfileScreen: React.FC = () => {
             styles.sectionCard,
             { backgroundColor: theme.colors.surface },
           ]}
-          elevation={isDarkMode ? 0 : 1}
+          elevation={theme.dark ? 0 : 1}
         >
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons
               name="phone"
               size={18}
-              color={theme.colors.error}
+              color={theme.colors.primary}
             />
             <Text
               style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
@@ -586,10 +1225,13 @@ const EditProfileScreen: React.FC = () => {
                   style={[
                     styles.verifiedChip,
                     {
-                      backgroundColor: isDarkMode ? "#14532D" : "#DCFCE7",
+                      backgroundColor: theme.colors.surfaceVariant,
                     },
                   ]}
-                  textStyle={styles.verifiedChipText}
+                  textStyle={[
+                    styles.verifiedChipText,
+                    { color: theme.colors.onSurface },
+                  ]}
                 >
                   Verified
                 </Chip>
@@ -599,7 +1241,11 @@ const EditProfileScreen: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onPress={handleVerifyPhone}
-                  style={styles.verifyButton}
+                  style={[
+                    styles.verifyButton,
+                    { borderColor: theme.colors.primary },
+                  ]}
+                  labelStyle={{ color: theme.colors.primary }}
                 />
               )}
             </View>
@@ -612,13 +1258,13 @@ const EditProfileScreen: React.FC = () => {
             styles.sectionCard,
             { backgroundColor: theme.colors.surface },
           ]}
-          elevation={isDarkMode ? 0 : 1}
+          elevation={theme.dark ? 0 : 1}
         >
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons
               name="map-marker"
               size={18}
-              color={theme.colors.error}
+              color={theme.colors.primary}
             />
             <Text
               style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
@@ -670,14 +1316,14 @@ const EditProfileScreen: React.FC = () => {
             styles.sectionCard,
             { backgroundColor: theme.colors.surface },
           ]}
-          elevation={isDarkMode ? 0 : 1}
+          elevation={theme.dark ? 0 : 1}
         >
           <View style={styles.switchRow}>
             <View style={styles.switchLabelContainer}>
               <MaterialCommunityIcons
                 name="store"
                 size={18}
-                color={theme.colors.error}
+                color={theme.colors.primary}
               />
               <Text
                 style={[styles.switchLabel, { color: theme.colors.onSurface }]}
@@ -791,13 +1437,13 @@ const EditProfileScreen: React.FC = () => {
             styles.sectionCard,
             { backgroundColor: theme.colors.surface },
           ]}
-          elevation={isDarkMode ? 0 : 1}
+          elevation={theme.dark ? 0 : 1}
         >
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons
               name="share-variant"
               size={18}
-              color={theme.colors.error}
+              color={theme.colors.primary}
             />
             <Text
               style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
@@ -899,11 +1545,11 @@ const EditProfileScreen: React.FC = () => {
           style={[
             styles.verifiedSection,
             {
-              backgroundColor: isDarkMode ? "#0B1120" : "#FEF3F2",
-              borderColor: isDarkMode ? "#991B1B" : "#FECACA",
+              backgroundColor: theme.colors.surfaceVariant,
+              borderColor: theme.colors.outline,
             },
           ]}
-          elevation={isDarkMode ? 0 : 1}
+          elevation={theme.dark ? 0 : 1}
         >
           <Text
             style={[
@@ -952,7 +1598,11 @@ const EditProfileScreen: React.FC = () => {
             variant="primary"
             size="md"
             onPress={handleBecomeVerified}
-            style={styles.applyButton}
+            style={[
+              styles.applyButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            labelStyle={{ color: theme.colors.onPrimary }}
           />
         </Surface>
 
@@ -961,22 +1611,31 @@ const EditProfileScreen: React.FC = () => {
           style={[
             styles.dangerSection,
             {
-              backgroundColor: isDarkMode ? "#111827" : "#FEF2F2",
-              borderColor: "#FECACA",
+              backgroundColor: theme.colors.surfaceVariant,
+              borderColor: theme.colors.outline,
             },
           ]}
-          elevation={isDarkMode ? 0 : 1}
+          elevation={theme.dark ? 0 : 1}
         >
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons
               name="alert-circle"
               size={18}
-              color="#DC2626"
+              color={theme.colors.onSurface}
             />
-            <Text style={styles.dangerTitle}>Danger Zone</Text>
+            <Text
+              style={[styles.dangerTitle, { color: theme.colors.onSurface }]}
+            >
+              Danger Zone
+            </Text>
           </View>
 
-          <Text style={styles.dangerDescription}>
+          <Text
+            style={[
+              styles.dangerDescription,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
             Once you delete your account, there is no going back. Please be
             certain.
           </Text>
@@ -986,7 +1645,8 @@ const EditProfileScreen: React.FC = () => {
             variant="danger"
             icon="trash-can"
             onPress={handleDeleteAccount}
-            style={styles.deleteButton}
+            style={[styles.deleteButton, { borderColor: theme.colors.primary }]}
+            labelStyle={{ color: theme.colors.primary }}
           />
         </Surface>
 
@@ -996,11 +1656,15 @@ const EditProfileScreen: React.FC = () => {
             label="Save Changes"
             variant="primary"
             loading={saving}
-            disabled={saving}
+            disabled={saving || !hasUnsavedChanges}
             onPress={handleSave}
             size="lg"
             fullWidth
-            style={styles.saveButton}
+            style={[
+              styles.saveButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            labelStyle={{ color: theme.colors.onPrimary }}
           />
         </View>
       </ScrollView>
@@ -1012,9 +1676,10 @@ const EditProfileScreen: React.FC = () => {
         style={[
           styles.snackbar,
           snackbar.type === "success"
-            ? { backgroundColor: "#16A34A" }
-            : { backgroundColor: "#DC2626" },
+            ? { backgroundColor: theme.dark ? "#FFFFFF" : "#000000" }
+            : { backgroundColor: theme.dark ? "#FFFFFF" : "#000000" },
         ]}
+        theme={{ colors: { onSurface: theme.dark ? "#000000" : "#FFFFFF" } }}
       >
         {snackbar.message}
       </Snackbar>
@@ -1091,13 +1756,23 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: "#EF4444",
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
+  },
+  avatarLoadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    borderRadius: 48,
+    justifyContent: "center",
+    alignItems: "center",
   },
   profileInfo: {
     alignItems: "center",
@@ -1122,10 +1797,10 @@ const styles = StyleSheet.create({
   verifiedText: {
     fontSize: 11,
     fontWeight: "500",
-    color: "#166534",
   },
   changePhotoButton: {
     minWidth: 200,
+    borderWidth: 1,
   },
   sectionCard: {
     padding: 16,
@@ -1145,7 +1820,6 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 13,
     marginBottom: 4,
-    color: "#111827",
   },
   sectionHelper: {
     fontSize: 12,
@@ -1171,13 +1845,13 @@ const styles = StyleSheet.create({
   },
   verifyButton: {
     minWidth: 80,
+    borderWidth: 1,
   },
   verifiedChip: {
     height: 32,
     justifyContent: "center",
   },
   verifiedChipText: {
-    color: "#166534",
     fontSize: 12,
     fontWeight: "500",
   },
@@ -1197,16 +1871,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginVertical: 14,
-  },
-  inlineButtonsRow: {
-    flexDirection: "row",
-    columnGap: 10,
-    marginTop: 4,
-  },
-  inlineButton: {
-    flex: 1,
-    borderRadius: 999,
-    height: 44,
   },
   licenseCard: {
     borderWidth: 1,
@@ -1261,17 +1925,15 @@ const styles = StyleSheet.create({
   dangerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#DC2626",
   },
   dangerDescription: {
     fontSize: 13,
     marginTop: 4,
     marginBottom: 12,
     lineHeight: 18,
-    color: "#7F1D1D",
   },
   deleteButton: {
-    borderColor: "#DC2626",
+    borderWidth: 1,
   },
   saveButtonContainer: {
     marginTop: 4,
@@ -1282,6 +1944,136 @@ const styles = StyleSheet.create({
   },
   snackbar: {
     borderRadius: 8,
+  },
+  // Bottom Sheet Styles
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  bottomSheetContainer: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: Platform.OS === "ios" ? 34 : 24,
+    maxHeight: height * 0.8,
+  },
+  bottomSheetHandle: {
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  bottomSheetHandleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+  },
+  bottomSheetHeader: {
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    alignItems: "center",
+  },
+  bottomSheetTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  bottomSheetSubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    opacity: 0.7,
+  },
+  uploadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  uploadingText: {
+    marginTop: 12,
+    fontSize: 14,
+  },
+  currentPhotoSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  currentPhotoAvatar: {
+    marginRight: 16,
+  },
+  currentPhotoInfo: {
+    flex: 1,
+  },
+  currentPhotoLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  viewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  viewButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+  optionsContainer: {
+    paddingHorizontal: 20,
+    gap: 12,
+    marginBottom: 20,
+  },
+  optionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+  },
+  optionIconContainer: {
+    marginRight: 16,
+  },
+  optionIconBackground: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  optionTextContainer: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  optionDescription: {
+    fontSize: 13,
+    opacity: 0.7,
+  },
+  cancelButton: {
+    marginHorizontal: 20,
+    padding: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  tipsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    gap: 8,
+  },
+  tipsText: {
+    fontSize: 12,
+    flex: 1,
+    fontStyle: "italic",
   },
 });
 

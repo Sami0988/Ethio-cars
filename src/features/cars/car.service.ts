@@ -26,7 +26,7 @@ export const carService = {
       location?: string;
     }
   ): Promise<CarListResponse> {
-    const response = await apiClient.get<CarListResponse>("/cars/listings", {
+    const response = await apiClient.get<CarListResponse>("/cars", {
       params: { page, limit, ...filters },
     });
     return response.data;

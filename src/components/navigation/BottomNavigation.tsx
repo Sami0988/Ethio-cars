@@ -63,8 +63,8 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
                       ? "#FFFFFF"
                       : theme.colors.primary
                     : tab.isSpecial
-                    ? "#FFFFFF"
-                    : "#6B7280"
+                      ? "#FFFFFF"
+                      : "#6B7280"
                 }
               />
             </View>
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#059669",
+    backgroundColor: "#000000",
     marginBottom: 0,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
