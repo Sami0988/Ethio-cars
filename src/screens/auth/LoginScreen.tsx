@@ -80,12 +80,10 @@ const LoginScreen: React.FC = () => {
 
   const handleGoogleLogin = () => {
     // TODO: Implement Google OAuth
-    console.log("Google login tapped");
   };
 
   const handleAppleLogin = () => {
     // TODO: Implement Apple Sign In
-    console.log("Apple login tapped");
   };
 
   // Animation styles

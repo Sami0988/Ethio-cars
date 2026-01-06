@@ -58,7 +58,9 @@ class ApiClient {
       async (config) => {
         const token = await getItemAsync("auth_token");
         if (token) {
-          config.headers.set("Authorization", `Bearer ${token}`);
+          // Ensure headers object exists and set Authorization header
+          config.headers = config.headers || {};
+          (config.headers as any)["Authorization"] = `Bearer ${token}`;
         }
         return config;
       },
@@ -83,8 +85,9 @@ class ApiClient {
   // You can keep AxiosResponse<T> if you like,
   // or switch to returning just T (response.data) for nicer typing.
 
-  public get<T = any>(url: string, params?: any): Promise<AxiosResponse<T>> {
-    return this.client.get<T>(url, { params });
+  // Accept a full Axios config object (including `params`) and pass it through.
+  public get<T = any>(url: string, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.get<T>(url, config);
   }
 
   public post<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {

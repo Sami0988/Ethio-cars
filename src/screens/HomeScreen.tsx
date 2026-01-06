@@ -1,35 +1,54 @@
+// screens/HomeScreen.tsx
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
+  Alert,
   Animated,
   Dimensions,
   FlatList,
+  Platform,
   RefreshControl,
   ScrollView,
+  StatusBar,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from "react-native";
 import {
-  Avatar,
+  ActivityIndicator,
   Button,
-  Card,
+  Chip,
   Divider,
   IconButton,
-  List,
+  Searchbar,
   Surface,
   Text,
-  TextInput,
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import CarCard from "../components/CarCard";
+import FilterModal from "../components/FilterModal";
 import { customColors } from "../constants/colors";
 import { useAuthStore } from "../features/auth/auth.store";
-import { useAllCarListings } from "../features/cars/car.hooks";
-import { CarListing } from "../features/cars/car.types";
+import {
+  useCarPriceRange,
+  useCarStats,
+  useInfiniteCarListings,
+} from "../features/cars/car.hooks";
+import {
+  CarFilters,
+  CarListing,
+  SORT_OPTIONS,
+} from "../features/cars/car.types";
 import { useThemeStore } from "../features/theme/theme.store";
 
-const { width } = Dimensions.get("window");
-const DRAWER_WIDTH = width * 0.75;
+const { width, height } = Dimensions.get("window");
 
 const HomeScreen: React.FC = () => {
   const theme = useTheme();
@@ -37,597 +56,811 @@ const HomeScreen: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore();
   const { isDarkMode, toggleTheme } = useThemeStore();
   const colors = customColors[isDarkMode ? "dark" : "light"];
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("All Cars");
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const translateX = useState(new Animated.Value(-DRAWER_WIDTH))[0];
 
-  // Use the real car data hook
-  const {
-    data: carListingsData,
-    isLoading,
-    error,
-    refetch,
-    isFetching,
-  } = useAllCarListings(1, 20, {
-    search: searchQuery || undefined,
+  // States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [filters, setFilters] = useState<CarFilters>({
+    sort: "newest",
+    limit: 20,
   });
 
-  const carListings = carListingsData?.data?.listings || [];
+  // Debounced filters: prevent fetching on every keystroke
+  const [debouncedFilters, setDebouncedFilters] = useState<CarFilters>(() => ({
+    ...filters,
+    search: undefined,
+  }));
 
-  // Debug: Log API data
-  console.log("HomeScreen - carListingsData:", carListingsData);
-  console.log("HomeScreen - carListings:", carListings);
-  console.log("HomeScreen - isLoading:", isLoading);
-  console.log("HomeScreen - error:", error);
+  // Update debouncedFilters after a short delay when `searchQuery` or `filters` change
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedFilters((prev) => ({
+        ...prev,
+        ...filters,
+        search: searchQuery || undefined,
+      }));
+    }, 300); // 300ms debounce
 
-  const filters = [
-    { id: "all", label: "All Cars" },
-    { id: "budget", label: "Under 500k" },
-    { id: "toyota", label: "Toyota" },
-    { id: "recent", label: "2020+" },
-  ];
+    return () => clearTimeout(handler);
+  }, [searchQuery, filters]);
 
-  const handleRefresh = () => {
-    refetch();
-  };
+  // Animation refs
+  const headerScrollAnim = useRef(new Animated.Value(0)).current;
+  const searchBarAnim = useRef(new Animated.Value(0)).current;
+  const fabAnim = useRef(new Animated.Value(1)).current;
+  const scrollRef = useRef<FlatList>(null);
 
-  const handleCallPress = (listing: CarListing) => {
-    console.log("Calling for:", listing.listing_id);
-  };
+  // Fetch data
+  const {
+    data,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    isRefetching,
+  } = useInfiniteCarListings(20, debouncedFilters);
 
-  const handleMessagePress = (listing: CarListing) => {
-    console.log("Message for:", listing.listing_id);
-  };
+  const { data: statsData, isLoading: statsLoading } = useCarStats();
+  const { data: priceRangeData } = useCarPriceRange();
 
-  const handleCarPress = (listing: CarListing) => {
-    router.push(`/car/${listing.listing_id}`);
-  };
+  // Extract all listings - FIXED: Remove duplicates
+  const allListings = useMemo(() => {
+    if (!data?.pages) return [];
 
-  // Drawer functions
-  const openDrawer = () => {
-    setIsDrawerOpen(true);
-    Animated.timing(translateX, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
+    const allItems = data.pages.flatMap((page) => page.data?.listings || []);
 
-  const closeDrawer = () => {
-    setIsDrawerOpen(false);
-    Animated.timing(translateX, {
-      toValue: -DRAWER_WIDTH,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
+    // Remove duplicates using a Set
+    const uniqueItems = Array.from(
+      new Map(allItems.map((item) => [item.listing_id, item])).values()
+    );
 
-  const handleMenuPress = (item: string) => {
-    closeDrawer();
+    return uniqueItems;
+  }, [data]);
 
-    switch (item) {
-      case "profile":
-        router.push("/(tabs)/profile");
-        break;
-      case "messages":
-        router.push("/messages");
-        break;
-      case "myPosts":
-        router.push("/my-posts");
-        break;
-      case "createListing":
-        router.push("/create");
-        break;
-      case "saved":
-        router.push("/saved");
-        break;
-      case "settings":
-        router.push("/settings");
-        break;
-      case "help":
-        router.push("/help");
-        break;
-      case "about":
-        router.push("/about");
-        break;
-      case "logout":
-        // TODO: Implement logout
-        console.log("Logout pressed");
-        break;
-    }
-  };
+  const totalListings = data?.pages[0]?.data?.pagination?.total || 0;
 
-  const renderCarListing = ({ item }: { item: CarListing }) => (
-    <Card
-      style={[styles.listingCard, { backgroundColor: theme.colors.surface }]}
-      onPress={() => handleCarPress(item)}
-      elevation={2}
-    >
-      {/* Car Image */}
-      <View style={styles.imageContainer}>
-        <View style={styles.imagePlaceholder}>
-          <MaterialCommunityIcons
-            name="car"
-            size={80}
-            color={theme.colors.onSurfaceVariant}
-          />
-        </View>
-
-        {/* Price Tag */}
-        <View
-          style={[styles.priceTag, { backgroundColor: theme.colors.primary }]}
-        >
-          <Text style={styles.priceTagText}>
-            ETB {item.price.toLocaleString()}
-          </Text>
-        </View>
-      </View>
-
-      {/* Car Content */}
-      <View style={styles.listingContent}>
-        <View style={styles.carHeader}>
-          <View style={styles.carTitleContainer}>
-            <Text style={[styles.carTitle, { color: theme.colors.onSurface }]}>
-              {item.year} {item.make} {item.model}
-            </Text>
-            <View style={styles.verifiedContainer}>
-              <MaterialCommunityIcons
-                name="check-circle"
-                size={16}
-                color="#10B981"
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.carDetails}>
-          <View style={styles.detailItem}>
-            <MaterialCommunityIcons
-              name="speedometer"
-              size={16}
-              color={theme.colors.onSurfaceVariant}
-            />
-            <Text
-              style={[
-                styles.detailText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {item.mileage.toLocaleString()} km
-            </Text>
-          </View>
-          <View style={styles.detailItem}>
-            <MaterialCommunityIcons
-              name="map-marker"
-              size={16}
-              color={theme.colors.onSurfaceVariant}
-            />
-            <Text
-              style={[
-                styles.detailText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Addis Ababa
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.actionButtons}>
-          <Button
-            mode="outlined"
-            style={[
-              styles.messageButton,
-              { borderColor: theme.colors.outline },
-            ]}
-            onPress={() => handleMessagePress(item)}
-            textColor={theme.colors.primary}
-          >
-            Message
-          </Button>
-          <IconButton
-            icon="phone"
-            mode="contained"
-            size={20}
-            style={[
-              styles.callButton,
-              { backgroundColor: theme.colors.primary },
-            ]}
-            iconColor="#FFFFFF"
-            onPress={() => handleCallPress(item)}
-          />
-        </View>
-      </View>
-    </Card>
+  // Handle scroll for animations
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: headerScrollAnim } } }],
+    { useNativeDriver: false }
   );
 
-  const renderHeader = () => (
-    <View>
-      {/* Header */}
-      <View style={styles.header}>
-        <IconButton
-          icon="menu"
-          size={24}
-          iconColor={theme.colors.onSurface}
-          onPress={openDrawer}
-        />
-        <View style={styles.brandContainer}>
-          <Text style={[styles.brandName, { color: theme.colors.onSurface }]}>
-            EthioCars
+  // Load more function
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Apply filters
+  const handleApplyFilters = (newFilters: CarFilters) => {
+    setFilters(newFilters);
+    setShowFilters(false);
+  };
+
+  // Clear filters
+  const handleClearFilters = () => {
+    setFilters({ sort: "newest", limit: 20 });
+    setSearchQuery("");
+  };
+
+  // Toggle search bar
+  const toggleSearch = () => {
+    Animated.timing(searchBarAnim, {
+      toValue: showSearch ? 0 : 1,
+      duration: 300,
+      // Animates `height` and `marginBottom` which are not supported by the
+      // native driver; use the JS driver instead to avoid runtime errors.
+      useNativeDriver: false,
+    }).start();
+    setShowSearch(!showSearch);
+  };
+
+  // Perform an immediate search (used when user taps search icon or submits)
+  const performSearch = () => {
+    // Apply current filters immediately with the current search query
+    setDebouncedFilters((prev) => ({
+      ...prev,
+      ...filters,
+      search: searchQuery || undefined,
+    }));
+    // Close the search UI
+    setShowSearch(false);
+    // Scroll to top so user sees results from page 1
+    scrollRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
+  // Handle call button press with authentication check
+  const handleCallPress = (listing: CarListing) => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        "Authentication Required",
+        "Please sign in or create an account to call the seller.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Sign In",
+            onPress: () => router.push("/(auth)/login"),
+          },
+          {
+            text: "Sign Up",
+            onPress: () => router.push("/(auth)/register"),
+          },
+        ]
+      );
+      return;
+    }
+
+    // If authenticated, proceed with call
+    // TODO: Update when phone number is available in the API
+    Alert.alert(
+      "Call Feature",
+      "This feature will be available once phone numbers are integrated with the listings."
+    );
+  };
+
+  // Animation for FAB
+  useEffect(() => {
+    const listener = headerScrollAnim.addListener(({ value }) => {
+      // hide FAB when scrolled far down
+      if (value > 100) {
+        Animated.timing(fabAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      } else {
+        Animated.timing(fabAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      }
+
+      // show scroll-to-top button after a threshold
+      setShowScrollTop(value > 400);
+    });
+
+    return () => {
+      headerScrollAnim.removeListener(listener as any);
+    };
+  }, []);
+
+  // Get unique key for each item
+  const getItemKey = (item: CarListing, index: number): string => {
+    if (!item?.listing_id) {
+      return `item-${index}-${Date.now()}`;
+    }
+    return `listing-${item.listing_id}`;
+  };
+
+  // Render header
+  const renderHeader = () => {
+    const headerOpacity = headerScrollAnim.interpolate({
+      inputRange: [0, 80],
+      outputRange: [1, 0],
+      extrapolate: "clamp",
+    });
+
+    const headerTranslateY = headerScrollAnim.interpolate({
+      inputRange: [0, 80],
+      outputRange: [0, -60],
+      extrapolate: "clamp",
+    });
+
+    return (
+      <Animated.View
+        style={[
+          styles.headerContainer,
+          {
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslateY }],
+          },
+        ]}
+      >
+        {/* Welcome Message */}
+        <View style={styles.welcomeContainer}>
+          <Text style={[styles.welcomeText, { color: theme.colors.onSurface }]}>
+            {user
+              ? `Welcome back, ${user.first_name || user.username}!`
+              : "Welcome to EthioCars!"}
           </Text>
           <Text
             style={[
-              styles.brandTagline,
+              styles.subWelcomeText,
               { color: theme.colors.onSurfaceVariant },
             ]}
           >
-            Drive Your Dreams
+            {totalListings.toLocaleString()} cars available
           </Text>
         </View>
-      </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          mode="outlined"
-          placeholder="Search cars, makes, models..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+        {/* Search Bar */}
+        <Animated.View
           style={[
-            styles.searchInput,
+            styles.searchContainer,
+            {
+              height: searchBarAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 56],
+              }),
+              opacity: searchBarAnim,
+              marginBottom: searchBarAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 16],
+              }),
+            },
+          ]}
+        >
+          <Searchbar
+            placeholder="Search cars, makes, models..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchBar}
+            inputStyle={styles.searchInput}
+            iconColor={theme.colors.primary}
+            onSubmitEditing={() => performSearch()}
+            onIconPress={() => performSearch()}
+            clearIcon="close"
+          />
+        </Animated.View>
+
+        {/* Quick Stats */}
+        <Surface
+          style={[
+            styles.statsSurface,
             { backgroundColor: theme.colors.surface },
           ]}
-          left={
-            <TextInput.Icon
-              icon="magnify"
-              color={theme.colors.onSurfaceVariant}
-            />
-          }
-          right={
-            <TextInput.Icon
-              icon="filter-variant"
-              color={theme.colors.onSurfaceVariant}
-            />
-          }
-        />
-      </View>
+        >
+          <View style={styles.statItem}>
+            <View
+              style={[
+                styles.statIconContainer,
+                { backgroundColor: theme.colors.primary + "20" },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="car"
+                size={20}
+                color={theme.colors.primary}
+              />
+            </View>
+            <View style={styles.statTextContainer}>
+              <Text
+                style={[styles.statNumber, { color: theme.colors.onSurface }]}
+              >
+                {statsLoading
+                  ? "..."
+                  : (
+                      statsData?.data?.total_listings || totalListings
+                    ).toLocaleString()}
+              </Text>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Cars Listed
+              </Text>
+            </View>
+          </View>
 
-      {/* Filter Chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersScroll}
-        contentContainerStyle={styles.filtersContainer}
-      >
-        {filters.map((filter) => (
+          <Divider style={styles.statDivider} />
+
+          <View style={styles.statItem}>
+            <View
+              style={[
+                styles.statIconContainer,
+                { backgroundColor: "#10B98120" },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="trending-up"
+                size={20}
+                color="#10B981"
+              />
+            </View>
+            <View style={styles.statTextContainer}>
+              <Text
+                style={[styles.statNumber, { color: theme.colors.onSurface }]}
+              >
+                {priceRangeData?.data?.min_price
+                  ? `ETB ${priceRangeData.data.min_price.toLocaleString()}`
+                  : "..."}
+              </Text>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Starting From
+              </Text>
+            </View>
+          </View>
+
+          <Divider style={styles.statDivider} />
+
+          <View style={styles.statItem}>
+            <View
+              style={[
+                styles.statIconContainer,
+                { backgroundColor: "#3B82F620" },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="shield-check"
+                size={20}
+                color="#3B82F6"
+              />
+            </View>
+            <View style={styles.statTextContainer}>
+              <Text
+                style={[styles.statNumber, { color: theme.colors.onSurface }]}
+              >
+                98%
+              </Text>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Verified
+              </Text>
+            </View>
+          </View>
+        </Surface>
+
+        {/* Quick Filters */}
+        <View style={styles.quickFiltersContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickFiltersScroll}
+          >
+            <Chip
+              icon="sort"
+              onPress={() => setShowFilters(true)}
+              style={styles.quickFilterChip}
+              mode={filters.sort !== "newest" ? "flat" : "outlined"}
+              selected={filters.sort !== "newest"}
+            >
+              Sort: {SORT_OPTIONS.find((s) => s.value === filters.sort)?.label}
+            </Chip>
+
+            {filters.make && (
+              <Chip
+                icon="car"
+                onPress={() =>
+                  setFilters((prev) => ({ ...prev, make: undefined }))
+                }
+                style={styles.quickFilterChip}
+                mode="flat"
+              >
+                {filters.make}
+              </Chip>
+            )}
+
+            {(filters.minPrice || filters.maxPrice) && (
+              <Chip
+                icon="currency-usd"
+                onPress={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    minPrice: undefined,
+                    maxPrice: undefined,
+                  }))
+                }
+                style={styles.quickFilterChip}
+                mode="flat"
+              >
+                {filters.minPrice
+                  ? `From ${filters.minPrice.toLocaleString()}`
+                  : ""}
+                {filters.maxPrice
+                  ? ` To ${filters.maxPrice.toLocaleString()}`
+                  : ""}
+              </Chip>
+            )}
+
+            <Chip
+              icon="filter"
+              onPress={() => setShowFilters(true)}
+              style={[
+                styles.quickFilterChip,
+                { backgroundColor: theme.colors.primary },
+              ]}
+              textStyle={{ color: "#FFFFFF" }}
+            >
+              More Filters
+            </Chip>
+          </ScrollView>
+        </View>
+
+        {/* Section Header */}
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text
+              style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
+            >
+              Latest Listings
+            </Text>
+            <Text
+              style={[
+                styles.sectionSubtitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              {allListings.length} cars found
+            </Text>
+          </View>
           <Button
-            key={filter.id}
-            mode={selectedFilter === filter.label ? "contained" : "outlined"}
-            onPress={() => setSelectedFilter(filter.label)}
-            style={[
-              styles.filterChip,
-              selectedFilter === filter.label && {
-                backgroundColor: theme.colors.primary,
-              },
-            ]}
-            textColor={
-              selectedFilter === filter.label ? "#FFFFFF" : theme.colors.primary
-            }
+            mode="text"
+            onPress={() => router.push("/browse")}
+            textColor={theme.colors.primary}
             compact
+            icon="arrow-right"
           >
-            {filter.label}
+            View All
           </Button>
-        ))}
-      </ScrollView>
+        </View>
+      </Animated.View>
+    );
+  };
 
-      {/* Stats Card */}
-      <Surface
-        style={[styles.statsSurface, { backgroundColor: theme.colors.surface }]}
-      >
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: theme.colors.onSurface }]}>
-            1,245+
-          </Text>
+  // Render footer
+  const renderFooter = () => {
+    if (isFetchingNextPage) {
+      return (
+        <View style={styles.loadingFooter}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
           <Text
-            style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}
+            style={[
+              styles.loadingText,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
           >
-            Cars Listed
+            Loading more cars...
           </Text>
         </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: theme.colors.onSurface }]}>
-            98%
+      );
+    }
+
+    if (!hasNextPage && allListings.length > 0) {
+      return (
+        <View style={styles.endFooter}>
+          <MaterialCommunityIcons
+            name="check-circle"
+            size={32}
+            color={theme.colors.primary}
+          />
+          <Text style={[styles.endText, { color: theme.colors.onSurface }]}>
+            You've reached the end
           </Text>
           <Text
-            style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}
+            style={[
+              styles.endSubtext,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
           >
-            Verified
+            No more cars available
           </Text>
         </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: theme.colors.onSurface }]}>
-            24h
+      );
+    }
+
+    if (allListings.length === 0 && !isLoading && !error) {
+      return (
+        <View style={styles.emptyFooter}>
+          <MaterialCommunityIcons
+            name="car-off"
+            size={64}
+            color={theme.colors.onSurfaceVariant}
+          />
+          <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
+            No cars found
           </Text>
           <Text
-            style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}
+            style={[
+              styles.emptySubtitle,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
           >
-            Avg. Response
+            Try adjusting your search or filters
           </Text>
+          <Button
+            mode="outlined"
+            onPress={handleClearFilters}
+            style={styles.clearFiltersButton}
+            icon="filter-off"
+          >
+            Clear All Filters
+          </Button>
         </View>
-      </Surface>
-    </View>
+      );
+    }
+
+    return <View style={styles.footerSpacer} />;
+  };
+
+  // Render empty state
+  const renderEmptyState = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.skeletonContainer}>
+          {[1, 2, 3].map((item) => (
+            <View key={`skeleton-${item}`} style={styles.skeletonCard}>
+              <View
+                style={[
+                  styles.skeletonImage,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              />
+              <View style={styles.skeletonContent}>
+                <View
+                  style={[
+                    styles.skeletonTitle,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                />
+                <View style={styles.skeletonDetails}>
+                  <View
+                    style={[
+                      styles.skeletonDetail,
+                      { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.skeletonDetail,
+                      { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
+                  />
+                </View>
+                <View style={styles.skeletonButtons}>
+                  <View
+                    style={[
+                      styles.skeletonButton,
+                      { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.skeletonButton,
+                      { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
+                  />
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.errorContainer}>
+          <MaterialCommunityIcons
+            name="car-off"
+            size={80}
+            color={theme.colors.onSurfaceVariant}
+          />
+          <Text style={[styles.errorTitle, { color: theme.colors.onSurface }]}>
+            Couldn't load listings
+          </Text>
+          <Text
+            style={[
+              styles.errorSubtitle,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            {error.message || "Network error. Please try again."}
+          </Text>
+          <Button
+            mode="contained"
+            onPress={() => refetch()}
+            style={styles.retryButton}
+            icon="refresh"
+            contentStyle={styles.retryButtonContent}
+          >
+            Try Again
+          </Button>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  // Render car item
+  const renderCarItem = ({
+    item,
+    index,
+  }: {
+    item: CarListing;
+    index: number;
+  }) => (
+    <CarCard
+      listing={item}
+      index={index}
+      onPress={() => router.push(`/car/${item.listing_id}`)}
+      onCallPress={() => handleCallPress(item)}
+      onSavePress={() => {}}
+    />
   );
 
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      {/* Drawer Overlay */}
-      {isDrawerOpen && (
-        <Animated.View
+      <StatusBar
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+        backgroundColor={theme.colors.background}
+      />
+
+      {/* Fixed Header */}
+      {!showSearch && (
+        <View
           style={[
-            styles.overlay,
+            styles.fixedHeader,
             {
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              opacity: translateX.interpolate({
-                inputRange: [-DRAWER_WIDTH, 0],
-                outputRange: [0, 1],
-              }),
+              backgroundColor: theme.colors.background,
             },
           ]}
-          onStartShouldSetResponder={() => true}
-          onResponderRelease={closeDrawer}
-        />
+        >
+          <View style={styles.fixedHeaderContent}>
+            <Text
+              style={[
+                styles.fixedHeaderTitle,
+                { color: theme.colors.onSurface },
+              ]}
+            >
+              EthioCars
+            </Text>
+            <View style={styles.fixedHeaderIcons}>
+              <IconButton
+                icon="theme-light-dark"
+                size={20}
+                iconColor={theme.colors.onSurface}
+                onPress={toggleTheme}
+              />
+            </View>
+          </View>
+        </View>
       )}
 
-      {/* Drawer */}
+      {/* Main Content */}
+      <FlatList
+        ref={scrollRef}
+        data={allListings}
+        renderItem={renderCarItem}
+        keyExtractor={getItemKey}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.listContainer,
+          {
+            paddingTop: !showSearch ? (Platform.OS === "ios" ? 100 : 80) : 20,
+          },
+        ]}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmptyState}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.3} // Changed from 0.5 to 0.3 for earlier trigger
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+            progressBackgroundColor={theme.colors.surface}
+          />
+        }
+      />
+
+      {/* Floating Action Button */}
+      {isFetchingNextPage && (
+        <View
+          style={[
+            styles.bottomLoadingBar,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          pointerEvents="none"
+        >
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text
+            style={[
+              styles.bottomLoadingText,
+              { color: theme.colors.onSurface },
+            ]}
+          >
+            Loading more cars...
+          </Text>
+        </View>
+      )}
+
       <Animated.View
         style={[
-          styles.drawer,
+          styles.fabContainer,
           {
-            transform: [{ translateX }],
-            backgroundColor: theme.colors.surface,
+            opacity: fabAnim,
+            transform: [{ scale: fabAnim }],
           },
         ]}
       >
-        <View style={styles.drawerHeader}>
-          <Avatar.Text
-            size={60}
-            label={
-              user?.first_name?.charAt(0) || user?.username?.charAt(0) || "U"
+        {showScrollTop && (
+          <TouchableOpacity
+            style={[
+              styles.fab,
+              styles.secondaryFab,
+              { backgroundColor: theme.colors.surface },
+            ]}
+            onPress={() =>
+              scrollRef.current?.scrollToOffset({ offset: 0, animated: true })
             }
-            style={{ backgroundColor: theme.colors.primary }}
-          />
-          <View style={styles.drawerUserInfo}>
-            <Text
-              style={[styles.drawerUserName, { color: theme.colors.onSurface }]}
-            >
-              {user?.first_name && user?.last_name
-                ? `${user.first_name} ${user.last_name}`
-                : user?.username || "User"}
-            </Text>
-            <Text
-              style={[
-                styles.drawerUserEmail,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {user?.email || "user@example.com"}
-            </Text>
-          </View>
-          <IconButton
-            icon="close"
-            size={24}
-            iconColor={theme.colors.onSurfaceVariant}
-            onPress={closeDrawer}
-          />
-        </View>
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons
+              name="arrow-up"
+              size={20}
+              color={theme.colors.primary}
+            />
+          </TouchableOpacity>
+        )}
 
-        <Divider style={styles.divider} />
+        <TouchableOpacity
+          style={[
+            styles.fab,
+            styles.secondaryFab,
+            { backgroundColor: theme.colors.surface },
+            (!hasNextPage || isFetchingNextPage) && { opacity: 0.5 },
+          ]}
+          onPress={loadMore}
+          activeOpacity={0.8}
+          disabled={!hasNextPage || isFetchingNextPage}
+        >
+          <MaterialCommunityIcons
+            name="arrow-down"
+            size={22}
+            color={theme.colors.primary}
+          />
+        </TouchableOpacity>
 
-        <ScrollView style={styles.drawerContent}>
-          <List.Item
-            title="Profile"
-            description="View and edit your profile"
-            left={(props) => (
-              <List.Icon
-                {...props}
-                icon="account"
-                color={theme.colors.primary}
-              />
-            )}
-            onPress={() => handleMenuPress("profile")}
-          />
-          <List.Item
-            title="Messages"
-            description="View your conversations"
-            left={(props) => (
-              <List.Icon
-                {...props}
-                icon="message"
-                color={theme.colors.primary}
-              />
-            )}
-            onPress={() => handleMenuPress("messages")}
-          />
-          <List.Item
-            title="My Posts"
-            description="Manage your car listings"
-            left={(props) => (
-              <List.Icon
-                {...props}
-                icon="format-list-bulleted"
-                color={theme.colors.primary}
-              />
-            )}
-            onPress={() => handleMenuPress("myPosts")}
-          />
-          <List.Item
-            title="Create Listing"
-            description="Add a new car listing"
-            left={(props) => (
-              <List.Icon
-                {...props}
-                icon="plus-circle"
-                color={theme.colors.primary}
-              />
-            )}
-            onPress={() => handleMenuPress("createListing")}
-          />
-          <List.Item
-            title="Saved Cars"
-            description="View your saved listings"
-            left={(props) => (
-              <List.Icon {...props} icon="heart" color={theme.colors.primary} />
-            )}
-            onPress={() => handleMenuPress("saved")}
-          />
-          <Divider style={styles.divider} />
-          <List.Item
-            title="Theme"
-            description={`${isDarkMode ? "Light" : "Dark"} mode`}
-            left={(props) => (
-              <List.Icon
-                {...props}
-                icon={
-                  isDarkMode ? "white-balance-sunny" : "moon-waning-crescent"
-                }
-                color={theme.colors.primary}
-              />
-            )}
-            onPress={toggleTheme}
-          />
-          <List.Item
-            title="Settings"
-            description="App settings and preferences"
-            left={(props) => (
-              <List.Icon {...props} icon="cog" color={theme.colors.primary} />
-            )}
-            onPress={() => handleMenuPress("settings")}
-          />
-          <List.Item
-            title="Help"
-            description="Get help and support"
-            left={(props) => (
-              <List.Icon
-                {...props}
-                icon="help-circle"
-                color={theme.colors.primary}
-              />
-            )}
-            onPress={() => handleMenuPress("help")}
-          />
-          <List.Item
-            title="About"
-            description="App information"
-            left={(props) => (
-              <List.Icon
-                {...props}
-                icon="information"
-                color={theme.colors.primary}
-              />
-            )}
-            onPress={() => handleMenuPress("about")}
-          />
-          <Divider style={styles.divider} />
-          <List.Item
-            title="Logout"
-            description="Sign out of your account"
-            left={(props) => (
-              <List.Icon {...props} icon="logout" color={theme.colors.error} />
-            )}
-            onPress={() => handleMenuPress("logout")}
-          />
-        </ScrollView>
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          onPress={() => router.push("/create")}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
       </Animated.View>
 
-      <FlatList
-        data={isLoading ? [] : carListings}
-        renderItem={renderCarListing}
-        keyExtractor={(item) => item.listing_id.toString()}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={
-          isLoading ? (
-            <View style={styles.loadingContainer}>
-              {[1, 2, 3].map((i) => (
-                <Card
-                  key={i}
-                  style={[
-                    styles.skeletonCard,
-                    { backgroundColor: theme.colors.surface },
-                  ]}
-                >
-                  <View style={styles.skeletonImage} />
-                  <View style={styles.skeletonContent}>
-                    <View style={styles.skeletonTitle} />
-                    <View style={styles.skeletonDetails} />
-                  </View>
-                </Card>
-              ))}
-            </View>
-          ) : error ? (
-            <View style={styles.errorContainer}>
-              <MaterialCommunityIcons
-                name="car-off"
-                size={64}
-                color={theme.colors.onSurfaceVariant}
-              />
-              <Text
-                style={[styles.errorTitle, { color: theme.colors.onSurface }]}
-              >
-                Couldn't load listings
-              </Text>
-              <Text
-                style={[
-                  styles.errorSubtitle,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                {error?.message || "Network error. Please try again."}
-              </Text>
-              <Button
-                mode="contained"
-                onPress={handleRefresh}
-                style={styles.retryButton}
-              >
-                Try Again
-              </Button>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons
-                name="car-search"
-                size={64}
-                color={theme.colors.onSurfaceVariant}
-              />
-              <Text
-                style={[styles.emptyTitle, { color: theme.colors.onSurface }]}
-              >
-                No cars found
-              </Text>
-              <Text
-                style={[
-                  styles.emptySubtitle,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Try adjusting your filters
-              </Text>
-            </View>
-          )
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={isFetching}
-            onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilters}
+        onDismiss={() => setShowFilters(false)}
+        filters={filters}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
+        priceRange={
+          priceRangeData?.data
+            ? {
+                min: priceRangeData.data.min_price || 0,
+                max: priceRangeData.data.max_price || 10000000,
+              }
+            : undefined
         }
       />
     </View>
@@ -638,262 +871,322 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
+  fixedHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    paddingTop: Platform.OS === "ios" ? 50 : 30,
     paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 8,
+    height: Platform.OS === "ios" ? 90 : 70,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.1)",
+    elevation: 4,
+  },
+  fixedHeaderContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    height: 40,
+  },
+  fixedHeaderTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "System",
+  },
+  fixedHeaderIcons: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  headerContainer: {
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
+  },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   brandContainer: {
     flexDirection: "column",
-    marginLeft: 8,
   },
   brandName: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: "bold",
+    fontFamily: "System",
   },
   brandTagline: {
-    fontSize: 12,
+    fontSize: 14,
+    fontFamily: "System",
     marginTop: 2,
   },
-  headerIcons: {
+  topBarIcons: {
     flexDirection: "row",
-    gap: 8,
+    gap: 4,
+  },
+  welcomeContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: "bold",
+    fontFamily: "System",
+    lineHeight: 32,
+  },
+  subWelcomeText: {
+    fontSize: 16,
+    fontFamily: "System",
+    marginTop: 6,
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    paddingHorizontal: 20,
+    overflow: "hidden",
+  },
+  searchBar: {
+    borderRadius: 12,
+    elevation: 2,
+    height: 48,
   },
   searchInput: {
-    borderRadius: 12,
-  },
-  filtersScroll: {
-    marginBottom: 16,
-  },
-  filtersContainer: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  filterChip: {
-    borderRadius: 20,
+    fontSize: 16,
   },
   statsSurface: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
     elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   statItem: {
-    flex: 1,
     alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+    flex: 1,
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statTextContainer: {
+    flexDirection: "column",
+    flex: 1,
   },
   statNumber: {
     fontSize: 18,
     fontWeight: "bold",
+    fontFamily: "System",
   },
   statLabel: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
+    fontFamily: "System",
+    marginTop: 2,
   },
   statDivider: {
     width: 1,
-    height: 32,
+    height: 30,
     backgroundColor: "#E5E7EB",
-    marginHorizontal: 16,
+  },
+  quickFiltersContainer: {
+    marginBottom: 20,
+  },
+  quickFiltersScroll: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  quickFilterChip: {
+    borderRadius: 16,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    fontFamily: "System",
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    fontFamily: "System",
+    marginTop: 4,
   },
   listContainer: {
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
-  loadingContainer: {
-    paddingHorizontal: 16,
+  skeletonContainer: {
+    paddingHorizontal: 20,
     gap: 16,
   },
   skeletonCard: {
-    borderRadius: 16,
-    marginBottom: 16,
+    borderRadius: 20,
     overflow: "hidden",
+    backgroundColor: "#FFF",
+    elevation: 2,
   },
   skeletonImage: {
     width: "100%",
     height: 200,
-    backgroundColor: "#f0f0f0",
   },
   skeletonContent: {
     padding: 16,
   },
   skeletonTitle: {
-    width: 150,
+    width: "70%",
     height: 20,
-    backgroundColor: "#f0f0f0",
     borderRadius: 4,
     marginBottom: 12,
   },
   skeletonDetails: {
     flexDirection: "row",
     gap: 16,
-  },
-  listingCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  imageContainer: {
-    position: "relative",
-    height: 200,
-  },
-  imagePlaceholder: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f8f9fa",
-  },
-  priceTag: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  priceTagText: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  listingContent: {
-    padding: 16,
-  },
-  carHeader: {
-    marginBottom: 12,
-  },
-  carTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  carTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    flex: 1,
-  },
-  verifiedContainer: {
-    marginLeft: 8,
-  },
-  carDetails: {
-    flexDirection: "row",
-    gap: 16,
     marginBottom: 16,
   },
-  detailItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+  skeletonDetail: {
+    width: 60,
+    height: 16,
+    borderRadius: 4,
   },
-  detailText: {
-    fontSize: 14,
-  },
-  actionButtons: {
+  skeletonButtons: {
     flexDirection: "row",
     gap: 12,
   },
-  messageButton: {
+  skeletonButton: {
     flex: 1,
+    height: 40,
     borderRadius: 8,
   },
-  callButton: {
-    borderRadius: 8,
+  loadingFooter: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontFamily: "System",
+  },
+  endFooter: {
+    alignItems: "center",
+    padding: 40,
+    gap: 12,
+  },
+  endText: {
+    fontSize: 18,
+    fontWeight: "600",
+    fontFamily: "System",
+    marginTop: 8,
+  },
+  endSubtext: {
+    fontSize: 14,
+    fontFamily: "System",
+    marginBottom: 20,
+  },
+  emptyFooter: {
+    alignItems: "center",
+    padding: 60,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 24,
+    marginBottom: 8,
+    fontFamily: "System",
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 32,
+    fontFamily: "System",
+  },
+  clearFiltersButton: {
+    borderRadius: 12,
+    paddingHorizontal: 24,
+  },
+  footerSpacer: {
+    height: 20,
   },
   errorContainer: {
     alignItems: "center",
+    justifyContent: "center",
     padding: 40,
-    marginHorizontal: 16,
+    minHeight: height * 0.6,
   },
   errorTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 16,
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: 24,
     marginBottom: 8,
+    fontFamily: "System",
   },
   errorSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 32,
     paddingHorizontal: 20,
+    fontFamily: "System",
   },
   retryButton: {
-    borderRadius: 8,
+    borderRadius: 12,
+    paddingHorizontal: 32,
   },
-  emptyContainer: {
-    alignItems: "center",
-    padding: 60,
-    marginHorizontal: 16,
+  retryButtonContent: {
+    height: 48,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: "center",
-  },
-  // Drawer styles
-  overlay: {
+  fabContainer: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
+    bottom: 30,
+    right: 20,
+    gap: 12,
   },
-  drawer: {
+  bottomLoadingBar: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: DRAWER_WIDTH,
-    zIndex: 1001,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 2,
-      height: 0,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  drawerHeader: {
+    left: 16,
+    right: 16,
+    bottom: 110,
+    zIndex: 250,
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    elevation: 6,
   },
-  drawerUserInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  drawerUserName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  drawerUserEmail: {
+  bottomLoadingText: {
+    marginLeft: 8,
     fontSize: 14,
   },
-  divider: {
-    marginVertical: 8,
+  fab: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  drawerContent: {
-    flex: 1,
-    paddingVertical: 8,
+  secondaryFab: {
+    elevation: 4,
   },
 });
 

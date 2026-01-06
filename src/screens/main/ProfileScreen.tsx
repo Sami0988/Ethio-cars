@@ -131,7 +131,6 @@ const ProfileScreen: React.FC = () => {
         if (!result.canceled && result.assets[0]) {
           setProfileImage(result.assets[0].uri);
           // Here you would upload to your server
-          console.log("New profile photo:", result.assets[0].uri);
           Alert.alert("Success", "Profile photo updated!");
         }
       } catch (error) {
@@ -159,7 +158,6 @@ const ProfileScreen: React.FC = () => {
         if (!result.canceled && result.assets[0]) {
           setProfileImage(result.assets[0].uri);
           // Here you would upload to your server
-          console.log("Selected profile photo:", result.assets[0].uri);
           Alert.alert("Success", "Profile photo updated!");
         }
       } catch (error) {

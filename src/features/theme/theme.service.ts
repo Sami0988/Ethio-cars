@@ -2,7 +2,6 @@
 import { MD3DarkTheme, MD3LightTheme } from "react-native-paper";
 import { ThemeMode } from "./theme.types";
 
-
 // Custom black/white light theme
 export const CustomLightTheme = {
   ...MD3LightTheme,
@@ -61,11 +60,11 @@ export const CustomDarkTheme = {
     onSecondaryContainer: "#000000",
     tertiary: "#FFFFFF",
     onTertiary: "#000000",
-    surface: "#000000",
+    surface: "#4a4a4a",
     onSurface: "#FFFFFF",
-    surfaceVariant: "#111111",
+    surfaceVariant: "#5a5a5a",
     onSurfaceVariant: "#FFFFFF",
-    background: "#000000",
+    background: "#3a3a3a",
     onBackground: "#FFFFFF",
     error: "#FFFFFF",
     onError: "#000000",
@@ -80,11 +79,11 @@ export const CustomDarkTheme = {
     inversePrimary: "#000000",
     elevation: {
       level0: "transparent",
-      level1: "#000000",
-      level2: "#000000",
-      level3: "#000000",
-      level4: "#000000",
-      level5: "#000000",
+      level1: "#4a4a4a",
+      level2: "#4a4a4a",
+      level3: "#4a4a4a",
+      level4: "#4a4a4a",
+      level5: "#4a4a4a",
     },
   },
 };
