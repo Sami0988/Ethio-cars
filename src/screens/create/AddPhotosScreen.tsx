@@ -1,21 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Animated,
+  Dimensions,
   Image,
+  Linking,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
-  Animated,
-  ActivityIndicator,
-  Linking,
 } from "react-native";
-import { Button, Card, useTheme } from "react-native-paper";
+import { Button, useTheme } from "react-native-paper";
 import { VehicleData } from "../../types/vehicle";
 
 interface Photo {

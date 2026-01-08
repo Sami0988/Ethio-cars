@@ -1,6 +1,6 @@
 // src/hooks/useImagePicker.ts
-import { useCallback, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
+import { useCallback, useState } from "react";
 import { Platform } from "react-native";
 import { buildImagePayload, isUnder10MB } from "../utils/imageProcessor";
 
@@ -93,7 +93,7 @@ export function useImagePicker() {
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
-          quality: 1, 
+          quality: 1,
         });
 
         await handleResult(result, type);
@@ -139,8 +139,8 @@ export function useImagePicker() {
   }, []);
 
   return {
-    imageUri, 
-    pickedImage, 
+    imageUri,
+    pickedImage,
     isPicking,
     error,
     pickFromLibrary,

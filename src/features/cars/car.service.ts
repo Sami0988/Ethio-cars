@@ -278,8 +278,44 @@ export const carService = {
     message: string;
     data: Make[];
   }> {
-    const response = await apiClient.get("/data/makes");
-    return response.data;
+    // First, get the total count and pagination info
+    const firstResponse = await apiClient.get("/data/makes", {
+      params: { limit: 100 },
+    });
+
+    if (!firstResponse.data.success) {
+      return firstResponse.data;
+    }
+
+    const totalMakes = firstResponse.data.data?.pagination?.total || 0;
+    const totalPages = Math.ceil(totalMakes / 100);
+
+    let allMakes: any[] = [...(firstResponse.data.data?.makes || [])];
+
+    // Fetch remaining pages if there are more
+    for (let page = 2; page <= totalPages; page++) {
+      try {
+        const response = await apiClient.get("/data/makes", {
+          params: { limit: 100, page },
+        });
+
+        if (response.data.success && response.data.data?.makes) {
+          allMakes.push(...response.data.data.makes);
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Error fetching page ${page}:`, error);
+        break; // Stop if we encounter an error
+      }
+    }
+
+    return {
+      success: true,
+      message: "Success",
+      data: allMakes,
+    };
   },
 
   // Get models for a specific make

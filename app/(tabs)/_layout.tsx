@@ -133,74 +133,6 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="saved"
-        options={{
-          title: "Saved",
-          tabBarIcon: ({ color, size, focused }) => (
-            <View
-              style={
-                focused ? styles.iconContainerActive : styles.iconContainer
-              }
-            >
-              <View style={styles.iconWrapper}>
-                <MaterialCommunityIcons
-                  name="bookmark"
-                  size={focused ? 24 : size}
-                  color={color}
-                />
-              </View>
-              {focused && (
-                <View
-                  style={[styles.activeIndicator, { backgroundColor: color }]}
-                />
-              )}
-            </View>
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="like"
-        options={{
-          title: "Like",
-          tabBarIcon: ({ color, size, focused }) => (
-            <View
-              style={
-                focused ? styles.iconContainerActive : styles.iconContainer
-              }
-            >
-              <View style={styles.iconWrapper}>
-                <MaterialCommunityIcons
-                  name="heart"
-                  size={focused ? 24 : size}
-                  color={color}
-                />
-              </View>
-              {focused && (
-                <View
-                  style={[styles.activeIndicator, { backgroundColor: color }]}
-                />
-              )}
-            </View>
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="add"
-        options={{
-          title: "",
-          tabBarIcon: ({ focused }) => (
-            <View style={styles.fabContainer}>
-              <View style={styles.fab}>
-                <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
-              </View>
-            </View>
-          ),
-        }}
-      />
-
-      <Tabs.Screen
         name="inbox"
         options={{
           title: "Inbox",
@@ -235,6 +167,20 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="add"
+        options={{
+          title: "",
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.fabContainer}>
+              <View style={styles.fab}>
+                <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
+              </View>
+            </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
@@ -247,6 +193,33 @@ export default function TabLayout() {
               <View style={styles.iconWrapper}>
                 <MaterialCommunityIcons
                   name="account"
+                  size={focused ? 24 : size}
+                  color={color}
+                />
+              </View>
+              {focused && (
+                <View
+                  style={[styles.activeIndicator, { backgroundColor: color }]}
+                />
+              )}
+            </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color, size, focused }) => (
+            <View
+              style={
+                focused ? styles.iconContainerActive : styles.iconContainer
+              }
+            >
+              <View style={styles.iconWrapper}>
+                <MaterialCommunityIcons
+                  name="cog-outline"
                   size={focused ? 24 : size}
                   color={color}
                 />

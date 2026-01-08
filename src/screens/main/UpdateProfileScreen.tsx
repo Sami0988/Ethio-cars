@@ -17,6 +17,7 @@ import {
   Avatar,
   Chip,
   Divider,
+  List,
   Portal,
   Snackbar,
   Surface,
@@ -408,7 +409,7 @@ const EditProfileScreen: React.FC = () => {
         });
 
         setTimeout(() => {
-          router.back();
+          router.replace("/profile");
         }, 1500);
       } else {
         showSnackbar(
@@ -501,6 +502,25 @@ const EditProfileScreen: React.FC = () => {
     ]);
   };
 
+  // Help & Support handlers
+  const handleHelpCenter = () => {
+    Alert.alert("Not supported", "This feature is currently not supported.", [
+      { text: "OK" },
+    ]);
+  };
+
+  const handleContactSupport = () => {
+    Alert.alert("Not supported", "This feature is currently not supported.", [
+      { text: "OK" },
+    ]);
+  };
+
+  const handleAboutApp = () => {
+    Alert.alert("Not supported", "This feature is currently not supported.", [
+      { text: "OK" },
+    ]);
+  };
+
   // check if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
     const compare = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
@@ -519,7 +539,7 @@ const EditProfileScreen: React.FC = () => {
         {
           text: "Discard",
           style: "destructive",
-          onPress: () => router.back(),
+          onPress: () => router.replace("/profile"),
         },
       ]
     );
@@ -886,12 +906,12 @@ const EditProfileScreen: React.FC = () => {
                     {
                       text: "Discard",
                       style: "destructive",
-                      onPress: () => router.back(),
+                      onPress: () => router.replace("/profile"),
                     },
                   ]
                 );
               } else {
-                router.back();
+                router.replace("/profile");
               }
             }}
             iconStyle={{
@@ -1474,7 +1494,7 @@ const EditProfileScreen: React.FC = () => {
               textColor={theme.colors.onSurface}
               left={
                 <TextInput.Icon
-                  icon="telegram"
+                  icon="at"
                   color={theme.colors.onSurfaceVariant}
                 />
               }
@@ -1538,6 +1558,117 @@ const EditProfileScreen: React.FC = () => {
               }
             />
           </View>
+        </Surface>
+
+        {/* Help & Support Section */}
+        <Surface
+          style={[
+            styles.sectionCard,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          elevation={theme.dark ? 0 : 1}
+        >
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons
+              name="help-circle-outline"
+              size={18}
+              color={theme.colors.primary}
+            />
+            <Text
+              style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
+            >
+              Help & Support
+            </Text>
+          </View>
+
+          <List.Item
+            title="Help Center"
+            description="FAQs and guides"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="lifebuoy"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            right={() => (
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={theme.colors.outline}
+              />
+            )}
+            onPress={handleHelpCenter}
+          />
+          <Divider />
+
+          <List.Item
+            title="Contact Support"
+            description="Get in touch with us"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="headset"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            right={() => (
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={theme.colors.outline}
+              />
+            )}
+            onPress={handleContactSupport}
+          />
+          <Divider />
+
+          <List.Item
+            title="About"
+            description="App version and information"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="information-outline"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            right={() => (
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={theme.colors.outline}
+              />
+            )}
+            onPress={handleAboutApp}
+          />
         </Surface>
 
         {/* Get Verified */}
@@ -2074,6 +2205,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
     fontStyle: "italic",
+  },
+  // List item icon style for Help & Support
+  itemIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 16,
+    marginRight: 8,
   },
 });
 

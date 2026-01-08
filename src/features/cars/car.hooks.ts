@@ -1,5 +1,4 @@
 // hooks/car.hook.ts
-import { apiClient } from "@/src/api/apiClient";
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -7,7 +6,9 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import React, { useEffect } from "react";
+import * as React from "react";
+import { useEffect } from "react";
+import { apiClient } from "../../api/apiClient";
 import { carService } from "./car.service";
 import {
   CarFilters,

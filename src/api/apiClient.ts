@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.10:3000/mobile-api/v1";
+  process.env.EXPO_PUBLIC_API_URL || "http://10.156.76.164:3000/mobile-api/v1";
 // ⚠️ Change IP to your machine’s LAN IP for dev; keep HTTPS-only in production builds.
 
 const isWeb =

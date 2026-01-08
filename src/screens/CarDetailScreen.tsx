@@ -23,6 +23,7 @@ import {
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { customColors } from "../constants/colors";
+import { useDeleteCar, useUpdateCar } from "../features/cars/car.hooks";
 import { useThemeStore } from "../features/theme/theme.store";
 
 const { width } = Dimensions.get("window");
@@ -98,6 +99,12 @@ const CarDetailScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // Delete car mutation
+  const deleteCarMutation = useDeleteCar();
+
+  // Update car mutation
+  const updateCarMutation = useUpdateCar();
+
   useEffect(() => {
     fetchCarDetail();
   }, [id]);
@@ -137,6 +144,58 @@ const CarDetailScreen: React.FC = () => {
     } catch (error) {
       console.error("Error sharing:", error);
     }
+  };
+
+  const handleDeleteCar = () => {
+    Alert.alert(
+      "Delete Car Listing",
+      "Are you sure you want to delete this car listing? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            deleteCarMutation.mutate(carDetail!.listing_id, {
+              onSuccess: (response: any) => {
+                if (response.success) {
+                  Alert.alert("Success", "Car listing deleted successfully", [
+                    {
+                      text: "OK",
+                      onPress: () => router.back(),
+                    },
+                  ]);
+                } else {
+                  Alert.alert(
+                    "Error",
+                    response.message || "Failed to delete car listing"
+                  );
+                }
+              },
+              onError: (error: any) => {
+                Alert.alert(
+                  "Error",
+                  error?.response?.data?.message ||
+                    error?.message ||
+                    "Failed to delete car listing"
+                );
+              },
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEditCar = () => {
+    // Navigate to edit screen with car data
+    router.push({
+      pathname: "/edit-car",
+      params: { id: carDetail?.listing_id.toString() },
+    });
   };
 
   const handleNextImage = () => {
@@ -239,12 +298,6 @@ const CarDetailScreen: React.FC = () => {
             Car Details
           </Text>
         </View>
-        <IconButton
-          icon="share"
-          size={24}
-          iconColor={theme.colors.onSurface}
-          onPress={handleShare}
-        />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -646,6 +699,16 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
+    justifyContent: "center",
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "System",
+    margin: 30,
+    alignItems: "center",
+  },
+  headerActions: {
+    flexDirection: "row",
     alignItems: "center",
   },
   title: {

@@ -98,9 +98,15 @@ export default function VehicleBasicsScreen({
   };
 
   // Extract makes from API response
-  const makes = makesResponse?.success
-    ? makesResponse.data.map((make: any) => make.name)
-    : [];
+  const makes =
+    makesResponse?.success && Array.isArray(makesResponse.data)
+      ? makesResponse.data.map((make: any) => make.name)
+      : [];
+
+  // Debug: Log the actual response structure
+  if (makesResponse) {
+    console.log("Makes response:", makesResponse);
+  }
 
   const models = [
     "Corolla",

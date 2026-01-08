@@ -11,7 +11,8 @@ import {
 } from "./auth.types";
 
 // Platform detection for web vs native
-const isWeb = typeof window !== "undefined" && window.localStorage;
+const isWeb =
+  typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 
 // Storage configuration for Zustand persistence
 const storage = {
@@ -27,13 +28,20 @@ const storage = {
           const value = await SecureStore.getItemAsync(name);
           return value ? JSON.parse(value) : null;
         } catch (secureStoreError) {
-          // Fallback to localStorage if SecureStore fails
+          // Fallback to localStorage if SecureStore fails and if available
           console.warn(
-            "SecureStore not available, falling back to localStorage:",
+            "SecureStore not available or failed, falling back to localStorage if available:",
             secureStoreError
           );
-          const value = localStorage.getItem(name);
-          return value ? JSON.parse(value) : null;
+          if (typeof localStorage !== "undefined") {
+            const value = localStorage.getItem(name);
+            return value ? JSON.parse(value) : null;
+          } else {
+            console.warn(
+              "localStorage is not available in this environment; returning null."
+            );
+            return null;
+          }
         }
       }
     } catch (error) {
@@ -51,12 +59,18 @@ const storage = {
         try {
           await SecureStore.setItemAsync(name, JSON.stringify(value));
         } catch (secureStoreError) {
-          // Fallback to localStorage if SecureStore fails
+          // Fallback to localStorage if SecureStore fails and if available
           console.warn(
-            "SecureStore not available, falling back to localStorage:",
+            "SecureStore not available or failed, falling back to localStorage if available:",
             secureStoreError
           );
-          localStorage.setItem(name, JSON.stringify(value));
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(name, JSON.stringify(value));
+          } else {
+            console.warn(
+              "localStorage is not available in this environment; skipping persist."
+            );
+          }
         }
       }
     } catch (error) {
@@ -73,12 +87,18 @@ const storage = {
         try {
           await SecureStore.deleteItemAsync(name);
         } catch (secureStoreError) {
-          // Fallback to localStorage if SecureStore fails
+          // Fallback to localStorage if SecureStore fails and if available
           console.warn(
-            "SecureStore not available, falling back to localStorage:",
+            "SecureStore not available or failed, falling back to localStorage if available:",
             secureStoreError
           );
-          localStorage.removeItem(name);
+          if (typeof localStorage !== "undefined") {
+            localStorage.removeItem(name);
+          } else {
+            console.warn(
+              "localStorage is not available in this environment; skipping remove."
+            );
+          }
         }
       }
     } catch (error) {

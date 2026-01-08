@@ -428,7 +428,6 @@ const HomeScreen: React.FC = () => {
             contentContainerStyle={styles.quickFiltersScroll}
           >
             <Chip
-              icon="sort"
               onPress={() => setShowFilters(true)}
               style={styles.quickFilterChip}
               mode={filters.sort !== "newest" ? "flat" : "outlined"}
@@ -503,15 +502,6 @@ const HomeScreen: React.FC = () => {
               {allListings.length} cars found
             </Text>
           </View>
-          <Button
-            mode="text"
-            onPress={() => router.push("/browse")}
-            textColor={theme.colors.primary}
-            compact
-            icon="arrow-right"
-          >
-            View All
-          </Button>
         </View>
       </Animated.View>
     );
@@ -819,32 +809,6 @@ const HomeScreen: React.FC = () => {
             />
           </TouchableOpacity>
         )}
-
-        <TouchableOpacity
-          style={[
-            styles.fab,
-            styles.secondaryFab,
-            { backgroundColor: theme.colors.surface },
-            (!hasNextPage || isFetchingNextPage) && { opacity: 0.5 },
-          ]}
-          onPress={loadMore}
-          activeOpacity={0.8}
-          disabled={!hasNextPage || isFetchingNextPage}
-        >
-          <MaterialCommunityIcons
-            name="arrow-down"
-            size={22}
-            color={theme.colors.primary}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-          onPress={() => router.push("/create")}
-          activeOpacity={0.8}
-        >
-          <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
       </Animated.View>
 
       {/* Filter Modal */}

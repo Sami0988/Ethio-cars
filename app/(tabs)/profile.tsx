@@ -1,6 +1,6 @@
 import React from "react";
-import ProfileScreen from "../../src/screens/main/ProfileScreen";
+import EditProfileScreen from "../../src/screens/main/UpdateProfileScreen";
 
 export default function ProfileTab() {
-  return <ProfileScreen />;
+  return <EditProfileScreen />;
 }
