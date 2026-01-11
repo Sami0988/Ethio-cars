@@ -8,24 +8,6 @@
     "scheme": "ethiocarsapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
-    "splash": {
-      "image": "./assets/images/logo-ethiocars.jpg",
-      "backgroundColor": "#f8f6f6",
-      "resizeMode": "contain"
-    },
-
-    "plugins": [
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/logo-ethiocars.jpg",
-          "backgroundColor": "#f8f6f6",
-          "resizeMode": "contain"
-        }
-      ]
-    ],
-
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ethiocars.app"
@@ -36,6 +18,11 @@
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1615a13a-065e-445c-9664-bb398548fc6b"
+      }
     }
   }
 }
