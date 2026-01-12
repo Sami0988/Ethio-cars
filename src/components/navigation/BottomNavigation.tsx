@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { Surface, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 interface BottomNavigationProps {
@@ -19,6 +20,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
   onTabPress,
 }) => {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   const tabs = [
     { id: "home", icon: "home", label: "Home" },
@@ -30,7 +32,14 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
   return (
     <Surface
-      style={[styles.container, { backgroundColor: theme.colors.surface }]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surface,
+          paddingBottom:
+            Platform.OS === "ios" ? 20 + insets.bottom : insets.bottom,
+        },
+      ]}
       elevation={4}
     >
       <View style={styles.content}>
@@ -95,7 +104,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingBottom: Platform.OS === "ios" ? 20 : 0,
     paddingTop: 8,
   },
   content: {

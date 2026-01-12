@@ -31,6 +31,7 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import CarCard from "../components/CarCard";
 import FilterModal from "../components/FilterModal";
@@ -54,7 +55,8 @@ const HomeScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
-  const { isDarkMode, toggleTheme } = useThemeStore();
+  const { isDarkMode, toggleTheme, themeMode } = useThemeStore();
+  console.log("Current themeMode:", themeMode, "isDarkMode:", isDarkMode);
   const colors = customColors[isDarkMode ? "dark" : "light"];
 
   // States
@@ -233,6 +235,9 @@ const HomeScreen: React.FC = () => {
     };
   }, []);
 
+  // Safe area insets used for spacing
+  const insets = useSafeAreaInsets();
+
   // Get unique key for each item
   const getItemKey = (item: CarListing, index: number): string => {
     if (!item?.listing_id) {
@@ -260,6 +265,7 @@ const HomeScreen: React.FC = () => {
         style={[
           styles.headerContainer,
           {
+            paddingTop: insets.top + (Platform.OS === "ios" ? 4 : 2),
             opacity: headerOpacity,
             transform: [{ translateY: headerTranslateY }],
           },
@@ -356,16 +362,11 @@ const HomeScreen: React.FC = () => {
           <Divider style={styles.statDivider} />
 
           <View style={styles.statItem}>
-            <View
-              style={[
-                styles.statIconContainer,
-                { backgroundColor: "#10B98120" },
-              ]}
-            >
+            <View style={styles.carIconContainer}>
               <MaterialCommunityIcons
-                name="trending-up"
-                size={20}
-                color="#10B981"
+                name="car"
+                size={28}
+                color={isDarkMode ? "#FFFFFF" : "#5a5959ff"}
               />
             </View>
             <View style={styles.statTextContainer}>
@@ -374,7 +375,7 @@ const HomeScreen: React.FC = () => {
               >
                 {priceRangeData?.data?.min_price
                   ? `ETB ${priceRangeData.data.min_price.toLocaleString()}`
-                  : "..."}
+                  : "100k"}
               </Text>
               <Text
                 style={[
@@ -704,25 +705,58 @@ const HomeScreen: React.FC = () => {
           style={[
             styles.fixedHeader,
             {
-              backgroundColor: theme.colors.background,
+              backgroundColor: theme.colors.surface,
+              // lift into the status bar so the header background covers it
+              top: -insets.top,
+              paddingTop: insets.top + 4,
+              paddingHorizontal: 16,
+              shadowColor: theme.colors.shadow,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
             },
           ]}
         >
           <View style={styles.fixedHeaderContent}>
-            <Text
-              style={[
-                styles.fixedHeaderTitle,
-                { color: theme.colors.onSurface },
-              ]}
-            >
+            <View style={styles.leftHeaderSection}>
+              <View
+                style={[
+                  styles.carIconContainer,
+                  { shadowColor: isDarkMode ? "#FFFFFF" : "#000000" },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="car"
+                  size={28}
+                  color={isDarkMode ? "#FFFFFF" : "#000000"}
+                />
+              </View>
+            </View>
+
+            <Text style={[styles.brandText, { color: theme.colors.primary }]}>
               EthioCars
             </Text>
-            <View style={styles.fixedHeaderIcons}>
+
+            <View style={styles.rightHeaderSection}>
               <IconButton
-                icon="theme-light-dark"
+                icon={
+                  isDarkMode ? "moon-waning-crescent" : "white-balance-sunny"
+                }
                 size={20}
-                iconColor={theme.colors.onSurface}
-                onPress={toggleTheme}
+                iconColor={isDarkMode ? "#FFD700" : "#000000"}
+                onPress={() => {
+                  console.log(
+                    "Toggle pressed, current isDarkMode:",
+                    isDarkMode
+                  );
+                  toggleTheme();
+                }}
+                style={[
+                  styles.themeButton,
+                  {
+                    backgroundColor: theme.colors.surfaceVariant + "20",
+                  },
+                ]}
               />
             </View>
           </View>
@@ -739,7 +773,10 @@ const HomeScreen: React.FC = () => {
         contentContainerStyle={[
           styles.listContainer,
           {
-            paddingTop: !showSearch ? (Platform.OS === "ios" ? 100 : 80) : 20,
+            paddingTop: !showSearch
+              ? insets.top + (Platform.OS === "ios" ? 8 : 4)
+              : insets.top + 2,
+            paddingBottom: insets.bottom + 24,
           },
         ]}
         ListHeaderComponent={renderHeader}
@@ -748,7 +785,7 @@ const HomeScreen: React.FC = () => {
         onScroll={handleScroll}
         scrollEventThrottle={16}
         onEndReached={loadMore}
-        onEndReachedThreshold={0.3} // Changed from 0.5 to 0.3 for earlier trigger
+        onEndReachedThreshold={0.3}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -841,30 +878,51 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 100,
-    paddingTop: Platform.OS === "ios" ? 50 : 30,
-    paddingHorizontal: 16,
-    height: Platform.OS === "ios" ? 90 : 70,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.1)",
-    elevation: 4,
+    borderBottomWidth: 0,
+    elevation: 6,
   },
   fixedHeaderContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    height: 40,
+    height: 32,
   },
-  fixedHeaderTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+  brandText: {
+    fontSize: 22,
+    fontWeight: "800",
     fontFamily: "System",
+    letterSpacing: -0.5,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   fixedHeaderIcons: {
     flexDirection: "row",
-    gap: 4,
+    gap: 8,
+  },
+  leftHeaderSection: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  rightHeaderSection: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  carIconContainer: {
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  themeButton: {
+    borderRadius: 20,
+    width: 40,
+    height: 40,
   },
   headerContainer: {
-    paddingTop: Platform.OS === "ios" ? 60 : 40,
+    // padding is applied dynamically using safe area insets
+    paddingBottom: 8,
+    backgroundColor: "transparent",
   },
   topBar: {
     flexDirection: "row",
@@ -872,9 +930,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     marginBottom: 20,
-  },
-  brandContainer: {
-    flexDirection: "column",
   },
   brandName: {
     fontSize: 32,
@@ -886,13 +941,9 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     marginTop: 2,
   },
-  topBarIcons: {
-    flexDirection: "row",
-    gap: 4,
-  },
   welcomeContainer: {
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 4,
   },
   welcomeText: {
     fontSize: 28,

@@ -1,17 +1,18 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import { useTheme } from "react-native-paper";
 import HomeScreen from "../../screens/HomeScreen";
+import Screen from "../common/Screen";
 
 const MainLayout: React.FC = () => {
   const theme = useTheme();
 
   return (
-    <View
+    <Screen
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <HomeScreen />
-    </View>
+    </Screen>
   );
 };
 

@@ -16,29 +16,23 @@ interface ThemeStore {
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set, get): ThemeStore => ({
-      themeMode: "system" as ThemeMode,
-      theme: getTheme("system"),
+      themeMode: "light" as ThemeMode,
+      theme: getTheme("light"),
 
-      get isDarkMode() {
-        const { themeMode } = get();
-        if (themeMode === "system") {
-          // For system mode, you might want to check the actual system preference
-          // For now, default to light mode for system
-          return false;
-        }
-        return themeMode === "dark";
-      },
+      isDarkMode: false,
 
       setThemeMode: (mode: ThemeMode) => {
         const theme = getTheme(mode);
-        set({ themeMode: mode, theme });
+        const isDarkMode = mode === "dark";
+        set({ themeMode: mode, theme, isDarkMode });
       },
 
       toggleTheme: () => {
         const { themeMode } = get();
         const newMode = themeMode === "dark" ? "light" : "dark";
         const theme = getTheme(newMode);
-        set({ themeMode: newMode, theme });
+        const isDarkMode = newMode === "dark";
+        set({ themeMode: newMode, theme, isDarkMode });
       },
     }),
     {

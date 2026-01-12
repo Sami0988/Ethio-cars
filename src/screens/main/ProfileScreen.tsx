@@ -5,7 +5,6 @@ import React, { useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Dimensions,
   Modal,
   Platform,
   ScrollView,
@@ -28,26 +27,29 @@ import {
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import Screen from "../../components/common/Screen";
 import { useLogout } from "../../features/auth/auth.hooks";
 import { useAuthStore } from "../../features/auth/auth.store";
 import { useCarListings } from "../../features/cars/car.hooks";
 import { useThemeStore } from "../../features/theme/theme.store";
-
-const { width, height } = Dimensions.get("window");
+import { getDynamicHeight, screenHeight } from "../../utils/responsive";
 
 const ProfileScreen: React.FC = () => {
-  const theme = useTheme();
   const router = useRouter();
   const { user, isAuthenticated, updateUser } = useAuthStore() as any;
   const { themeMode, setThemeMode } = useThemeStore();
+  const theme = useTheme();
   const logoutMutation = useLogout();
+
+  // Use safe area wrapper for consistent spacing
+  const insets = require("react-native-safe-area-context").useSafeAreaInsets();
 
   const { data: listingsData } = useCarListings(1, 20);
   const userListings = listingsData?.data?.listings || [];
 
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [showImagePickerSheet, setShowImagePickerSheet] = useState(false);
-  const sheetAnimation = useRef(new Animated.Value(height)).current;
+  const sheetAnimation = useRef(new Animated.Value(screenHeight)).current;
 
   // Expandable sections state
   const [expandedSections, setExpandedSections] = useState({
@@ -124,7 +126,7 @@ const ProfileScreen: React.FC = () => {
 
   const hideBottomSheet = () => {
     Animated.timing(sheetAnimation, {
-      toValue: height,
+      toValue: screenHeight,
       duration: 250,
       useNativeDriver: true,
     }).start(() => {
@@ -493,9 +495,7 @@ const ProfileScreen: React.FC = () => {
         style={[
           styles.expandableHeader,
           {
-            backgroundColor: expanded
-              ? theme.colors.surfaceVariant + "20"
-              : "transparent",
+            backgroundColor: expanded ? theme.colors.surface : "transparent",
             borderTopLeftRadius: 8,
             borderTopRightRadius: 8,
           },
@@ -673,7 +673,7 @@ const ProfileScreen: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <View
+      <Screen
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.signInPrompt}>
@@ -707,817 +707,844 @@ const ProfileScreen: React.FC = () => {
             Sign In
           </Button>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <ScrollView
+    <Screen
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
     >
-      {/* Image Picker Bottom Sheet */}
-      <ImagePickerBottomSheet />
-
-      {/* Header bar */}
-      <View style={styles.topBar}>
-        <IconButton
-          icon="chevron-left"
-          size={24}
-          iconColor={theme.colors.onBackground}
-          onPress={() => router.back()}
-        />
-        <Text
-          style={[styles.topBarTitle, { color: theme.colors.onBackground }]}
-        >
-          Profile
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      {/* Profile card */}
-      <Surface
-        style={[styles.profileCard, { backgroundColor: theme.colors.surface }]}
-        elevation={theme.dark ? 0 : 2}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.profileHeader}>
-          <TouchableOpacity
-            style={styles.avatarContainer}
-            onPress={handleChangeProfilePhoto}
+        {/* Image Picker Bottom Sheet */}
+        <ImagePickerBottomSheet />
+
+        {/* Header bar */}
+        <View style={styles.topBar}>
+          <IconButton
+            icon="chevron-left"
+            size={24}
+            iconColor={theme.colors.onBackground}
+            onPress={() => router.back()}
+          />
+          <Text
+            style={[styles.topBarTitle, { color: theme.colors.onBackground }]}
           >
-            <Avatar.Image size={72} source={avatarSource} />
-            {/* Edit overlay */}
-            <View
-              style={[
-                styles.editAvatarOverlay,
-                { backgroundColor: theme.colors.primary },
-              ]}
+            Profile
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        {/* Profile card */}
+        <Surface
+          style={[
+            styles.profileCard,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          elevation={theme.dark ? 0 : 2}
+        >
+          <View style={styles.profileHeader}>
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={handleChangeProfilePhoto}
             >
-              <MaterialCommunityIcons
-                name="camera"
-                size={20}
-                color={theme.colors.onPrimary}
-              />
-            </View>
-          </TouchableOpacity>
-          <View style={styles.profileInfo}>
-            <View style={styles.nameRow}>
-              <Text
-                style={[styles.profileName, { color: theme.colors.onSurface }]}
+              <Avatar.Image size={72} source={avatarSource} />
+              {/* Edit overlay */}
+              <View
+                style={[
+                  styles.editAvatarOverlay,
+                  { backgroundColor: theme.colors.primary },
+                ]}
               >
-                {user?.first_name} {user?.last_name}
-              </Text>
-              {user?.is_dealer && (
                 <MaterialCommunityIcons
-                  name="check-decagram"
-                  size={18}
-                  color={theme.colors.primary}
+                  name="camera"
+                  size={20}
+                  color={theme.colors.onPrimary}
                 />
-              )}
-            </View>
-            <Text
-              style={[
-                styles.profileUsername,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              @{user?.username}
-            </Text>
-            <View style={styles.metaRow}>
-              <Chip
-                mode="flat"
-                style={[
-                  styles.ratingChip,
-                  {
-                    backgroundColor: theme.colors.surfaceVariant,
-                  },
-                ]}
-                textStyle={[
-                  styles.ratingText,
-                  {
-                    color: theme.colors.onSurfaceVariant,
-                  },
-                ]}
-                icon="star"
-              >
-                4.8 (24 reviews)
-              </Chip>
-              <MaterialCommunityIcons
-                name="map-marker"
-                size={14}
-                color={theme.colors.onSurfaceVariant}
-              />
+              </View>
+            </TouchableOpacity>
+            <View style={styles.profileInfo}>
+              <View style={styles.nameRow}>
+                <Text
+                  style={[
+                    styles.profileName,
+                    { color: theme.colors.onSurface },
+                  ]}
+                >
+                  {user?.first_name} {user?.last_name}
+                </Text>
+                {user?.is_dealer && (
+                  <MaterialCommunityIcons
+                    name="check-decagram"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                )}
+              </View>
               <Text
                 style={[
-                  styles.metaText,
+                  styles.profileUsername,
                   { color: theme.colors.onSurfaceVariant },
                 ]}
               >
-                Addis Ababa, Ethiopia
+                @{user?.username}
+              </Text>
+              <View style={styles.metaRow}>
+                <Chip
+                  mode="flat"
+                  style={[
+                    styles.ratingChip,
+                    {
+                      backgroundColor: theme.colors.surfaceVariant,
+                    },
+                  ]}
+                  textStyle={[
+                    styles.ratingText,
+                    {
+                      color: theme.colors.onSurfaceVariant,
+                    },
+                  ]}
+                  icon="star"
+                >
+                  4.8 (24 reviews)
+                </Chip>
+                <MaterialCommunityIcons
+                  name="map-marker"
+                  size={14}
+                  color={theme.colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.metaText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Addis Ababa, Ethiopia
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.memberSince,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Member since {user?.member_since || "2023"}
               </Text>
             </View>
-            <Text
-              style={[
-                styles.memberSince,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Member since {user?.member_since || "2023"}
-            </Text>
           </View>
-        </View>
-      </Surface>
+        </Surface>
 
-      {/* Account Information card */}
-      <Surface
-        style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}
-        elevation={theme.dark ? 0 : 1}
-      >
-        <Text
+        {/* Account Information card */}
+        <Surface
           style={[
-            styles.sectionHeaderLabel,
-            { color: theme.colors.onSurfaceVariant },
+            styles.sectionCard,
+            { backgroundColor: theme.colors.surface },
           ]}
+          elevation={theme.dark ? 0 : 1}
         >
-          Account Information
-        </Text>
-
-        <List.Item
-          title="Email"
-          description={user?.email}
-          titleStyle={{ color: theme.colors.onSurface }}
-          descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="email-outline"
-                size={20}
-                color={theme.colors.onSurface}
-              />
-            </View>
-          )}
-        />
-        <Divider />
-
-        <List.Item
-          title="Phone"
-          description={user?.phone || "Add phone number"}
-          titleStyle={{ color: theme.colors.onSurface }}
-          descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="phone-outline"
-                size={20}
-                color={theme.colors.onSurface}
-              />
-            </View>
-          )}
-        />
-        <Divider />
-
-        <List.Item
-          title="Account Type"
-          description={user?.is_dealer ? "Dealer" : "Individual"}
-          titleStyle={{ color: theme.colors.onSurface }}
-          descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="id-card"
-                size={20}
-                color={theme.colors.onSurface}
-              />
-            </View>
-          )}
-        />
-        <Divider />
-
-        <List.Item
-          title="Password"
-          description="Change your password"
-          titleStyle={{ color: theme.colors.onSurface }}
-          descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="lock-outline"
-                size={20}
-                color={theme.colors.onSurface}
-              />
-            </View>
-          )}
-        />
-      </Surface>
-
-      {/* Preferences */}
-      <Surface
-        style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}
-        elevation={theme.dark ? 0 : 1}
-      >
-        <Text
-          style={[
-            styles.sectionHeaderLabel,
-            { color: theme.colors.onSurfaceVariant },
-          ]}
-        >
-          Preferences
-        </Text>
-
-        {/* Push Notifications Section */}
-        <ExpandableSection
-          title="Push Notifications"
-          description={pushNotifications ? "On" : "Off"}
-          icon="bell-outline"
-          expanded={expandedSections.notifications}
-          onToggle={() => toggleSection("notifications")}
-        >
-          <View style={styles.switchOptionsContainer}>
-            <EnhancedSwitchOption
-              label="Enable Push Notifications"
-              description="Receive notifications for important updates"
-              value={pushNotifications}
-              onToggle={setPushNotifications}
-            />
-            <EnhancedSwitchOption
-              label="New Messages"
-              description="Get notified when you receive new messages"
-              value={pushNotifications}
-              onToggle={setPushNotifications}
-            />
-            <EnhancedSwitchOption
-              label="Listing Updates"
-              description="Notifications about your car listings"
-              value={pushNotifications}
-              onToggle={setPushNotifications}
-            />
-            <EnhancedSwitchOption
-              label="Promotional Offers"
-              description="Receive offers and discounts"
-              value={pushNotifications}
-              onToggle={setPushNotifications}
-            />
-          </View>
-        </ExpandableSection>
-
-        <Divider style={styles.sectionDivider} />
-
-        {/* Theme Section */}
-        <ExpandableSection
-          title="Theme"
-          description={
-            themeMode === "light"
-              ? "Light"
-              : themeMode === "dark"
-                ? "Dark"
-                : "System"
-          }
-          icon="theme-light-dark"
-          expanded={expandedSections.theme}
-          onToggle={() => toggleSection("theme")}
-        >
-          <View style={styles.radioOptionsContainer}>
-            <EnhancedRadioOption
-              value="light"
-              label="Light"
-              description="Bright theme optimized for daytime use"
-              selected={themeMode === "light"}
-              onSelect={() => setThemeMode("light")}
-            />
-            <EnhancedRadioOption
-              value="dark"
-              label="Dark"
-              description="Dark theme for better night viewing"
-              selected={themeMode === "dark"}
-              onSelect={() => setThemeMode("dark")}
-            />
-            <EnhancedRadioOption
-              value="system"
-              label="System Default"
-              description="Automatically match your device settings"
-              selected={themeMode === "system"}
-              onSelect={() => setThemeMode("system")}
-            />
-          </View>
-        </ExpandableSection>
-
-        <Divider style={styles.sectionDivider} />
-
-        {/* Language Section */}
-        <ExpandableSection
-          title="Language"
-          description={selectedLanguage === "english" ? "English" : "አማርኛ"}
-          icon="translate"
-          expanded={expandedSections.language}
-          onToggle={() => toggleSection("language")}
-        >
-          <View style={styles.radioOptionsContainer}>
-            <EnhancedRadioOption
-              value="english"
-              label="English"
-              description="English language interface"
-              selected={selectedLanguage === "english"}
-              onSelect={() => setSelectedLanguage("english")}
-            />
-            <EnhancedRadioOption
-              value="amharic"
-              label="አማርኛ (Amharic)"
-              description="አማርኛ ቋንቋ በይነገጽ"
-              selected={selectedLanguage === "amharic"}
-              onSelect={() => setSelectedLanguage("amharic")}
-            />
-          </View>
-        </ExpandableSection>
-
-        <Divider style={styles.sectionDivider} />
-
-        {/* Currency Section */}
-        <ExpandableSection
-          title="Currency"
-          description={selectedCurrency === "ETB" ? "ETB (Birr)" : "USD"}
-          icon="currency-usd"
-          expanded={expandedSections.currency}
-          onToggle={() => toggleSection("currency")}
-        >
-          <View style={styles.radioOptionsContainer}>
-            <EnhancedRadioOption
-              value="ETB"
-              label="ETB - Ethiopian Birr"
-              description="ብር - Local currency for Ethiopian market"
-              selected={selectedCurrency === "ETB"}
-              onSelect={() => setSelectedCurrency("ETB")}
-            />
-            <EnhancedRadioOption
-              value="USD"
-              label="USD - US Dollar"
-              description="$ - International currency for global transactions"
-              selected={selectedCurrency === "USD"}
-              onSelect={() => setSelectedCurrency("USD")}
-            />
-          </View>
-        </ExpandableSection>
-      </Surface>
-
-      {/* Safety & privacy */}
-      <Surface
-        style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}
-        elevation={theme.dark ? 0 : 1}
-      >
-        <Text
-          style={[
-            styles.sectionHeaderLabel,
-            { color: theme.colors.onSurfaceVariant },
-          ]}
-        >
-          Safety & Privacy
-        </Text>
-
-        {/* My Posts - navigate directly */}
-        <List.Item
-          title="My Posts"
-          description="View your car listings"
-          titleStyle={{ color: theme.colors.onSurface }}
-          descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="car-multiple"
-                size={20}
-                color={theme.colors.onSurface}
-              />
-            </View>
-          )}
-          right={() => (
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={22}
-              color={theme.colors.outline}
-            />
-          )}
-          onPress={() => router.push("/my-posts")}
-        />
-
-        <Divider style={styles.sectionDivider} />
-
-        {/* Phone Visibility Section */}
-        <ExpandableSection
-          title="Show Phone Number"
-          description={showPhoneNumber ? "Everyone" : "Only Contacts"}
-          icon="eye-outline"
-          expanded={expandedSections.phoneVisibility}
-          onToggle={() => toggleSection("phoneVisibility")}
-        >
-          <View style={styles.radioOptionsContainer}>
-            <EnhancedRadioOption
-              value="everyone"
-              label="Everyone"
-              description="All users can see your phone number for quick contact"
-              selected={showPhoneNumber}
-              onSelect={() => setShowPhoneNumber(true)}
-            />
-            <EnhancedRadioOption
-              value="contacts"
-              label="Only Contacts"
-              description="Only people you've connected with can see your number"
-              selected={!showPhoneNumber}
-              onSelect={() => setShowPhoneNumber(false)}
-            />
-          </View>
-        </ExpandableSection>
-
-        <Divider style={styles.sectionDivider} />
-
-        {/* Profile Visibility Section */}
-        <ExpandableSection
-          title="Profile Visibility"
-          description={
-            profileVisibility === "public"
-              ? "Public"
-              : profileVisibility === "friends"
-                ? "Friends Only"
-                : "Private"
-          }
-          icon="shield-account-outline"
-          expanded={expandedSections.profileVisibility}
-          onToggle={() => toggleSection("profileVisibility")}
-        >
-          <View style={styles.radioOptionsContainer}>
-            <EnhancedRadioOption
-              value="public"
-              label="Public"
-              description="Anyone can find and view your profile"
-              selected={profileVisibility === "public"}
-              onSelect={() => setProfileVisibility("public")}
-            />
-            <EnhancedRadioOption
-              value="friends"
-              label="Friends Only"
-              description="Only your connections can view your profile"
-              selected={profileVisibility === "friends"}
-              onSelect={() => setProfileVisibility("friends")}
-            />
-            <EnhancedRadioOption
-              value="private"
-              label="Private"
-              description="Your profile is hidden from other users"
-              selected={profileVisibility === "private"}
-              onSelect={() => setProfileVisibility("private")}
-            />
-          </View>
-        </ExpandableSection>
-
-        <Divider style={styles.sectionDivider} />
-
-        {/* Data Usage Section */}
-        <ExpandableSection
-          title="Data Usage"
-          description={
-            dataUsage === "normal"
-              ? "Normal"
-              : dataUsage === "low"
-                ? "Low"
-                : "High"
-          }
-          icon="chart-bar"
-          expanded={expandedSections.dataUsage}
-          onToggle={() => toggleSection("dataUsage")}
-        >
-          <View style={styles.radioOptionsContainer}>
-            <EnhancedRadioOption
-              value="low"
-              label="Low (Save Data)"
-              description="Reduced image quality to minimize data usage"
-              selected={dataUsage === "low"}
-              onSelect={() => setDataUsage("low")}
-            />
-            <EnhancedRadioOption
-              value="normal"
-              label="Normal (Balanced)"
-              description="Standard quality for everyday use"
-              selected={dataUsage === "normal"}
-              onSelect={() => setDataUsage("normal")}
-            />
-            <EnhancedRadioOption
-              value="high"
-              label="High (Best Quality)"
-              description="High-resolution images for best viewing experience"
-              selected={dataUsage === "high"}
-              onSelect={() => setDataUsage("high")}
-            />
-          </View>
-        </ExpandableSection>
-      </Surface>
-
-      {/* Help & support */}
-      <Surface
-        style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}
-        elevation={theme.dark ? 0 : 1}
-      >
-        <Text
-          style={[
-            styles.sectionHeaderLabel,
-            { color: theme.colors.onSurfaceVariant },
-          ]}
-        >
-          Help & Support
-        </Text>
-
-        <List.Item
-          title="Help Center"
-          description="FAQs and guides"
-          titleStyle={{ color: theme.colors.onSurface }}
-          descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="lifebuoy"
-                size={20}
-                color={theme.colors.onSurface}
-              />
-            </View>
-          )}
-          right={() => (
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={22}
-              color={theme.colors.outline}
-            />
-          )}
-          onPress={() =>
-            Alert.alert(
-              "Not supported",
-              "This feature is currently not supported.",
-              [{ text: "OK" }]
-            )
-          }
-        />
-        <Divider />
-
-        <List.Item
-          title="Contact Support"
-          description="Get in touch with us"
-          titleStyle={{ color: theme.colors.onSurface }}
-          descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="headset"
-                size={20}
-                color={theme.colors.onSurface}
-              />
-            </View>
-          )}
-          right={() => (
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={22}
-              color={theme.colors.outline}
-            />
-          )}
-          onPress={() =>
-            Alert.alert(
-              "Not supported",
-              "This feature is currently not supported.",
-              [{ text: "OK" }]
-            )
-          }
-        />
-        <Divider />
-
-        <List.Item
-          title="About"
-          description="App version and information"
-          titleStyle={{ color: theme.colors.onSurface }}
-          descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="information-outline"
-                size={20}
-                color={theme.colors.onSurface}
-              />
-            </View>
-          )}
-          right={() => (
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={22}
-              color={theme.colors.outline}
-            />
-          )}
-          onPress={() =>
-            Alert.alert(
-              "Not supported",
-              "This feature is currently not supported.",
-              [{ text: "OK" }]
-            )
-          }
-        />
-      </Surface>
-
-      {/* Become Verified Seller */}
-      <TouchableOpacity
-        style={[styles.verifiedCard, { backgroundColor: theme.colors.primary }]}
-        onPress={() =>
-          Alert.alert("Coming soon", "This feature is coming soon.")
-        }
-      >
-        <View
-          style={[
-            styles.verifiedLeft,
-            {
-              backgroundColor: theme.dark
-                ? "rgba(255,255,255,0.2)"
-                : "rgba(255,255,255,0.3)",
-            },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="shield-check"
-            size={26}
-            color={theme.colors.onPrimary}
-          />
-        </View>
-        <View style={styles.verifiedInfo}>
-          <Text
-            style={[styles.verifiedTitle, { color: theme.colors.onPrimary }]}
-          >
-            Become a Verified Seller
-          </Text>
           <Text
             style={[
-              styles.verifiedSubtitle,
-              { color: theme.colors.onPrimary, opacity: 0.9 },
+              styles.sectionHeaderLabel,
+              { color: theme.colors.onSurfaceVariant },
             ]}
           >
-            Get trusted badges & more visibility
+            Account Information
           </Text>
-        </View>
-        <MaterialCommunityIcons
-          name="chevron-right"
-          size={24}
-          color={theme.colors.onPrimary}
-        />
-      </TouchableOpacity>
 
-      {/* Actions: share, invite, logout, delete */}
-      <Surface
-        style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}
-        elevation={theme.dark ? 0 : 1}
-      >
-        <List.Item
-          title="Share Profile"
-          titleStyle={{ color: theme.colors.onSurface }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="share-variant"
-                size={20}
-                color={theme.colors.onSurface}
+          <List.Item
+            title="Email"
+            description={user?.email}
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="email-outline"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+          />
+          <Divider />
+
+          <List.Item
+            title="Phone"
+            description={user?.phone || "Add phone number"}
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="phone-outline"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+          />
+          <Divider />
+
+          <List.Item
+            title="Account Type"
+            description={user?.is_dealer ? "Dealer" : "Individual"}
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="id-card"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+          />
+          <Divider />
+
+          <List.Item
+            title="Password"
+            description="Change your password"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="lock-outline"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+          />
+        </Surface>
+
+        {/* Preferences */}
+        <Surface
+          style={[
+            styles.sectionCard,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          elevation={theme.dark ? 0 : 1}
+        >
+          <Text
+            style={[
+              styles.sectionHeaderLabel,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            Preferences
+          </Text>
+
+          {/* Push Notifications Section */}
+          <ExpandableSection
+            title="Push Notifications"
+            description={pushNotifications ? "On" : "Off"}
+            icon="bell-outline"
+            expanded={expandedSections.notifications}
+            onToggle={() => toggleSection("notifications")}
+          >
+            <View style={styles.switchOptionsContainer}>
+              <EnhancedSwitchOption
+                label="Enable Push Notifications"
+                description="Receive notifications for important updates"
+                value={pushNotifications}
+                onToggle={setPushNotifications}
+              />
+              <EnhancedSwitchOption
+                label="New Messages"
+                description="Get notified when you receive new messages"
+                value={pushNotifications}
+                onToggle={setPushNotifications}
+              />
+              <EnhancedSwitchOption
+                label="Listing Updates"
+                description="Notifications about your car listings"
+                value={pushNotifications}
+                onToggle={setPushNotifications}
+              />
+              <EnhancedSwitchOption
+                label="Promotional Offers"
+                description="Receive offers and discounts"
+                value={pushNotifications}
+                onToggle={setPushNotifications}
               />
             </View>
-          )}
-          onPress={() => {
-            Alert.alert(
-              "Share Profile",
-              "Profile sharing feature would open here"
-            );
-          }}
-        />
-        <Divider />
+          </ExpandableSection>
 
-        <List.Item
-          title="Invite Friends"
-          titleStyle={{ color: theme.colors.onSurface }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="account-plus-outline"
-                size={20}
-                color={theme.colors.onSurface}
+          <Divider style={styles.sectionDivider} />
+
+          {/* Theme Section */}
+          <ExpandableSection
+            title="Theme"
+            description={
+              themeMode === "light"
+                ? "Light"
+                : themeMode === "dark"
+                  ? "Dark"
+                  : "System"
+            }
+            icon="theme-light-dark"
+            expanded={expandedSections.theme}
+            onToggle={() => toggleSection("theme")}
+          >
+            <View style={styles.radioOptionsContainer}>
+              <EnhancedRadioOption
+                value="light"
+                label="Light"
+                description="Bright theme optimized for daytime use"
+                selected={themeMode === "light"}
+                onSelect={() => setThemeMode("light")}
+              />
+              <EnhancedRadioOption
+                value="dark"
+                label="Dark"
+                description="Dark theme for better night viewing"
+                selected={themeMode === "dark"}
+                onSelect={() => setThemeMode("dark")}
+              />
+              <EnhancedRadioOption
+                value="system"
+                label="System Default"
+                description="Automatically match your device settings"
+                selected={themeMode === "system"}
+                onSelect={() => setThemeMode("system")}
               />
             </View>
-          )}
-          onPress={() => {
-            Alert.alert("Invite Friends", "Invite feature would open here");
-          }}
-        />
-        <Divider />
+          </ExpandableSection>
 
-        <List.Item
-          title="Log Out"
-          titleStyle={{ color: theme.colors.onSurface }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="logout"
-                size={20}
-                color={theme.colors.onSurface}
+          <Divider style={styles.sectionDivider} />
+
+          {/* Language Section */}
+          <ExpandableSection
+            title="Language"
+            description={selectedLanguage === "english" ? "English" : "አማርኛ"}
+            icon="translate"
+            expanded={expandedSections.language}
+            onToggle={() => toggleSection("language")}
+          >
+            <View style={styles.radioOptionsContainer}>
+              <EnhancedRadioOption
+                value="english"
+                label="English"
+                description="English language interface"
+                selected={selectedLanguage === "english"}
+                onSelect={() => setSelectedLanguage("english")}
+              />
+              <EnhancedRadioOption
+                value="amharic"
+                label="አማርኛ (Amharic)"
+                description="አማርኛ ቋንቋ በይነገጽ"
+                selected={selectedLanguage === "amharic"}
+                onSelect={() => setSelectedLanguage("amharic")}
               />
             </View>
-          )}
-          onPress={handleLogout}
-        />
-        <Divider />
+          </ExpandableSection>
 
-        <List.Item
-          title="Delete Account"
-          titleStyle={{ color: theme.colors.onSurface }}
-          left={() => (
-            <View
-              style={[
-                styles.itemIconWrap,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="delete-outline"
-                size={20}
-                color={theme.colors.onSurface}
+          <Divider style={styles.sectionDivider} />
+
+          {/* Currency Section */}
+          <ExpandableSection
+            title="Currency"
+            description={selectedCurrency === "ETB" ? "ETB (Birr)" : "USD"}
+            icon="currency-usd"
+            expanded={expandedSections.currency}
+            onToggle={() => toggleSection("currency")}
+          >
+            <View style={styles.radioOptionsContainer}>
+              <EnhancedRadioOption
+                value="ETB"
+                label="ETB - Ethiopian Birr"
+                description="ብር - Local currency for Ethiopian market"
+                selected={selectedCurrency === "ETB"}
+                onSelect={() => setSelectedCurrency("ETB")}
+              />
+              <EnhancedRadioOption
+                value="USD"
+                label="USD - US Dollar"
+                description="$ - International currency for global transactions"
+                selected={selectedCurrency === "USD"}
+                onSelect={() => setSelectedCurrency("USD")}
               />
             </View>
-          )}
+          </ExpandableSection>
+        </Surface>
+
+        {/* Safety & privacy */}
+        <Surface
+          style={[
+            styles.sectionCard,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          elevation={theme.dark ? 0 : 1}
+        >
+          <Text
+            style={[
+              styles.sectionHeaderLabel,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            Safety & Privacy
+          </Text>
+
+          {/* My Posts - navigate directly */}
+          <List.Item
+            title="My Posts"
+            description="View your car listings"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="car-multiple"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            right={() => (
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={theme.colors.outline}
+              />
+            )}
+            onPress={() => router.push("/my-posts")}
+          />
+
+          <Divider style={styles.sectionDivider} />
+
+          {/* Phone Visibility Section */}
+          <ExpandableSection
+            title="Show Phone Number"
+            description={showPhoneNumber ? "Everyone" : "Only Contacts"}
+            icon="eye-outline"
+            expanded={expandedSections.phoneVisibility}
+            onToggle={() => toggleSection("phoneVisibility")}
+          >
+            <View style={styles.radioOptionsContainer}>
+              <EnhancedRadioOption
+                value="everyone"
+                label="Everyone"
+                description="All users can see your phone number for quick contact"
+                selected={showPhoneNumber}
+                onSelect={() => setShowPhoneNumber(true)}
+              />
+              <EnhancedRadioOption
+                value="contacts"
+                label="Only Contacts"
+                description="Only people you've connected with can see your number"
+                selected={!showPhoneNumber}
+                onSelect={() => setShowPhoneNumber(false)}
+              />
+            </View>
+          </ExpandableSection>
+
+          <Divider style={styles.sectionDivider} />
+
+          {/* Profile Visibility Section */}
+          <ExpandableSection
+            title="Profile Visibility"
+            description={
+              profileVisibility === "public"
+                ? "Public"
+                : profileVisibility === "friends"
+                  ? "Friends Only"
+                  : "Private"
+            }
+            icon="shield-account-outline"
+            expanded={expandedSections.profileVisibility}
+            onToggle={() => toggleSection("profileVisibility")}
+          >
+            <View style={styles.radioOptionsContainer}>
+              <EnhancedRadioOption
+                value="public"
+                label="Public"
+                description="Anyone can find and view your profile"
+                selected={profileVisibility === "public"}
+                onSelect={() => setProfileVisibility("public")}
+              />
+              <EnhancedRadioOption
+                value="friends"
+                label="Friends Only"
+                description="Only your connections can view your profile"
+                selected={profileVisibility === "friends"}
+                onSelect={() => setProfileVisibility("friends")}
+              />
+              <EnhancedRadioOption
+                value="private"
+                label="Private"
+                description="Your profile is hidden from other users"
+                selected={profileVisibility === "private"}
+                onSelect={() => setProfileVisibility("private")}
+              />
+            </View>
+          </ExpandableSection>
+
+          <Divider style={styles.sectionDivider} />
+
+          {/* Data Usage Section */}
+          <ExpandableSection
+            title="Data Usage"
+            description={
+              dataUsage === "normal"
+                ? "Normal"
+                : dataUsage === "low"
+                  ? "Low"
+                  : "High"
+            }
+            icon="chart-bar"
+            expanded={expandedSections.dataUsage}
+            onToggle={() => toggleSection("dataUsage")}
+          >
+            <View style={styles.radioOptionsContainer}>
+              <EnhancedRadioOption
+                value="low"
+                label="Low (Save Data)"
+                description="Reduced image quality to minimize data usage"
+                selected={dataUsage === "low"}
+                onSelect={() => setDataUsage("low")}
+              />
+              <EnhancedRadioOption
+                value="normal"
+                label="Normal (Balanced)"
+                description="Standard quality for everyday use"
+                selected={dataUsage === "normal"}
+                onSelect={() => setDataUsage("normal")}
+              />
+              <EnhancedRadioOption
+                value="high"
+                label="High (Best Quality)"
+                description="High-resolution images for best viewing experience"
+                selected={dataUsage === "high"}
+                onSelect={() => setDataUsage("high")}
+              />
+            </View>
+          </ExpandableSection>
+        </Surface>
+
+        {/* Help & support */}
+        <Surface
+          style={[
+            styles.sectionCard,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          elevation={theme.dark ? 0 : 1}
+        >
+          <Text
+            style={[
+              styles.sectionHeaderLabel,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            Help & Support
+          </Text>
+
+          <List.Item
+            title="Help Center"
+            description="FAQs and guides"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="lifebuoy"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            right={() => (
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={theme.colors.outline}
+              />
+            )}
+            onPress={() =>
+              Alert.alert(
+                "Not supported",
+                "This feature is currently not supported.",
+                [{ text: "OK" }]
+              )
+            }
+          />
+          <Divider />
+
+          <List.Item
+            title="Contact Support"
+            description="Get in touch with us"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="headset"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            right={() => (
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={theme.colors.outline}
+              />
+            )}
+            onPress={() =>
+              Alert.alert(
+                "Not supported",
+                "This feature is currently not supported.",
+                [{ text: "OK" }]
+              )
+            }
+          />
+          <Divider />
+
+          <List.Item
+            title="About"
+            description="App version and information"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="information-outline"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            right={() => (
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={theme.colors.outline}
+              />
+            )}
+            onPress={() =>
+              Alert.alert(
+                "Not supported",
+                "This feature is currently not supported.",
+                [{ text: "OK" }]
+              )
+            }
+          />
+        </Surface>
+
+        {/* Become Verified Seller */}
+        <TouchableOpacity
+          style={[
+            styles.verifiedCard,
+            { backgroundColor: theme.colors.primary },
+          ]}
           onPress={() =>
-            Alert.alert(
-              "Delete Account",
-              "Are you sure you want to delete your account? This action cannot be undone.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: () => {
-                    Alert.alert(
-                      "Account Deletion",
-                      "Account deletion feature would be implemented here"
-                    );
-                  },
-                },
-              ]
-            )
+            Alert.alert("Coming soon", "This feature is coming soon.")
           }
-        />
-      </Surface>
+        >
+          <View
+            style={[
+              styles.verifiedLeft,
+              {
+                backgroundColor: theme.dark
+                  ? "rgba(255,255,255,0.2)"
+                  : "rgba(255,255,255,0.3)",
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="shield-check"
+              size={26}
+              color={theme.colors.onPrimary}
+            />
+          </View>
+          <View style={styles.verifiedInfo}>
+            <Text
+              style={[styles.verifiedTitle, { color: theme.colors.onPrimary }]}
+            >
+              Become a Verified Seller
+            </Text>
+            <Text
+              style={[
+                styles.verifiedSubtitle,
+                { color: theme.colors.onPrimary, opacity: 0.9 },
+              ]}
+            >
+              Get trusted badges & more visibility
+            </Text>
+          </View>
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={24}
+            color={theme.colors.onPrimary}
+          />
+        </TouchableOpacity>
 
-      {/* Spacing at bottom */}
-      <View style={styles.bottomSpacing} />
-    </ScrollView>
+        {/* Actions: share, invite, logout, delete */}
+        <Surface
+          style={[
+            styles.sectionCard,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          elevation={theme.dark ? 0 : 1}
+        >
+          <List.Item
+            title="Share Profile"
+            titleStyle={{ color: theme.colors.onSurface }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="share-variant"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            onPress={() => {
+              Alert.alert(
+                "Share Profile",
+                "Profile sharing feature would open here"
+              );
+            }}
+          />
+          <Divider />
+
+          <List.Item
+            title="Invite Friends"
+            titleStyle={{ color: theme.colors.onSurface }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="account-plus-outline"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            onPress={() => {
+              Alert.alert("Invite Friends", "Invite feature would open here");
+            }}
+          />
+          <Divider />
+
+          <List.Item
+            title="Log Out"
+            titleStyle={{ color: theme.colors.onSurface }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="logout"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            onPress={handleLogout}
+          />
+          <Divider />
+
+          <List.Item
+            title="Delete Account"
+            titleStyle={{ color: theme.colors.onSurface }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="delete-outline"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+            onPress={() =>
+              Alert.alert(
+                "Delete Account",
+                "Are you sure you want to delete your account? This action cannot be undone.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => {
+                      Alert.alert(
+                        "Account Deletion",
+                        "Account deletion feature would be implemented here"
+                      );
+                    },
+                  },
+                ]
+              )
+            }
+          />
+        </Surface>
+
+        {/* Spacing at bottom */}
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
+    </Screen>
   );
 };
 
@@ -1697,7 +1724,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: Platform.OS === "ios" ? 34 : 24,
-    maxHeight: height * 0.8,
+    maxHeight: getDynamicHeight(600, 700, 800),
   },
   bottomSheetHandle: {
     alignItems: "center",

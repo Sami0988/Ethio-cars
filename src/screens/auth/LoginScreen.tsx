@@ -3,7 +3,6 @@ import { useFormik } from "formik";
 import React, { useEffect, useState } from "react";
 import {
   Animated,
-  Dimensions,
   Easing,
   KeyboardAvoidingView,
   Platform,
@@ -24,9 +23,13 @@ import {
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useAuthStore } from "../../features/auth/auth.store";
+import {
+  commonFontSizes,
+  commonSpacing,
+  getDynamicWidth,
+  getSpacing,
+} from "../../utils/responsive";
 import { LoginFormData, loginSchema } from "../../utils/validation";
-
-const { width } = Dimensions.get("window");
 
 const LoginScreen: React.FC = () => {
   const router = useRouter();
@@ -350,23 +353,23 @@ const styles = StyleSheet.create({
   },
   backgroundCircle: {
     position: "absolute",
-    width: width * 1.5,
-    height: width * 1.5,
-    borderRadius: width * 0.75,
+    width: getDynamicWidth(280, 350, 420),
+    height: getDynamicWidth(280, 350, 420),
+    borderRadius: getDynamicWidth(210, 262, 315),
     backgroundColor: "#FEE2E2",
-    top: -width * 0.5,
-    left: -width * 0.25,
+    top: getDynamicWidth(-140, -175, -210),
+    left: getDynamicWidth(-70, -87, -105),
     opacity: 0.3,
   },
   backgroundCircle2: {
     position: "absolute",
-    width: width * 1.2,
-    height: width * 1.2,
-    borderRadius: width * 0.6,
-    backgroundColor: "#DBEAFE",
-    top: -width * 0.3,
-    right: -width * 0.3,
-    opacity: 0.3,
+    width: getDynamicWidth(200, 250, 300),
+    height: getDynamicWidth(200, 250, 300),
+    borderRadius: getDynamicWidth(100, 125, 150),
+    backgroundColor: "#E0E7FF",
+    top: getDynamicWidth(-100, -125, -150),
+    left: getDynamicWidth(-50, -62, -75),
+    opacity: 0.2,
   },
   content: {
     flex: 1,
@@ -410,35 +413,37 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     overflow: "hidden",
-    marginBottom: 24,
+    marginBottom: commonSpacing.card,
+    marginHorizontal: commonSpacing.container,
   },
   cardTitle: {
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: commonSpacing.medium,
     fontWeight: "600",
     color: "#374151",
+    fontSize: commonFontSizes.large,
   },
   input: {
-    marginBottom: 8,
+    marginBottom: commonSpacing.small,
     backgroundColor: "#fff",
   },
   forgotButton: {
     alignSelf: "flex-end",
-    marginTop: 4,
-    marginBottom: 20,
+    marginTop: commonSpacing.small,
+    marginBottom: commonSpacing.medium,
   },
   loginButton: {
     borderRadius: 12,
-    paddingVertical: 6,
+    paddingVertical: getSpacing(4, 6, 8),
     elevation: 2,
   },
   buttonContent: {
-    paddingVertical: 8,
+    paddingVertical: getSpacing(6, 8, 10),
   },
   dividerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 24,
+    marginVertical: commonSpacing.medium,
   },
   divider: {
     flex: 1,
@@ -452,8 +457,8 @@ const styles = StyleSheet.create({
   },
   socialContainer: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
+    gap: commonSpacing.small,
+    marginBottom: commonSpacing.card,
   },
   socialButton: {
     flex: 1,
@@ -461,34 +466,35 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   socialButtonContent: {
-    paddingVertical: 6,
+    paddingVertical: getSpacing(4, 6, 8),
   },
   registerContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: commonSpacing.small,
   },
   registerButton: {
-    marginLeft: 4,
+    marginLeft: commonSpacing.small,
   },
   featuresSurface: {
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    padding: commonSpacing.container,
+    marginBottom: commonSpacing.card,
     backgroundColor: "#FFFFFF",
   },
   featuresTitle: {
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: commonSpacing.medium,
     fontWeight: "600",
     color: "#374151",
+    fontSize: commonFontSizes.large,
   },
   featuresGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    gap: 16,
+    gap: commonSpacing.medium,
   },
   featureItem: {
     alignItems: "center",

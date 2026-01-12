@@ -2,10 +2,12 @@ import { Tabs } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 export default function TabLayout() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -80,8 +82,8 @@ export default function TabLayout() {
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
-          height: 75,
-          paddingBottom: 12,
+          height: 75 + insets.bottom,
+          paddingBottom: 12 + insets.bottom,
           paddingTop: 10,
           paddingHorizontal: 10,
         },

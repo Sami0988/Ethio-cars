@@ -1,11 +1,12 @@
 import React from "react";
 import { Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const PRIMARY = "#dc2828";
 
 export const SplashScreen: React.FC = () => {
   return (
-    <View style={{ flex: 1, backgroundColor: "#f8f6f6" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8f6f6" }}>
       {/* decorative gradient top */}
       <View
         style={{
@@ -134,6 +135,6 @@ export const SplashScreen: React.FC = () => {
           <Text style={{ fontSize: 16, color: "#e2e8f0" }}>🛡️</Text>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };

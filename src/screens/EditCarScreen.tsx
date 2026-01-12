@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -22,8 +21,7 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useUpdateCar } from "../features/cars/car.hooks";
 import { useImagePicker } from "../hooks/useImagePicker";
-
-const { width } = Dimensions.get("window");
+import { getFontSize, getSpacing } from "../utils/responsive";
 
 interface EditCarScreenProps {}
 
@@ -562,40 +560,43 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: getSpacing(12, 16, 20),
+    paddingVertical: getSpacing(6, 8, 10),
     elevation: 2,
     zIndex: 100,
   },
   headerTitle: {
     flex: 1,
     alignItems: "center",
-  },
-  placeholder: {
-    width: 40,
-  },
-  title: {
-    fontSize: 18,
+    fontSize: getFontSize(16, 18, 20),
     fontWeight: "bold",
     fontFamily: "System",
+  },
+  title: {
+    fontSize: getFontSize(16, 18, 20),
+    fontWeight: "bold",
+    fontFamily: "System",
+  },
+  placeholder: {
+    width: getSpacing(32, 40, 48),
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 120,
+    padding: getSpacing(12, 16, 20),
+    paddingBottom: getSpacing(100, 120, 140),
   },
   card: {
-    marginBottom: 16,
-    padding: 20,
+    marginBottom: getSpacing(12, 16, 20),
+    padding: getSpacing(16, 20, 24),
     borderRadius: 16,
     elevation: 2,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: getFontSize(16, 18, 20),
     fontWeight: "bold",
-    marginBottom: 16,
+    marginBottom: getSpacing(12, 16, 20),
     fontFamily: "System",
   },
   formGroup: {

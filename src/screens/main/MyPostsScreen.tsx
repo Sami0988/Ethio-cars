@@ -13,6 +13,7 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useCarListings } from "../../features/cars/car.hooks";
 import { CarListing } from "../../features/cars/car.types";
+import { getFontSize, getSpacing } from "@/src/utils/responsive";
 
 const MyPostsScreen: React.FC = () => {
   const theme = useTheme();
@@ -226,22 +227,22 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    padding: getSpacing(12, 16, 20),
   },
   title: {
-    fontSize: 20,
+    fontSize: getFontSize(18, 20, 22),
     fontWeight: "bold",
     flex: 1,
     textAlign: "center",
   },
   headerSpacer: {
-    width: 48,
+    width: getSpacing(40, 48, 56),
   },
   filtersContainer: {
     flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 8,
+    paddingHorizontal: getSpacing(12, 16, 20),
+    paddingVertical: getSpacing(12, 16, 20),
+    gap: getSpacing(6, 8, 10),
   },
   filterChip: {
     backgroundColor: "#F3F4F6",
@@ -253,29 +254,29 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   listContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
+    paddingHorizontal: getSpacing(12, 16, 20),
+    paddingBottom: getSpacing(80, 100, 120),
   },
   listingCard: {
-    marginBottom: 16,
+    marginBottom: getSpacing(12, 16, 20),
     borderRadius: 12,
   },
   listingHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginBottom: getSpacing(8, 12, 16),
   },
   listingInfo: {
     flex: 1,
   },
   carTitle: {
-    fontSize: 18,
+    fontSize: getFontSize(16, 18, 20),
     fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: getSpacing(3, 4, 6),
   },
   listingId: {
-    fontSize: 12,
+    fontSize: getFontSize(10, 12, 14),
     color: "#6B7280",
   },
   statusContainer: {
@@ -286,26 +287,26 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: getFontSize(10, 12, 14),
     fontWeight: "500",
   },
   listingDetails: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: getSpacing(12, 16, 20),
   },
   detailItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: getSpacing(3, 4, 6),
   },
   detailText: {
-    fontSize: 14,
+    fontSize: getFontSize(12, 14, 16),
     color: "#6B7280",
   },
   listingActions: {
     flexDirection: "row",
-    gap: 8,
+    gap: getSpacing(6, 8, 10),
   },
   actionButton: {
     flex: 1,

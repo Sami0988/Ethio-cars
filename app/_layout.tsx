@@ -3,9 +3,12 @@ import { Redirect, Stack } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { ThemeProvider } from "../src/components/providers/ThemeProvider";
 import { useAuthStore } from "../src/features/auth/auth.store";
+import { useThemeStore } from "../src/features/theme/theme.store";
 import { SplashScreen as EthioSplash } from "../src/screens/SplashScreen";
+import "./safeAreaTrace";
 
 type InitialRoute = "/onboarding" | "/(auth)/login" | "/(tabs)";
 
@@ -26,6 +29,24 @@ const webStorage = {
     }
     return await SecureStore.setItem(key, value);
   },
+};
+
+// Themed wrapper component
+const ThemedSafeArea = ({ children }: { children: React.ReactNode }) => {
+  const { isDarkMode } = useThemeStore();
+  const backgroundColor = isDarkMode ? "#121212" : "#FFFFFF";
+
+  return (
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor,
+      }}
+      edges={["top", "left", "right"]}
+    >
+      {children}
+    </SafeAreaView>
+  );
 };
 
 export default function RootLayout() {
@@ -59,16 +80,24 @@ export default function RootLayout() {
 
   // While deciding, show splash once
   if (loading || !initialRoute) {
-    return <EthioSplash />;
+    return (
+      <SafeAreaProvider>
+        <EthioSplash />
+      </SafeAreaProvider>
+    );
   }
 
   // After decision, render app stack and perform a single redirect
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-        <Redirect href={initialRoute} />
-      </ThemeProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <ThemedSafeArea>
+            <Stack screenOptions={{ headerShown: false }} />
+            <Redirect href={initialRoute} />
+          </ThemedSafeArea>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }

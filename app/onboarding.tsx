@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useRef, useState } from "react";
@@ -11,7 +12,10 @@ import {
   Text,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("window");
 
@@ -86,6 +90,7 @@ export default function OnboardingScreen() {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const ref = useRef<FlatList>(null);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const updateCurrentSlideIndex = (e: any) => {
     const contentOffsetX = e.nativeEvent.contentOffset.x;
@@ -135,70 +140,82 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Skip button */}
-      <Pressable style={styles.skipButton} onPress={skip}>
-        <Text style={styles.skipText}>Skip</Text>
-      </Pressable>
-
-      {/* Slides */}
-      <FlatList
-        ref={ref}
-        data={slides}
-        renderItem={({ item }) => <Slide item={item} />}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        pagingEnabled
-        bounces={false}
-        onMomentumScrollEnd={updateCurrentSlideIndex}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.flatListContent}
-      />
-
-      {/* Bottom controls */}
-      <View style={styles.bottomContainer}>
-        <Pagination />
-
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+      <View style={styles.container}>
+        {/* Skip button */}
         <Pressable
-          onPress={goToNextSlide}
-          style={({ pressed }) => [
-            styles.nextButton,
-            pressed && styles.nextButtonPressed,
-          ]}
+          style={[styles.skipButton, { top: insets.top + 12 }]}
+          onPress={skip}
         >
-          <LinearGradient
-            colors={["#5A67D8", "#4C51BF"]}
-            style={styles.buttonGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Text style={styles.buttonText}>
-              {currentSlideIndex === slides.length - 1 ? "Get Started" : "Next"}
-            </Text>
-            {currentSlideIndex < slides.length - 1 && (
-              <Text style={styles.buttonArrow}>→</Text>
-            )}
-          </LinearGradient>
+          <Text style={styles.skipText}>Skip</Text>
         </Pressable>
 
-        {/* Progress indicator */}
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>
-            {currentSlideIndex + 1} / {slides.length}
-          </Text>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${((currentSlideIndex + 1) / slides.length) * 100}%`,
-                },
-              ]}
-            />
+        {/* Slides */}
+        <FlatList
+          ref={ref}
+          data={slides}
+          renderItem={({ item }) => <Slide item={item} />}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          pagingEnabled
+          bounces={false}
+          onMomentumScrollEnd={updateCurrentSlideIndex}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.flatListContent}
+        />
+
+        {/* Bottom controls */}
+        <View
+          style={[
+            styles.bottomContainer,
+            { paddingBottom: 20 + insets.bottom },
+          ]}
+        >
+          <Pagination />
+
+          <Pressable
+            onPress={goToNextSlide}
+            style={({ pressed }) => [
+              styles.nextButton,
+              pressed && styles.nextButtonPressed,
+            ]}
+          >
+            <LinearGradient
+              colors={["#5A67D8", "#4C51BF"]}
+              style={styles.buttonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.buttonText}>
+                {currentSlideIndex === slides.length - 1
+                  ? "Get Started"
+                  : "Next"}
+              </Text>
+              {currentSlideIndex < slides.length - 1 && (
+                <Text style={styles.buttonArrow}>→</Text>
+              )}
+            </LinearGradient>
+          </Pressable>
+
+          {/* Progress indicator */}
+          <View style={styles.progressContainer}>
+            <Text style={styles.progressText}>
+              {currentSlideIndex + 1} / {slides.length}
+            </Text>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${((currentSlideIndex + 1) / slides.length) * 100}%`,
+                  },
+                ]}
+              />
+            </View>
           </View>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

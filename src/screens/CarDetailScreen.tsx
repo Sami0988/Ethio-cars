@@ -26,7 +26,25 @@ import { customColors } from "../constants/colors";
 import { useDeleteCar, useUpdateCar } from "../features/cars/car.hooks";
 import { useThemeStore } from "../features/theme/theme.store";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
+
+// Responsive dimensions
+const isSmallScreen = width < 375;
+const isMediumScreen = width >= 375 && width < 768;
+const isLargeScreen = width >= 768;
+
+// Dynamic spacing based on screen size
+const getSpacing = (small: number, medium: number, large: number) => {
+  if (isSmallScreen) return small;
+  if (isMediumScreen) return medium;
+  return large;
+};
+
+const getFontSize = (small: number, medium: number, large: number) => {
+  if (isSmallScreen) return small;
+  if (isMediumScreen) return medium;
+  return large;
+};
 
 interface CarDetail {
   listing_id: number;
@@ -692,8 +710,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingHorizontal: getSpacing(12, 16, 20),
+    paddingVertical: getSpacing(6, 8, 10),
     elevation: 2,
     zIndex: 100,
   },
@@ -701,10 +719,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     textAlign: "center",
-    fontSize: 16,
+    fontSize: getFontSize(14, 16, 18),
     fontWeight: "bold",
     fontFamily: "System",
-    margin: 30,
+    margin: getSpacing(20, 25, 30),
     alignItems: "center",
   },
   headerActions: {
@@ -718,7 +736,7 @@ const styles = StyleSheet.create({
   },
   imageGallery: {
     position: "relative",
-    height: 250,
+    height: getSpacing(200, 250, 300),
   },
   mainImage: {
     width: "100%",
@@ -761,8 +779,8 @@ const styles = StyleSheet.create({
     right: 16,
   },
   card: {
-    margin: 16,
-    padding: 20,
+    margin: getSpacing(12, 16, 20),
+    padding: getSpacing(16, 20, 24),
     borderRadius: 16,
     elevation: 2,
   },
@@ -776,9 +794,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   carTitle: {
-    fontSize: 24,
+    fontSize: getFontSize(20, 24, 28),
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: getSpacing(6, 8, 10),
     fontFamily: "System",
   },
   verifiedRow: {
@@ -804,7 +822,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   price: {
-    fontSize: 28,
+    fontSize: getFontSize(24, 28, 32),
     fontWeight: "bold",
     fontFamily: "System",
   },
@@ -830,9 +848,9 @@ const styles = StyleSheet.create({
     fontFamily: "System",
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: getFontSize(16, 18, 20),
     fontWeight: "bold",
-    marginBottom: 12,
+    marginBottom: getSpacing(10, 12, 14),
     fontFamily: "System",
   },
   description: {
