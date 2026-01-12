@@ -124,13 +124,13 @@ export interface CarDetail extends CarListing {
 // ========== REQUEST/PAYLOAD INTERFACES ==========
 export interface CreateCarRequest {
   make_id: number;
-  model_id: number;
+  model_id: string | number; // Accept both string and number for flexibility
   year: number;
   price: number;
   mileage: number;
   fuel_type: string;
   transmission: string;
-  body_type: string;
+  body_type?: string;
   drive_type?: string;
   condition: string;
   negotiable?: boolean;
@@ -145,7 +145,7 @@ export interface CreateCarRequest {
   town_id?: number;
   features?: number[];
   images?: Array<{
-    data: string; // base64 or URL
+    data: string;
     type?: "exterior" | "interior" | "damage" | "document" | "other";
     is_primary?: boolean;
   }>;

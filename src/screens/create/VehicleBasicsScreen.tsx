@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   Dimensions,
   Modal,
@@ -12,8 +14,9 @@ import {
   View,
 } from "react-native";
 import { Button, Card, TextInput, useTheme } from "react-native-paper";
-import { useCarMakes } from "../features/cars/car.hooks";
-import { VehicleData } from "../types/vehicle";
+import { useAuthStore } from "../../features/auth/auth.store";
+import { useCarMakes } from "../../features/cars/car.hooks";
+import { VehicleData } from "../../types/vehicle";
 
 interface VehicleBasicsScreenProps {
   onContinue?: () => void;
@@ -32,18 +35,31 @@ export default function VehicleBasicsScreen({
   const { width } = Dimensions.get("window");
   const styles = getDynamicStyles(theme, width);
 
+  // Check authentication status
+  const isAuthenticated = useAuthStore((state: any) => state.isAuthenticated);
+  const user = useAuthStore((state: any) => state.user);
+
   const [formData, setFormData] = useState({
+    make_id: vehicleData?.make_id || undefined,
+    model_id: vehicleData?.model_id || "",
     make: vehicleData?.make || "",
     model: vehicleData?.model || "",
     year: vehicleData?.year || "",
     mileage: vehicleData?.mileage || "",
     condition:
       vehicleData?.condition ||
-      ("Used" as "New" | "Used" | "Slightly Used" | "Damaged"),
+      ("Good" as "New" | "Like New" | "Excellent" | "Good" | "Fair" | "Poor"),
     color: vehicleData?.color || "",
     doors: vehicleData?.doors?.toString() || "",
     seats: vehicleData?.seats?.toString() || "",
   });
+
+  const [selectedMakeId, setSelectedMakeId] = useState<number | undefined>(
+    vehicleData?.make_id
+  );
+  const [selectedModelId, setSelectedModelId] = useState<string>(
+    vehicleData?.model_id || ""
+  );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showMakeModal, setShowMakeModal] = useState(false);
@@ -56,6 +72,71 @@ export default function VehicleBasicsScreen({
   // Animated value for spinner rotation
   const spinValue = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Check if user is authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        "Authentication Required",
+        "Please sign in first to create a car listing.",
+        [
+          {
+            text: "Sign In",
+            onPress: () => router.replace("/(auth)/login"),
+            style: "default",
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+        ]
+      );
+    }
+  }, [isAuthenticated, router]);
+
+  // If not authenticated, show a message instead of the form
+  if (!isAuthenticated) {
+    return (
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <StatusBar
+          barStyle={theme.dark ? "light-content" : "dark-content"}
+          backgroundColor={theme.colors.background}
+        />
+        <View style={styles.authRequiredContainer}>
+          <Ionicons name="lock-closed" size={80} color={theme.colors.primary} />
+          <Text
+            style={[
+              styles.authRequiredTitle,
+              { color: theme.colors.onBackground },
+            ]}
+          >
+            Please Sign In First
+          </Text>
+          <Text
+            style={[
+              styles.authRequiredMessage,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            You need to be signed in to create a car listing.
+          </Text>
+          <Button
+            mode="contained"
+            onPress={() => router.replace("/(auth)/login")}
+            style={[
+              styles.signInButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            labelStyle={{ color: theme.colors.onPrimary }}
+          >
+            Sign In
+          </Button>
+        </View>
+      </View>
+    );
+  }
 
   // Create animations
   useEffect(() => {
@@ -97,10 +178,19 @@ export default function VehicleBasicsScreen({
     refetchMakes();
   };
 
+  const handleOpenModelModal = () => {
+    if (formData.make) {
+      setShowModelModal(true);
+    }
+  };
+
   // Extract makes from API response
   const makes =
     makesResponse?.success && Array.isArray(makesResponse.data)
-      ? makesResponse.data.map((make: any) => make.name)
+      ? makesResponse.data.map((make: any) => ({
+          id: make.make_id,
+          name: make.name,
+        }))
       : [];
 
   // Debug: Log the actual response structure
@@ -125,7 +215,7 @@ export default function VehicleBasicsScreen({
     "Model Y",
   ];
 
-  const conditions = ["New", "Used", "Slightly Used", "Damaged"];
+  const conditions = ["New", "Like New", "Excellent", "Good", "Fair", "Poor"];
 
   // Generate years from 1886 to 2026
   const years = Array.from({ length: 2026 - 1886 + 1 }, (_, i) =>
@@ -151,6 +241,8 @@ export default function VehicleBasicsScreen({
 
     if (updateVehicleData) {
       updateVehicleData({
+        make_id: selectedMakeId,
+        model_id: selectedModelId || formData.model,
         make: formData.make,
         model: formData.model,
         year: formData.year,
@@ -180,7 +272,7 @@ export default function VehicleBasicsScreen({
     visible: boolean,
     onClose: () => void,
     title: string,
-    items: string[],
+    items: string[] | { id: any; name: any }[],
     selectedValue: string,
     onSelect: (value: string) => void,
     isLoading?: boolean,
@@ -313,65 +405,85 @@ export default function VehicleBasicsScreen({
               style={styles.modalContent}
               showsVerticalScrollIndicator={false}
             >
-              {items.map((item) => (
-                <TouchableOpacity
-                  key={item}
-                  style={[
-                    styles.modalItem,
-                    {
-                      backgroundColor: theme.colors.surface,
-                      borderLeftWidth: selectedValue === item ? 4 : 0,
-                      borderLeftColor:
-                        selectedValue === item
-                          ? theme.colors.primary
-                          : "transparent",
-                    },
-                  ]}
-                  onPress={() => {
-                    onSelect(item);
-                    onClose();
-                  }}
-                >
-                  <View style={styles.modalItemContent}>
-                    {selectedValue === item ? (
+              {items.map((item) => {
+                const itemValue = typeof item === "string" ? item : item.name;
+                const itemId = typeof item === "string" ? item : item.id;
+
+                return (
+                  <TouchableOpacity
+                    key={itemId}
+                    style={[
+                      styles.modalItem,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        borderLeftWidth: selectedValue === itemValue ? 4 : 0,
+                        borderLeftColor:
+                          selectedValue === itemValue
+                            ? theme.colors.primary
+                            : "transparent",
+                      },
+                    ]}
+                    onPress={() => {
+                      if (isMakeModal && typeof item !== "string") {
+                        // For make modal, store both ID and name
+                        setSelectedMakeId(item.id);
+                        updateFormData("make", item.name);
+                        updateFormData("make_id", item.id);
+                        // Reset model when make changes
+                        setSelectedModelId("");
+                        updateFormData("model", "");
+                      } else if (!isMakeModal) {
+                        // For model modal, store model ID
+                        setSelectedModelId(itemValue);
+                        onSelect(itemValue);
+                      } else {
+                        onSelect(itemValue);
+                      }
+                      onClose();
+                    }}
+                  >
+                    <View style={styles.modalItemContent}>
+                      {selectedValue === itemValue ? (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={24}
+                          color={theme.colors.primary}
+                        />
+                      ) : (
+                        <Ionicons
+                          name="ellipse-outline"
+                          size={24}
+                          color={theme.colors.outline}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.modalItemText,
+                          {
+                            color:
+                              selectedValue === itemValue
+                                ? theme.colors.primary
+                                : theme.colors.onSurface,
+                            fontFamily:
+                              selectedValue === itemValue ? "System" : "System",
+                            fontWeight:
+                              selectedValue === itemValue ? "600" : "400",
+                          },
+                        ]}
+                      >
+                        {itemValue}
+                      </Text>
+                    </View>
+                    {selectedValue === itemValue && (
                       <Ionicons
-                        name="checkmark-circle"
-                        size={24}
+                        name="chevron-forward"
+                        size={20}
                         color={theme.colors.primary}
                       />
-                    ) : (
-                      <Ionicons
-                        name="ellipse-outline"
-                        size={24}
-                        color={theme.colors.outline}
-                      />
                     )}
-                    <Text
-                      style={[
-                        styles.modalItemText,
-                        {
-                          color:
-                            selectedValue === item
-                              ? theme.colors.primary
-                              : theme.colors.onSurface,
-                          fontFamily:
-                            selectedValue === item ? "System" : "System",
-                          fontWeight: selectedValue === item ? "600" : "400",
-                        },
-                      ]}
-                    >
-                      {item}
-                    </Text>
-                  </View>
-                  {selectedValue === item && (
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color={theme.colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           )}
         </Animated.View>
@@ -1482,6 +1594,32 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       fontSize: 16,
       fontWeight: "500",
       marginTop: 16,
+    },
+    // Authentication required styles
+    authRequiredContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 32,
+      paddingVertical: 60,
+    },
+    authRequiredTitle: {
+      fontSize: 28,
+      fontWeight: "700",
+      textAlign: "center",
+      marginBottom: 16,
+      marginTop: 24,
+    },
+    authRequiredMessage: {
+      fontSize: 16,
+      textAlign: "center",
+      marginBottom: 32,
+      lineHeight: 24,
+    },
+    signInButton: {
+      paddingHorizontal: 32,
+      paddingVertical: 14,
+      borderRadius: 12,
     },
   });
 };

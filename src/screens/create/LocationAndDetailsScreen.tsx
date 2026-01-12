@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Dimensions,
   Modal,
   ScrollView,
   StatusBar,
@@ -10,17 +12,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
-  Animated,
 } from "react-native";
-import {
-  Button,
-  Card,
-  RadioButton,
-  TextInput,
-  useTheme,
-  Chip,
-} from "react-native-paper";
+import { Button, TextInput, useTheme } from "react-native-paper";
 import { useCarLocations } from "../../features/cars/car.hooks";
 import { useLocation } from "../../hooks/useLocation";
 import { VehicleData } from "../../types/vehicle";
@@ -80,6 +73,15 @@ export default function LocationAndDetailsScreen({
   );
   const [selectedCity, setSelectedCity] = useState(
     vehicleData?.location?.city || ""
+  );
+  const [selectedRegionId, setSelectedRegionId] = useState<number | undefined>(
+    vehicleData?.location?.region_id
+  );
+  const [selectedZoneId, setSelectedZoneId] = useState<number | undefined>(
+    vehicleData?.location?.zone_id
+  );
+  const [selectedTownId, setSelectedTownId] = useState<number | undefined>(
+    vehicleData?.location?.town_id
   );
 
   // State for modals
@@ -153,60 +155,68 @@ export default function LocationAndDetailsScreen({
   // Fallback regions
   const fallbackRegions = [
     {
-      id: "addis",
+      region_id: 1,
       name: "Addis Ababa",
-      cities: ["Addis Ababa"],
-      zones: ["City"],
+      region: "አዲስ አበባ", // Amharic name
+      cities: [{ town_id: 1, zone_id: 1, name: "Addis Ababa" }],
+      zones: [{ zone_id: 1, region_id: 1, name: "City" }],
     },
     {
-      id: "oromia",
+      region_id: 2,
       name: "Oromia",
-      cities: ["Adama", "Jimma", "Bishoftu"],
-      zones: ["East", "West", "North"],
+      cities: [
+        { town_id: 2, zone_id: 2, name: "Adama" },
+        { town_id: 3, zone_id: 2, name: "Jimma" },
+        { town_id: 4, zone_id: 2, name: "Bishoftu" },
+      ],
+      zones: [
+        { zone_id: 2, region_id: 2, name: "East" },
+        { zone_id: 3, region_id: 2, name: "West" },
+        { zone_id: 4, region_id: 2, name: "North" },
+      ],
     },
     {
-      id: "amhara",
+      region_id: 3,
       name: "Amhara",
-      cities: ["Bahir Dar", "Gonder", "Dessie"],
-      zones: ["North", "South", "West"],
+      cities: [
+        { town_id: 5, zone_id: 5, name: "Bahir Dar" },
+        { town_id: 6, zone_id: 5, name: "Gonder" },
+        { town_id: 7, zone_id: 5, name: "Dessie" },
+      ],
+      zones: [
+        { zone_id: 5, region_id: 3, name: "North" },
+        { zone_id: 6, region_id: 3, name: "South" },
+        { zone_id: 7, region_id: 3, name: "West" },
+      ],
     },
     {
-      id: "snnpr",
+      region_id: 4,
       name: "Southern Nations",
-      cities: ["Hawassa", "Arba Minch", "Wolaita"],
-      zones: ["Central", "North", "South"],
+      cities: [
+        { town_id: 8, zone_id: 8, name: "Hawassa" },
+        { town_id: 9, zone_id: 8, name: "Arba Minch" },
+        { town_id: 10, zone_id: 8, name: "Wolaita" },
+      ],
+      zones: [
+        { zone_id: 8, region_id: 4, name: "Central" },
+        { zone_id: 9, region_id: 4, name: "North" },
+        { zone_id: 10, region_id: 4, name: "South" },
+      ],
     },
     {
-      id: "tigray",
+      region_id: 5,
       name: "Tigray",
-      cities: ["Mekelle", "Axum", "Adigrat"],
-      zones: ["Central", "Eastern", "Western"],
+      cities: [
+        { town_id: 11, zone_id: 11, name: "Mekelle" },
+        { town_id: 12, zone_id: 11, name: "Axum" },
+        { town_id: 13, zone_id: 11, name: "Adigrat" },
+      ],
+      zones: [
+        { zone_id: 11, region_id: 5, name: "Central" },
+        { zone_id: 12, region_id: 5, name: "East" },
+        { zone_id: 13, region_id: 5, name: "West" },
+      ],
     },
-    {
-      id: "afar",
-      name: "Afar",
-      cities: ["Semera", "Awash", "Logiya"],
-      zones: ["Zone 1", "Zone 2", "Zone 3"],
-    },
-    {
-      id: "somali",
-      name: "Somali",
-      cities: ["Jijiga", "Degehabur", "Kebri Dahar"],
-      zones: ["Fafan", "Jarar", "Shabelle"],
-    },
-    {
-      id: "benishangul",
-      name: "Benishangul-Gumuz",
-      cities: ["Asosa", "Metekel"],
-      zones: ["Asosa", "Metekel"],
-    },
-    {
-      id: "gambela",
-      name: "Gambela",
-      cities: ["Gambela", "Abobo"],
-      zones: ["Anywaa", "Nuer"],
-    },
-    { id: "harari", name: "Harari", cities: ["Harar"], zones: ["Harar City"] },
   ];
 
   // Use API data if available, otherwise use fallback
@@ -220,9 +230,28 @@ export default function LocationAndDetailsScreen({
     return "";
   };
 
+  // Debug logging
+  console.log("Regions from API:", regions.length > 0 ? "YES" : "NO");
+  console.log("Using fallback:", regions.length > 0 ? "NO" : "YES");
+  console.log("Selected region:", selectedRegion);
+  console.log(
+    "Display regions:",
+    displayRegions.map((r) => ({
+      name: getRegionName(r),
+      region_id: r.region_id,
+    }))
+  );
+
   // Get region by name
   const getRegionData = (regionName: string) => {
-    return displayRegions.find((r) => getRegionName(r) === regionName);
+    console.log("Looking for region:", regionName);
+    console.log(
+      "Available regions:",
+      displayRegions.map((r) => getRegionName(r))
+    );
+    const found = displayRegions.find((r) => getRegionName(r) === regionName);
+    console.log("Found region:", found);
+    return found;
   };
 
   // Get zones for selected region
@@ -245,8 +274,12 @@ export default function LocationAndDetailsScreen({
     return [];
   };
 
-  const availableZones = getZonesForSelectedRegion();
-  const availableCities = getCitiesForSelectedRegion();
+  const availableZones = getZonesForSelectedRegion().map(
+    (zone: any) => zone.name
+  );
+  const availableCities = getCitiesForSelectedRegion().map(
+    (city: any) => city.name
+  );
 
   const handleUseLocation = async () => {
     setIsGettingLocation(true);
@@ -268,21 +301,31 @@ export default function LocationAndDetailsScreen({
     const locationData = await getCurrentLocation();
 
     if (locationData) {
+      console.log("GPS location found:", locationData);
       setSelectedRegion(locationData.region || "");
       setSelectedZone(locationData.zone || "");
       setSelectedCity(locationData.city || "");
 
+      // Try to find and set the region ID
+      if (locationData.region) {
+        const regionData = getRegionData(locationData.region);
+        console.log("GPS region data found:", regionData);
+        if (regionData) {
+          setSelectedRegionId(regionData.region_id);
+          console.log("Set GPS region_id to:", regionData.region_id);
+        }
+      }
+
       Alert.alert(
         "Location Found",
-        `Found your location: ${locationData.address}`,
+        `Found your location: ${locationData.region}, ${locationData.city}`,
         [{ text: "OK" }]
       );
     } else if (error) {
-      const isPermissionError =
-        error.includes("permission") || error.includes("denied");
       const isLocationServicesError =
         error.includes("Location services are disabled") ||
         error.includes("Current location is unavailable");
+      const isPermissionError = error.includes("Permission denied");
 
       Alert.alert(
         isLocationServicesError
@@ -306,6 +349,16 @@ export default function LocationAndDetailsScreen({
   };
 
   const handleContinue = () => {
+    // Debug logging
+    console.log("Continue clicked - Location state:", {
+      selectedRegion,
+      selectedZone,
+      selectedCity,
+      selectedRegionId,
+      selectedZoneId,
+      selectedTownId,
+    });
+
     // Validate location
     if (!selectedRegion) {
       Alert.alert(
@@ -331,11 +384,11 @@ export default function LocationAndDetailsScreen({
         region: selectedRegion,
         zone: selectedZone,
         city: selectedCity,
+        address: location.address,
         coordinates:
           location.latitude && location.longitude
             ? { latitude: location.latitude, longitude: location.longitude }
             : null,
-        address: location.address,
       },
       description,
       contactPreference,
@@ -343,14 +396,30 @@ export default function LocationAndDetailsScreen({
     };
 
     console.log("Location & details submitted:", listingData);
+    console.log("Final location IDs being sent:", {
+      region_id: selectedRegionId,
+      zone_id: selectedZoneId,
+      town_id: selectedTownId,
+    });
 
     if (updateVehicleData) {
-      updateVehicleData({
-        location: listingData.location,
+      const locationUpdate = {
+        location: {
+          region: selectedRegion,
+          zone: selectedZone,
+          city: selectedCity,
+          region_id: selectedRegionId,
+          zone_id: selectedZoneId,
+          town_id: selectedTownId,
+          address: listingData.location.address,
+        },
         description: listingData.description,
         contactPreference: listingData.contactPreference,
         availability: listingData.availability,
-      });
+      } as Partial<VehicleData>;
+
+      console.log("Calling updateVehicleData with:", locationUpdate);
+      updateVehicleData(locationUpdate);
     }
 
     if (onContinue) {
@@ -1600,10 +1669,21 @@ export default function LocationAndDetailsScreen({
         "Select Region",
         displayRegions.map((r) => getRegionName(r)).filter(Boolean),
         selectedRegion,
-        (region) => {
-          setSelectedRegion(region);
+        (regionName) => {
+          console.log("Region selected:", regionName);
+          setSelectedRegion(regionName);
           setSelectedZone("");
           setSelectedCity("");
+          // Set the region ID when region is selected
+          const regionData = getRegionData(regionName);
+          console.log("Region data found:", regionData);
+          if (regionData) {
+            // The region object itself has region_id
+            setSelectedRegionId(regionData.region_id);
+            console.log("Set region_id to:", regionData.region_id);
+          } else {
+            console.log("No region data found for:", regionName);
+          }
         },
         isLoadingLocations
       )}
@@ -1614,7 +1694,16 @@ export default function LocationAndDetailsScreen({
         "Select Zone",
         availableZones,
         selectedZone,
-        setSelectedZone,
+        (zoneName) => {
+          setSelectedZone(zoneName);
+          setSelectedCity("");
+          // Find the zone object and set its ID
+          const zones = getZonesForSelectedRegion();
+          const zoneData = zones.find((z: any) => z.name === zoneName);
+          if (zoneData) {
+            setSelectedZoneId(zoneData.zone_id);
+          }
+        },
         !selectedRegion
       )}
 
@@ -1624,7 +1713,15 @@ export default function LocationAndDetailsScreen({
         "Select City",
         availableCities,
         selectedCity,
-        setSelectedCity,
+        (cityName) => {
+          setSelectedCity(cityName);
+          // Find the town object and set its ID
+          const towns = getCitiesForSelectedRegion();
+          const townData = towns.find((t: any) => t.name === cityName);
+          if (townData) {
+            setSelectedTownId(townData.town_id);
+          }
+        },
         !selectedRegion
       )}
     </View>

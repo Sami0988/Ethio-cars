@@ -31,14 +31,18 @@ export default function TechnicalDetailsScreen({
   const styles = getDynamicStyles(theme, width);
 
   const [selectedFuel, setSelectedFuel] = useState(
-    vehicleData?.fuel || "Diesel"
+    vehicleData?.fuel || "Gasoline"
   );
   const [selectedTransmission, setSelectedTransmission] = useState(
-    vehicleData?.transmission || "Manual"
+    vehicleData?.transmission || "Automatic"
   );
-  const [selectedBodyType, setSelectedBodyType] = useState("SUV");
+  const [selectedBodyType, setSelectedBodyType] = useState(
+    vehicleData?.body_type || "Sedan"
+  );
   const [selectedEngine, setSelectedEngine] = useState("1.8L");
-  const [selectedDrive, setSelectedDrive] = useState("FWD");
+  const [selectedDrive, setSelectedDrive] = useState(
+    vehicleData?.drive_type || "FWD"
+  );
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -90,10 +94,22 @@ export default function TechnicalDetailsScreen({
       description: "Electric with gas backup",
     },
     {
-      name: "Other",
-      icon: "ellipsis-horizontal",
-      color: "#6B7280",
-      description: "Alternative fuel types",
+      name: "Hydrogen",
+      icon: "water",
+      color: "#06B6D4",
+      description: "Zero emissions, future technology",
+    },
+    {
+      name: "Natural Gas",
+      icon: "flame",
+      color: "#F97316",
+      description: "Clean burning fuel",
+    },
+    {
+      name: "Flex Fuel",
+      icon: "gas-station",
+      color: "#8B5CF6",
+      description: "Multiple fuel compatibility",
     },
   ];
 
@@ -117,6 +133,12 @@ export default function TechnicalDetailsScreen({
       description: "Smooth, efficient, no gears",
     },
     {
+      name: "Semi-Automatic",
+      icon: "settings",
+      color: "#8B5CF6",
+      description: "Combines automatic and manual control",
+    },
+    {
       name: "Dual-Clutch",
       icon: "git-merge",
       color: "#8B5CF6",
@@ -138,6 +160,12 @@ export default function TechnicalDetailsScreen({
       description: "Spacious, versatile, higher ride",
     },
     {
+      name: "Truck",
+      icon: "car",
+      color: "#6B7280",
+      description: "Powerful, utilitarian, heavy-duty",
+    },
+    {
       name: "Coupe",
       icon: "car-sport",
       color: "#EF4444",
@@ -150,16 +178,22 @@ export default function TechnicalDetailsScreen({
       description: "Compact, practical, good cargo",
     },
     {
+      name: "Van",
+      icon: "car",
+      color: "#6B7280",
+      description: "Cargo space, family-friendly",
+    },
+    {
       name: "Convertible",
       icon: "car",
       color: "#8B5CF6",
       description: "Open top, fun driving",
     },
     {
-      name: "Truck",
+      name: "Wagon",
       icon: "car",
-      color: "#6B7280",
-      description: "Powerful, utilitarian, heavy-duty",
+      color: "#06B6D4",
+      description: "Long roof, extra cargo space",
     },
     {
       name: "Minivan",
@@ -168,10 +202,10 @@ export default function TechnicalDetailsScreen({
       description: "Family-friendly, spacious",
     },
     {
-      name: "Wagon",
-      icon: "car",
-      color: "#06B6D4",
-      description: "Long roof, extra cargo space",
+      name: "Crossover",
+      icon: "car-sport",
+      color: "#10B981",
+      description: "Best of SUV and hatchback",
     },
   ];
 
@@ -241,6 +275,8 @@ export default function TechnicalDetailsScreen({
       updateVehicleData({
         fuel: selectedFuel,
         transmission: selectedTransmission,
+        body_type: selectedBodyType,
+        drive_type: selectedDrive,
       });
     }
 

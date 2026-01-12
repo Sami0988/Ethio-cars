@@ -1,5 +1,7 @@
 // Shared types for the create listing flow
 export interface VehicleData {
+  make_id?: number;
+  model_id?: string;
   make: string;
   model: string;
   year: string;
@@ -12,6 +14,9 @@ export interface VehicleData {
   fuel: string;
   photos: string[];
   location: {
+    region_id?: number;
+    zone_id?: number;
+    town_id?: number;
     region: string;
     zone: string;
     city: string;

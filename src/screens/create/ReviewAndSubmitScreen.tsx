@@ -17,6 +17,58 @@ import { Button, Switch, useTheme } from "react-native-paper";
 import { useCreateCar } from "../../features/cars/car.hooks";
 import { VehicleData } from "../../types/vehicle";
 
+// API Enum values for validation
+const VALID_FUEL_TYPES = [
+  "Gasoline",
+  "Diesel",
+  "Electric",
+  "Hybrid",
+  "Plug-in Hybrid",
+  "Hydrogen",
+  "Natural Gas",
+  "Flex Fuel",
+];
+
+const VALID_TRANSMISSIONS = [
+  "Automatic",
+  "Manual",
+  "CVT",
+  "Semi-Automatic",
+  "Dual-Clutch",
+];
+
+const VALID_BODY_TYPES = [
+  "Sedan",
+  "SUV",
+  "Truck",
+  "Coupe",
+  "Hatchback",
+  "Van",
+  "Convertible",
+  "Wagon",
+  "Minivan",
+  "Crossover",
+];
+
+const VALID_DRIVE_TYPES = ["FWD", "RWD", "AWD", "4WD"];
+
+const VALID_CONDITIONS = [
+  "New",
+  "Like New",
+  "Excellent",
+  "Good",
+  "Fair",
+  "Poor",
+];
+
+const VALID_IMAGE_TYPES = [
+  "exterior",
+  "interior",
+  "damage",
+  "document",
+  "other",
+];
+
 interface ReviewAndSubmitScreenProps {
   onContinue?: () => void;
   onBack?: () => void;
@@ -98,32 +150,104 @@ export default function ReviewAndSubmitScreen({
     setIsPublishing(true);
 
     try {
+      // Validate required fields
+      if (!vehicleData?.make_id || !vehicleData?.model_id) {
+        Alert.alert("Validation Error", "Please select vehicle make and model");
+        return;
+      }
+
+      if (
+        !vehicleData?.year ||
+        parseInt(vehicleData.year) < 1886 ||
+        parseInt(vehicleData.year) > new Date().getFullYear() + 1
+      ) {
+        Alert.alert("Validation Error", "Please select a valid year");
+        return;
+      }
+
+      // Validate enum values
+      const fuelType = vehicleData?.fuel || "Gasoline";
+      const transmission = vehicleData?.transmission || "Automatic";
+      const bodyType = vehicleData?.body_type || "Sedan";
+      const driveType = vehicleData?.drive_type || "FWD";
+      const condition = vehicleData?.condition || "Good";
+
+      if (!VALID_FUEL_TYPES.includes(fuelType)) {
+        Alert.alert("Validation Error", `Invalid fuel type: ${fuelType}`);
+        return;
+      }
+
+      if (!VALID_TRANSMISSIONS.includes(transmission)) {
+        Alert.alert(
+          "Validation Error",
+          `Invalid transmission: ${transmission}`
+        );
+        return;
+      }
+
+      if (!VALID_BODY_TYPES.includes(bodyType)) {
+        Alert.alert("Validation Error", `Invalid body type: ${bodyType}`);
+        return;
+      }
+
+      if (!VALID_DRIVE_TYPES.includes(driveType)) {
+        Alert.alert("Validation Error", `Invalid drive type: ${driveType}`);
+        return;
+      }
+
+      if (!VALID_CONDITIONS.includes(condition)) {
+        Alert.alert("Validation Error", `Invalid condition: ${condition}`);
+        return;
+      }
+
       // Transform vehicle data to API format
       const apiData = {
-        make_id: 1294,
-        model_id: 48,
+        make_id: vehicleData.make_id!,
+        model_id: vehicleData.model || "",
         year: parseInt(vehicleData?.year || "2020"),
         price: parseInt(vehicleData?.price?.replace(/,/g, "") || "0"),
         negotiable: vehicleData?.negotiable || false,
         mileage: parseInt(vehicleData?.mileage?.replace(/,/g, "") || "0"),
-        fuel_type: vehicleData?.fuel || "Gasoline",
-        transmission: vehicleData?.transmission || "Manual",
-        body_type: vehicleData?.body_type || "Sedan",
-        drive_type: vehicleData?.drive_type || "FWD",
-        condition: vehicleData?.condition || "Good",
+        fuel_type: fuelType,
+        transmission: transmission,
+        body_type: bodyType,
+        drive_type: driveType,
+        condition: condition,
         exterior_color: vehicleData?.color || "Silver",
         interior_color: vehicleData?.interior_color || "Black",
         doors: vehicleData?.doors || 4,
         seats: vehicleData?.seats || 5,
         description: vehicleData?.description || "",
-        region_id: 1,
-        features: vehicleData?.features?.slice(0, 5) || [1, 2, 3, 4, 5],
+        region_id: vehicleData?.location?.region_id || undefined,
+        zone_id: vehicleData?.location?.zone_id || undefined,
+        town_id: vehicleData?.location?.town_id || undefined,
+        features: (vehicleData?.features || []).slice(0, 20),
         images:
-          vehicleData?.photos?.slice(0, 4).map((photo, index) => ({
-            data: "base64-encoded-image-data-here...",
-            type: index === 0 ? "exterior" : "interior",
-          })) || [],
+          (vehicleData?.photos || []).slice(0, 10).map((photo, index) => {
+            const imageType:
+              | "exterior"
+              | "interior"
+              | "damage"
+              | "document"
+              | "other" = index === 0 ? "exterior" : "interior";
+
+            if (!VALID_IMAGE_TYPES.includes(imageType)) {
+              console.warn(
+                `Invalid image type: ${imageType}, using 'exterior'`
+              );
+            }
+
+            return {
+              data: photo,
+              type: VALID_IMAGE_TYPES.includes(imageType)
+                ? imageType
+                : "exterior",
+              is_primary: index === 0,
+            };
+          }) || [],
       };
+
+      console.log("API Data being sent:", JSON.stringify(apiData, null, 2));
 
       console.log("Publishing listing with API data:", apiData);
 

@@ -158,7 +158,18 @@ export function useLocation(): UseLocationReturn {
 
         // Try to determine Ethiopian region from geocoded data
         let region = "";
-        let city = firstResult?.city || firstResult?.subregion || "";
+        let city = "";
+
+        // Use the correct properties from geocoded result
+        if (firstResult?.city) {
+          city = firstResult.city;
+        }
+        if (firstResult?.subregion) {
+          city = firstResult.subregion;
+        }
+        if (firstResult?.region) {
+          region = firstResult.region;
+        }
 
         // Simple mapping for Ethiopia (you might want to improve this with more accurate data)
         if (city.toLowerCase().includes("addis")) {
@@ -171,6 +182,28 @@ export function useLocation(): UseLocationReturn {
           region = "Oromia";
         } else if (city.toLowerCase().includes("hawassa")) {
           region = "Southern Nations, Nationalities, and Peoples' Region";
+        } else if (city.toLowerCase().includes("arba minch")) {
+          region = "SNNPR";
+        } else if (city.toLowerCase().includes("sodo")) {
+          region = "Sidama";
+        } else if (city.toLowerCase().includes("dila")) {
+          region = "Somali";
+        } else if (city.toLowerCase().includes("gambela")) {
+          region = "Gambela";
+        } else if (city.toLowerCase().includes("harari")) {
+          region = "Harari";
+        } else if (city.toLowerCase().includes("afar")) {
+          region = "Somali";
+        } else if (city.toLowerCase().includes("benishangul")) {
+          region = "Benishangul-Gumuz";
+        } else if (city.toLowerCase().includes("gambela")) {
+          region = "Gambela";
+        } else if (city.toLowerCase().includes("somali")) {
+          region = "Somali";
+        } else if (city.toLowerCase().includes("tigray")) {
+          region = "Tigray";
+        } else if (city.toLowerCase().includes("afar")) {
+          region = "Somali";
         }
 
         // If we couldn't determine region, use the first Ethiopian region as fallback
@@ -195,7 +228,9 @@ export function useLocation(): UseLocationReturn {
           zone,
           city: city || "Unknown City",
           address: firstResult
-            ? `${firstResult.street || ""}, ${firstResult.city || ""}, ${firstResult.region || ""}`
+            ? `${firstResult.street || ""}, ${firstResult.city || ""}, ${
+                firstResult.region || ""
+              }`
             : "Address not available",
           accuracy: currentLocation.coords.accuracy,
           timestamp: currentLocation.timestamp,

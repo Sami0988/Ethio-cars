@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { useTheme } from "react-native-paper";
-import VehicleBasicsScreen from "../../components/VehicleBasicsScreen";
 import { VehicleData } from "../../types/vehicle";
 import AddPhotosScreen from "./AddPhotosScreen";
 import FeaturesAndExtrasScreen from "./FeaturesAndExtrasScreen";
@@ -9,6 +8,7 @@ import LocationAndDetailsScreen from "./LocationAndDetailsScreen";
 import PricingScreen from "./PricingScreen";
 import ReviewAndSubmitScreen from "./ReviewAndSubmitScreen";
 import TechnicalDetailsScreen from "./TechnicalDetailsScreen";
+import VehicleBasicsScreen from "./VehicleBasicsScreen";
 
 const CreateListingScreen: React.FC = () => {
   const theme = useTheme();
