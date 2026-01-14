@@ -23,6 +23,7 @@ interface CarCardProps {
   onPress?: () => void;
   onCallPress?: () => void;
   onSavePress?: () => void;
+  onMessagePress?: () => void;
 }
 
 const CarCard: React.FC<CarCardProps> = ({
@@ -32,6 +33,7 @@ const CarCard: React.FC<CarCardProps> = ({
   onPress,
   onCallPress,
   onSavePress,
+  onMessagePress,
 }) => {
   const theme = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -393,6 +395,23 @@ const CarCard: React.FC<CarCardProps> = ({
               >
                 Call
               </Button>
+              <Button
+                mode="contained"
+                style={[
+                  styles.callButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+                onPress={onMessagePress}
+                icon="message"
+                compact
+                textColor="#FFFFFF"
+                labelStyle={{
+                  color: "#FFFFFF",
+                  fontWeight: "600",
+                }}
+              >
+                Message
+              </Button>
             </View>
           </View>
         </Card>
@@ -549,6 +568,7 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: "row",
     justifyContent: "center",
+    gap: 8,
   },
   messageButton: {
     flex: 1,
@@ -556,7 +576,7 @@ const styles = StyleSheet.create({
     height: 42,
   },
   callButton: {
-    width: "100%",
+    flex: 1,
     borderRadius: 10,
     height: 42,
   },

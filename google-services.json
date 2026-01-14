@@ -1,0 +1,23 @@
+{
+  "project_info": {
+    "project_number": "871913850490",
+    "project_id": "ethiocars-messaging"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:871913850490:android:1234567890abcdef",
+        "android_client_info": {
+          "package_name": "com.ethiocars.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYT3-sZSEWiCZ7zMH-JYQ7nAjjqzoW_nQ"
+        }
+      ]
+    }
+  ],
+  "configuration_version": "1"
+}

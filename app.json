@@ -19,6 +19,16 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "1615a13a-065e-445c-9664-bb398548fc6b"

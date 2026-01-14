@@ -1,6 +1,7 @@
+import { getFontSize, getSpacing } from "@/src/utils/responsive";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { FlatList, Image, StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -13,7 +14,6 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useCarListings } from "../../features/cars/car.hooks";
 import { CarListing } from "../../features/cars/car.types";
-import { getFontSize, getSpacing } from "@/src/utils/responsive";
 
 const MyPostsScreen: React.FC = () => {
   const theme = useTheme();
@@ -68,14 +68,29 @@ const MyPostsScreen: React.FC = () => {
   const renderListing = ({ item }: { item: CarListing }) => (
     <Card style={styles.listingCard} elevation={2}>
       <Card.Content>
-        <View style={styles.listingHeader}>
-          <View style={styles.listingInfo}>
-            <Text style={styles.carTitle}>
-              {item.year} {item.make} {item.model}
-            </Text>
-            <Text style={styles.listingId}>ID: {item.listing_id}</Text>
-          </View>
-          <View style={styles.statusContainer}>
+        {/* Image Section */}
+        <View style={styles.imageContainer}>
+          {item.primary_image || item.thumbnail ? (
+            <Image
+              source={{ uri: item.primary_image || item.thumbnail }}
+              style={styles.carImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={[
+                styles.imagePlaceholder,
+                { backgroundColor: theme.colors.surfaceVariant },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="car"
+                size={40}
+                color={theme.colors.onSurfaceVariant}
+              />
+            </View>
+          )}
+          <View style={styles.statusOverlay}>
             <Chip
               icon={getStatusIcon(item.status)}
               textStyle={styles.statusText}
@@ -86,6 +101,16 @@ const MyPostsScreen: React.FC = () => {
             >
               {item.status}
             </Chip>
+          </View>
+        </View>
+
+        {/* Car Info */}
+        <View style={styles.listingHeader}>
+          <View style={styles.listingInfo}>
+            <Text style={styles.carTitle}>
+              {item.year} {item.make} {item.model}
+            </Text>
+            <Text style={styles.listingId}>ID: {item.listing_id}</Text>
           </View>
         </View>
 
@@ -260,6 +285,29 @@ const styles = StyleSheet.create({
   listingCard: {
     marginBottom: getSpacing(12, 16, 20),
     borderRadius: 12,
+  },
+  imageContainer: {
+    height: 180,
+    borderRadius: 8,
+    overflow: "hidden",
+    marginBottom: getSpacing(12, 16, 20),
+    position: "relative",
+  },
+  carImage: {
+    width: "100%",
+    height: "100%",
+  },
+  imagePlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    height: "100%",
+  },
+  statusOverlay: {
+    position: "absolute",
+    top: getSpacing(8, 10, 12),
+    right: getSpacing(8, 10, 12),
   },
   listingHeader: {
     flexDirection: "row",

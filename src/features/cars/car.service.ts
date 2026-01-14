@@ -1,4 +1,5 @@
 // services/car.service.ts - COMPLETE FIXED VERSION
+import { buildImagePayload } from "@/src/utils/imageProcessor";
 import { apiClient } from "../../api/apiClient";
 import {
   CarDetailResponse,
@@ -250,7 +251,39 @@ export const carService = {
 
   // Create new car listing
   async createCar(data: CreateCarRequest): Promise<CarDetailResponse> {
-    const response = await apiClient.post<CarDetailResponse>("/cars", data);
+    // Process images to base64 using the utility
+    const processedImages = [];
+
+    if (data.images && data.images.length > 0) {
+      for (let i = 0; i < data.images.length; i++) {
+        const image = data.images[i];
+        if (image.data && image.data.startsWith("file://")) {
+          try {
+            const processedImage = await buildImagePayload(
+              image.data,
+              image.type
+            );
+            processedImages.push({
+              data: processedImage.data,
+              type: processedImage.type,
+              is_primary: image.is_primary,
+            });
+          } catch (error) {
+            console.error(`Failed to process image ${i}:`, error);
+            // Skip this image but continue with others
+            continue;
+          }
+        }
+      }
+    }
+
+    // Create the final payload with processed images
+    const payload = {
+      ...data,
+      images: processedImages,
+    };
+
+    const response = await apiClient.post<CarDetailResponse>("/cars", payload);
     return response.data;
   },
 

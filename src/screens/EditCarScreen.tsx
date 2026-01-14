@@ -152,7 +152,10 @@ const EditCarScreen: React.FC<EditCarScreenProps> = () => {
             Alert.alert("Success", "Car listing updated successfully", [
               {
                 text: "OK",
-                onPress: () => router.back(),
+                onPress: () => {
+                  // Navigate to home screen to see fresh data
+                  router.replace("/(tabs)");
+                },
               },
             ]);
           } else {

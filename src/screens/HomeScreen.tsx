@@ -1,5 +1,5 @@
 // screens/HomeScreen.tsx
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -42,6 +42,7 @@ import {
   useCarStats,
   useInfiniteCarListings,
 } from "../features/cars/car.hooks";
+import { carService } from "../features/cars/car.service";
 import {
   CarFilters,
   CarListing,
@@ -108,6 +109,19 @@ const HomeScreen: React.FC = () => {
 
   const { data: statsData, isLoading: statsLoading } = useCarStats();
   const { data: priceRangeData } = useCarPriceRange();
+
+  // Clear cache and refetch data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      // Clear the service cache
+      carService.clearListingsCache();
+
+      // Refetch all data
+      refetch();
+
+      console.log("HomeScreen focused - cleared cache and refetching data");
+    }, [refetch])
+  );
 
   // Extract all listings - FIXED: Remove duplicates
   const allListings = useMemo(() => {
@@ -208,6 +222,41 @@ const HomeScreen: React.FC = () => {
     );
   };
 
+  // Handle message button press with authentication check
+  const handleMessagePress = (listing: CarListing) => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        "Authentication Required",
+        "Please sign in or create an account to message the seller.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Sign In",
+            onPress: () => router.push("/(auth)/login"),
+          },
+          {
+            text: "Sign Up",
+            onPress: () => router.push("/(auth)/register"),
+          },
+        ]
+      );
+      return;
+    }
+
+    // Navigate to chat screen with seller info
+    router.push({
+      pathname: "/chat",
+      params: {
+        otherUserId: listing.seller?.user_id || "",
+        otherUserName: listing.seller?.username || "Seller",
+        listingId: listing.listing_id.toString(),
+      },
+    });
+  };
+
   // Animation for FAB
   useEffect(() => {
     const listener = headerScrollAnim.addListener(({ value }) => {
@@ -259,6 +308,13 @@ const HomeScreen: React.FC = () => {
       outputRange: [0, -60],
       extrapolate: "clamp",
     });
+
+    const chipBg = isDarkMode
+      ? (theme.colors.surfaceVariant ?? "#374151")
+      : (theme.colors.primary ?? "#3B82F6");
+    const chipText = isDarkMode
+      ? (theme.colors.onSurface ?? "#F9FAFB")
+      : (theme.colors.onPrimary ?? "#FFFFFF");
 
     return (
       <Animated.View
@@ -430,12 +486,70 @@ const HomeScreen: React.FC = () => {
           >
             <Chip
               onPress={() => setShowFilters(true)}
-              style={styles.quickFilterChip}
+              style={[styles.quickFilterChip, { backgroundColor: chipBg }]}
               mode={filters.sort !== "newest" ? "flat" : "outlined"}
               selected={filters.sort !== "newest"}
+              textStyle={{ color: chipText }}
             >
               Sort: {SORT_OPTIONS.find((s) => s.value === filters.sort)?.label}
             </Chip>
+
+            {/* Applied Filters (displayed between Sort and More Filters) */}
+            {filters.bodyType && (
+              <Chip
+                icon="car"
+                onPress={() =>
+                  setFilters((prev) => ({ ...prev, bodyType: undefined }))
+                }
+                style={[styles.quickFilterChip, { backgroundColor: chipBg }]}
+                mode="flat"
+                textStyle={{ color: chipText }}
+              >
+                {filters.bodyType}
+              </Chip>
+            )}
+
+            {filters.fuelType && (
+              <Chip
+                icon="fuel"
+                onPress={() =>
+                  setFilters((prev) => ({ ...prev, fuelType: undefined }))
+                }
+                style={[styles.quickFilterChip, { backgroundColor: chipBg }]}
+                mode="flat"
+                textStyle={{ color: chipText }}
+              >
+                {filters.fuelType}
+              </Chip>
+            )}
+
+            {filters.transmission && (
+              <Chip
+                icon="car-gear"
+                onPress={() =>
+                  setFilters((prev) => ({ ...prev, transmission: undefined }))
+                }
+                style={[styles.quickFilterChip, { backgroundColor: chipBg }]}
+                mode="flat"
+                textStyle={{ color: chipText }}
+              >
+                {filters.transmission}
+              </Chip>
+            )}
+
+            {filters.negotiable === true && (
+              <Chip
+                icon="handshake"
+                onPress={() =>
+                  setFilters((prev) => ({ ...prev, negotiable: undefined }))
+                }
+                style={[styles.quickFilterChip, { backgroundColor: chipBg }]}
+                mode="flat"
+                textStyle={{ color: chipText }}
+              >
+                Negotiable
+              </Chip>
+            )}
 
             {filters.make && (
               <Chip
@@ -443,8 +557,9 @@ const HomeScreen: React.FC = () => {
                 onPress={() =>
                   setFilters((prev) => ({ ...prev, make: undefined }))
                 }
-                style={styles.quickFilterChip}
+                style={[styles.quickFilterChip, { backgroundColor: chipBg }]}
                 mode="flat"
+                textStyle={{ color: chipText }}
               >
                 {filters.make}
               </Chip>
@@ -460,8 +575,9 @@ const HomeScreen: React.FC = () => {
                     maxPrice: undefined,
                   }))
                 }
-                style={styles.quickFilterChip}
+                style={[styles.quickFilterChip, { backgroundColor: chipBg }]}
                 mode="flat"
+                textStyle={{ color: chipText }}
               >
                 {filters.minPrice
                   ? `From ${filters.minPrice.toLocaleString()}`
@@ -475,11 +591,9 @@ const HomeScreen: React.FC = () => {
             <Chip
               icon="filter"
               onPress={() => setShowFilters(true)}
-              style={[
-                styles.quickFilterChip,
-                { backgroundColor: theme.colors.primary },
-              ]}
-              textStyle={{ color: "#FFFFFF" }}
+              style={[styles.quickFilterChip, { backgroundColor: chipBg }]}
+              mode="flat"
+              textStyle={{ color: chipText }}
             >
               More Filters
             </Chip>
@@ -687,6 +801,7 @@ const HomeScreen: React.FC = () => {
       onPress={() => router.push(`/car/${item.listing_id}`)}
       onCallPress={() => handleCallPress(item)}
       onSavePress={() => {}}
+      onMessagePress={() => handleMessagePress(item)}
     />
   );
 
@@ -740,10 +855,10 @@ const HomeScreen: React.FC = () => {
             <View style={styles.rightHeaderSection}>
               <IconButton
                 icon={
-                  isDarkMode ? "moon-waning-crescent" : "white-balance-sunny"
+                  isDarkMode ? "white-balance-sunny" : "moon-waning-crescent"
                 }
                 size={20}
-                iconColor={isDarkMode ? "#FFD700" : "#000000"}
+                iconColor={isDarkMode ? "#FFD700" : "#4A5568"}
                 onPress={() => {
                   console.log(
                     "Toggle pressed, current isDarkMode:",

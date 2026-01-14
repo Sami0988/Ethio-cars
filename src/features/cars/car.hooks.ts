@@ -145,11 +145,12 @@ export const useInfiniteCarListings = (
       return undefined;
     },
     initialPageParam: 1,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    // Don't refetch on window focus to prevent cache issues
-    refetchOnWindowFocus: false,
-    // Keep previous data while fetching
-    placeholderData: keepPreviousData,
+    staleTime: 0, // Always consider data stale - fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when screen comes into focus
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnReconnect: true, // Refetch when network reconnects
+    // Don't keep previous data - always show fresh data
+    placeholderData: undefined,
   });
 };
 
@@ -282,7 +283,10 @@ export const useCarStats = () => {
   return useQuery({
     queryKey: carKeys.stats(),
     queryFn: () => carService.getStats(),
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 0, // Always consider data stale - fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when screen comes into focus
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnReconnect: true, // Refetch when network reconnects
   });
 };
 
@@ -290,7 +294,10 @@ export const useCarPriceRange = () => {
   return useQuery({
     queryKey: carKeys.priceRange(),
     queryFn: () => carService.getPriceRange(),
-    staleTime: 15 * 60 * 1000, // 15 minutes
+    staleTime: 0, // Always consider data stale - fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when screen comes into focus
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnReconnect: true, // Refetch when network reconnects
   });
 };
 

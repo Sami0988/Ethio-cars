@@ -202,16 +202,17 @@ const FilterModal: React.FC<FilterModalProps> = ({
                       { borderColor: theme.colors.outline },
                       localFilters.bodyType === type && {
                         backgroundColor: theme.colors.primary,
+                        borderColor: theme.colors.primary,
                       },
                     ]}
                     textStyle={{
                       color:
                         localFilters.bodyType === type
-                          ? "#fff"
+                          ? theme.colors.onPrimary
                           : theme.colors.onSurface,
                     }}
                     showSelectedCheck
-                    mode="outlined"
+                    mode={localFilters.bodyType === type ? "flat" : "outlined"}
                   >
                     {type}
                   </Chip>
@@ -244,16 +245,17 @@ const FilterModal: React.FC<FilterModalProps> = ({
                       { borderColor: theme.colors.outline },
                       localFilters.fuelType === type && {
                         backgroundColor: theme.colors.primary,
+                        borderColor: theme.colors.primary,
                       },
                     ]}
                     textStyle={{
                       color:
                         localFilters.fuelType === type
-                          ? "#fff"
+                          ? theme.colors.onPrimary
                           : theme.colors.onSurface,
                     }}
                     showSelectedCheck
-                    mode="outlined"
+                    mode={localFilters.fuelType === type ? "flat" : "outlined"}
                   >
                     {type}
                   </Chip>
@@ -287,16 +289,19 @@ const FilterModal: React.FC<FilterModalProps> = ({
                       { borderColor: theme.colors.outline },
                       localFilters.transmission === type && {
                         backgroundColor: theme.colors.primary,
+                        borderColor: theme.colors.primary,
                       },
                     ]}
                     textStyle={{
                       color:
                         localFilters.transmission === type
-                          ? "#fff"
+                          ? theme.colors.onPrimary
                           : theme.colors.onSurface,
                     }}
                     showSelectedCheck
-                    mode="outlined"
+                    mode={
+                      localFilters.transmission === type ? "flat" : "outlined"
+                    }
                   >
                     {type}
                   </Chip>
@@ -327,16 +332,17 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     { borderColor: theme.colors.outline },
                     localFilters.negotiable === true && {
                       backgroundColor: theme.colors.primary,
+                      borderColor: theme.colors.primary,
                     },
                   ]}
                   textStyle={{
                     color:
                       localFilters.negotiable === true
-                        ? "#fff"
+                        ? theme.colors.onPrimary
                         : theme.colors.onSurface,
                   }}
                   showSelectedCheck
-                  mode="outlined"
+                  mode={localFilters.negotiable === true ? "flat" : "outlined"}
                   icon="handshake"
                 >
                   Negotiable Only

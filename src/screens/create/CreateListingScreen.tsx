@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
 import { useTheme } from "react-native-paper";
@@ -12,6 +13,7 @@ import VehicleBasicsScreen from "./VehicleBasicsScreen";
 
 const CreateListingScreen: React.FC = () => {
   const theme = useTheme();
+  const router = useRouter();
 
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
@@ -125,7 +127,10 @@ const CreateListingScreen: React.FC = () => {
       case 7:
         return (
           <ReviewAndSubmitScreen
-            onContinue={() => console.log("Listing submitted!")}
+            onContinue={() => {
+              // Navigate to home screen to see fresh data
+              router.replace("/(tabs)");
+            }}
             onBack={handleBack}
             vehicleData={vehicleData}
             jumpToStep={jumpToStep}
