@@ -12,6 +12,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Linking,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -70,7 +71,6 @@ const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const { isDarkMode, toggleTheme, themeMode } = useThemeStore();
-  console.log("Current themeMode:", themeMode, "isDarkMode:", isDarkMode);
   const colors = customColors[isDarkMode ? "dark" : "light"];
 
   // States
@@ -131,8 +131,6 @@ const HomeScreen: React.FC = () => {
 
       // Refetch all data
       refetch();
-
-      console.log("HomeScreen focused - cleared cache and refetching data");
     }, [refetch])
   );
 
@@ -227,12 +225,26 @@ const HomeScreen: React.FC = () => {
       return;
     }
 
-    // If authenticated, proceed with call
-    // TODO: Update when phone number is available in the API
-    Alert.alert(
-      "Call Feature",
-      "This feature will be available once phone numbers are integrated with the listings."
-    );
+    // Get the phone number (prefer company phone for dealers, otherwise use personal phone)
+    const phoneNumber = listing.seller?.is_dealer
+      ? listing.seller?.company_phone || listing.seller?.phone
+      : listing.seller?.phone;
+
+    if (!phoneNumber) {
+      Alert.alert(
+        "Please Try Again Later",
+        "Phone number not available at the moment."
+      );
+      return;
+    }
+
+    // Open phone dialer
+    Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+      Alert.alert(
+        "Please Try Again Later",
+        "Unable to make call at the moment. Please try again later."
+      );
+    });
   };
 
   // Handle message button press with authentication check
@@ -823,7 +835,6 @@ const HomeScreen: React.FC = () => {
       listing={item}
       index={index}
       onPress={() => router.push(`/car/${item.listing_id}`)}
-      onCallPress={() => handleCallPress(item)}
       onSavePress={() => {}}
       onMessagePress={() => handleMessagePress(item)}
     />
@@ -845,9 +856,10 @@ const HomeScreen: React.FC = () => {
             styles.fixedHeader,
             {
               backgroundColor: theme.colors.surface,
-              // Remove all padding to align with screen top
+              // Ensure no padding at all
               top: 0,
               paddingTop: 0,
+              marginTop: 0,
               paddingHorizontal: getResponsiveValue(12, 16, 20),
               shadowColor: theme.colors.shadow,
               shadowOffset: { width: 0, height: 2 },
@@ -884,10 +896,6 @@ const HomeScreen: React.FC = () => {
                 size={20}
                 iconColor={isDarkMode ? "#FFD700" : "#4A5568"}
                 onPress={() => {
-                  console.log(
-                    "Toggle pressed, current isDarkMode:",
-                    isDarkMode
-                  );
                   toggleTheme();
                 }}
                 style={[
@@ -1019,6 +1027,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     elevation: 6,
     height: getResponsiveValue(40, 48, 56),
+    paddingTop: 0,
+    marginTop: 0,
   },
   fixedHeaderContent: {
     flexDirection: "row",
@@ -1027,6 +1037,8 @@ const styles = StyleSheet.create({
     height: getResponsiveValue(32, 40, 48),
     paddingHorizontal: getResponsiveValue(12, 16, 20),
     paddingVertical: 0,
+    paddingTop: 0,
+    marginTop: 0,
   },
   brandText: {
     fontSize: getResponsiveValue(18, 22, 26),
@@ -1064,6 +1076,8 @@ const styles = StyleSheet.create({
     // padding is applied dynamically using safe area insets
     paddingBottom: getResponsiveValue(0, 1, 2),
     backgroundColor: "transparent",
+    paddingVertical: getResponsiveValue(12, 16, 20),
+    minHeight: getResponsiveValue(140, 160, 180),
   },
   topBar: {
     flexDirection: "row",
@@ -1084,8 +1098,8 @@ const styles = StyleSheet.create({
   },
   welcomeContainer: {
     paddingHorizontal: getResponsiveValue(16, 20, 24),
-    marginBottom: getResponsiveValue(0, 1, 2),
-    marginTop: getResponsiveValue(0, 1, 2),
+    marginBottom: getResponsiveValue(8, 12, 16),
+    marginTop: getResponsiveValue(4, 6, 8),
   },
   welcomeText: {
     fontSize: getResponsiveValue(24, 28, 32),

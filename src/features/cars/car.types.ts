@@ -63,8 +63,15 @@ export interface CarListing {
   seller?: {
     user_id: string;
     username: string;
+    email?: string;
+    phone?: string;
     is_dealer: boolean;
     company_name?: string;
+    company_address?: string;
+    company_phone?: string;
+    company_email?: string;
+    verification_status?: "verified" | "pending" | "unverified";
+    member_since?: string;
   };
 }
 

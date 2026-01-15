@@ -9,6 +9,7 @@ const MainLayout: React.FC = () => {
 
   return (
     <Screen
+      edges={["left", "right", "bottom"]}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <HomeScreen />

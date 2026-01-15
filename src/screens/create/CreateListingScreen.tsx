@@ -60,10 +60,8 @@ const CreateListingScreen: React.FC = () => {
   };
 
   const updateVehicleData = (updates: Partial<VehicleData>) => {
-    console.log("CreateListingScreen - updating vehicleData with:", updates);
     setVehicleData((prev) => {
       const newData = { ...prev, ...updates };
-      console.log("CreateListingScreen - new vehicleData:", newData);
       return newData;
     });
   };

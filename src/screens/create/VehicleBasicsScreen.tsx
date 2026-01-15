@@ -193,11 +193,6 @@ export default function VehicleBasicsScreen({
         }))
       : [];
 
-  // Debug: Log the actual response structure
-  if (makesResponse) {
-    console.log("Makes response:", makesResponse);
-  }
-
   const models = [
     "Corolla",
     "Camry",

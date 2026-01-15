@@ -21,7 +21,6 @@ interface CarCardProps {
   index: number;
   isLoading?: boolean;
   onPress?: () => void;
-  onCallPress?: () => void;
   onSavePress?: () => void;
   onMessagePress?: () => void;
 }
@@ -31,7 +30,6 @@ const CarCard: React.FC<CarCardProps> = ({
   index,
   isLoading = false,
   onPress,
-  onCallPress,
   onSavePress,
   onMessagePress,
 }) => {
@@ -383,20 +381,6 @@ const CarCard: React.FC<CarCardProps> = ({
             <View style={styles.actionButtons}>
               <Button
                 mode="contained"
-                style={[styles.callButton, { backgroundColor: "#918d83" }]}
-                onPress={onCallPress}
-                icon="phone"
-                compact
-                textColor="#FFFFFF"
-                labelStyle={{
-                  color: "#FFFFFF",
-                  fontWeight: "600",
-                }}
-              >
-                Call
-              </Button>
-              <Button
-                mode="contained"
                 style={[
                   styles.callButton,
                   { backgroundColor: theme.colors.primary },
@@ -404,9 +388,9 @@ const CarCard: React.FC<CarCardProps> = ({
                 onPress={onMessagePress}
                 icon="message"
                 compact
-                textColor="#FFFFFF"
+                textColor={theme.colors.onPrimary}
                 labelStyle={{
-                  color: "#FFFFFF",
+                  color: theme.colors.onPrimary,
                   fontWeight: "600",
                 }}
               >

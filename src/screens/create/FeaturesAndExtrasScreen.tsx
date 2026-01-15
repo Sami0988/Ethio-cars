@@ -1,24 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
-  Animated,
-  ActivityIndicator,
 } from "react-native";
-import {
-  Button,
-  Card,
-  Checkbox,
-  TextInput,
-  useTheme,
-  Chip,
-} from "react-native-paper";
+import { Button, Checkbox, TextInput, useTheme } from "react-native-paper";
 import { useCarFeatures } from "../../features/cars/car.hooks";
 import { Feature } from "../../features/cars/car.types";
 import { VehicleData } from "../../types/vehicle";
@@ -293,7 +286,6 @@ export default function FeaturesAndExtrasScreen({
 
   const handleContinue = () => {
     const featuresArray = Array.from(selectedFeatures);
-    console.log("Selected features:", featuresArray);
 
     if (updateVehicleData) {
       updateVehicleData({ features: featuresArray });

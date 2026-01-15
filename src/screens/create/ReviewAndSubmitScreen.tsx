@@ -86,9 +86,6 @@ export default function ReviewAndSubmitScreen({
   const { width } = Dimensions.get("window");
   const styles = getDynamicStyles(theme, width);
 
-  // Debug: Log the received vehicleData
-  console.log("ReviewAndSubmitScreen - vehicleData received:", vehicleData);
-
   // API mutation for creating car listing
   const createCarMutation = useCreateCar();
 
@@ -247,16 +244,10 @@ export default function ReviewAndSubmitScreen({
           }) || [],
       };
 
-      console.log("API Data being sent:", JSON.stringify(apiData, null, 2));
-
-      console.log("Publishing listing with API data:", apiData);
-
-      // Simulate API call with delay
+     // Simulate API call with delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const result = await createCarMutation.mutateAsync(apiData);
-
-      console.log("Car listing created successfully:", result);
 
       // Animate success
       animateSuccess();
@@ -274,13 +265,11 @@ export default function ReviewAndSubmitScreen({
             text: "Share",
             onPress: () => {
               // Share functionality here
-              console.log("Share listing");
             },
           },
         ]
       );
     } catch (error: any) {
-      console.error("Error creating car listing:", error);
 
       Alert.alert(
         "Publish Failed",
@@ -293,14 +282,12 @@ export default function ReviewAndSubmitScreen({
   };
 
   const handleSaveDraft = () => {
-    console.log("Saving draft...");
     Alert.alert("📁 Draft Saved", "Your listing has been saved as a draft.", [
       { text: "OK" },
     ]);
   };
 
   const handlePreview = () => {
-    console.log("Preview listing...");
     Alert.alert("Preview Mode", "Listing preview would open here", [
       { text: "OK" },
     ]);

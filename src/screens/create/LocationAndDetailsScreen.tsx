@@ -230,27 +230,9 @@ export default function LocationAndDetailsScreen({
     return "";
   };
 
-  // Debug logging
-  console.log("Regions from API:", regions.length > 0 ? "YES" : "NO");
-  console.log("Using fallback:", regions.length > 0 ? "NO" : "YES");
-  console.log("Selected region:", selectedRegion);
-  console.log(
-    "Display regions:",
-    displayRegions.map((r) => ({
-      name: getRegionName(r),
-      region_id: r.region_id,
-    }))
-  );
-
   // Get region by name
   const getRegionData = (regionName: string) => {
-    console.log("Looking for region:", regionName);
-    console.log(
-      "Available regions:",
-      displayRegions.map((r) => getRegionName(r))
-    );
     const found = displayRegions.find((r) => getRegionName(r) === regionName);
-    console.log("Found region:", found);
     return found;
   };
 
@@ -301,7 +283,6 @@ export default function LocationAndDetailsScreen({
     const locationData = await getCurrentLocation();
 
     if (locationData) {
-      console.log("GPS location found:", locationData);
       setSelectedRegion(locationData.region || "");
       setSelectedZone(locationData.zone || "");
       setSelectedCity(locationData.city || "");
@@ -309,10 +290,8 @@ export default function LocationAndDetailsScreen({
       // Try to find and set the region ID
       if (locationData.region) {
         const regionData = getRegionData(locationData.region);
-        console.log("GPS region data found:", regionData);
         if (regionData) {
           setSelectedRegionId(regionData.region_id);
-          console.log("Set GPS region_id to:", regionData.region_id);
         }
       }
 
@@ -349,16 +328,6 @@ export default function LocationAndDetailsScreen({
   };
 
   const handleContinue = () => {
-    // Debug logging
-    console.log("Continue clicked - Location state:", {
-      selectedRegion,
-      selectedZone,
-      selectedCity,
-      selectedRegionId,
-      selectedZoneId,
-      selectedTownId,
-    });
-
     // Validate location
     if (!selectedRegion) {
       Alert.alert(
@@ -395,13 +364,6 @@ export default function LocationAndDetailsScreen({
       availability,
     };
 
-    console.log("Location & details submitted:", listingData);
-    console.log("Final location IDs being sent:", {
-      region_id: selectedRegionId,
-      zone_id: selectedZoneId,
-      town_id: selectedTownId,
-    });
-
     if (updateVehicleData) {
       const locationUpdate = {
         location: {
@@ -418,7 +380,6 @@ export default function LocationAndDetailsScreen({
         availability: listingData.availability,
       } as Partial<VehicleData>;
 
-      console.log("Calling updateVehicleData with:", locationUpdate);
       updateVehicleData(locationUpdate);
     }
 
@@ -1670,19 +1631,14 @@ export default function LocationAndDetailsScreen({
         displayRegions.map((r) => getRegionName(r)).filter(Boolean),
         selectedRegion,
         (regionName) => {
-          console.log("Region selected:", regionName);
           setSelectedRegion(regionName);
           setSelectedZone("");
           setSelectedCity("");
           // Set the region ID when region is selected
           const regionData = getRegionData(regionName);
-          console.log("Region data found:", regionData);
           if (regionData) {
             // The region object itself has region_id
             setSelectedRegionId(regionData.region_id);
-            console.log("Set region_id to:", regionData.region_id);
-          } else {
-            console.log("No region data found for:", regionName);
           }
         },
         isLoadingLocations

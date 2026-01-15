@@ -1,6 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
+  Animated,
+  Dimensions,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -8,10 +12,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Dimensions,
-  Animated,
-  Alert,
-  Platform,
 } from "react-native";
 import { Button, Switch, useTheme } from "react-native-paper";
 import { VehicleData } from "../../types/vehicle";
@@ -140,8 +140,6 @@ export default function PricingScreen({
       isNegotiable,
       marketPosition: priceInfo.label,
     };
-
-    console.log("Pricing data submitted:", priceData);
 
     if (updateVehicleData) {
       updateVehicleData({

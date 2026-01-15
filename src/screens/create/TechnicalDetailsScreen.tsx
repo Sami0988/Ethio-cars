@@ -263,14 +263,6 @@ export default function TechnicalDetailsScreen({
   const currentStep = 3;
 
   const handleContinue = () => {
-    console.log("Technical details submitted:", {
-      fuel: selectedFuel,
-      transmission: selectedTransmission,
-      bodyType: selectedBodyType,
-      engine: selectedEngine,
-      drive: selectedDrive,
-    });
-
     if (updateVehicleData) {
       updateVehicleData({
         fuel: selectedFuel,

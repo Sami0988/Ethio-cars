@@ -649,14 +649,6 @@ const CarDetailScreen: React.FC = () => {
         ]}
       >
         <Button
-          mode="outlined"
-          onPress={() => Alert.alert("Message", "Message feature coming soon!")}
-          style={styles.messageButton}
-          icon="message"
-        >
-          Message
-        </Button>
-        <Button
           mode="contained"
           onPress={handleCall}
           style={[styles.callButton, { backgroundColor: "#4CAF50" }]}
