@@ -1,9 +1,10 @@
-// src/screens/ChatScreen.tsx
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
-  Dimensions,
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -12,18 +13,30 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useTheme } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useAuthStore } from "../features/auth/auth.store";
 import { Message, useMessaging } from "../services/messaging.service";
-import {
-  commonFontSizes,
-  commonSpacing,
-  isSmallScreen,
-  isTablet,
-} from "../utils/responsive";
+
+// Helper function to generate consistent colors from strings
+const stringToHslColor = (
+  str: string,
+  saturation: number = 70,
+  lightness: number = 60
+) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+};
 
 interface ChatScreenProps {
   route: {
@@ -36,11 +49,14 @@ interface ChatScreenProps {
 }
 
 const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
+  const router = useRouter();
   const { otherUserId, otherUserName, listingId } = route.params;
   const [messageText, setMessageText] = useState("");
   const [editingMessage, setEditingMessage] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const theme = useTheme();
   const {
     messages: initialMessages,
@@ -51,20 +67,60 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   } = useMessaging(otherUserId, otherUserName);
   const { user } = useAuthStore();
 
-  // Get screen dimensions for responsive keyboard offset
-  const screenHeight = Dimensions.get("window").height;
-  const keyboardOffset =
-    Platform.OS === "ios" ? screenHeight * 0.18 : screenHeight * 0.05;
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isSmallScreen = width < 375;
+  const isTablet = width >= 768;
+  const isLargeTablet = width >= 1024;
+  const isLandscape = width > height;
+
+  // Calculate responsive values
+  const getResponsiveValue = (
+    phone: number,
+    tablet: number,
+    largeTablet?: number
+  ) => {
+    if (isLargeTablet && largeTablet) return largeTablet;
+    return isTablet ? tablet : phone;
+  };
 
   const [messages, setMessages] = useState<Message[]>([]);
   const flatListRef = useRef<FlatList<Message> | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideUpAnim = useState(new Animated.Value(50))[0];
 
-  // Use messages directly from Firebase as they are stored (oldest first)
+  // Responsive dimensions
+  const headerHeight = getResponsiveValue(60, 70, 80);
+  const inputHeight = getResponsiveValue(60, 70, 80);
+  const inputExtra = getResponsiveValue(16, 18, 20);
+  const totalInputHeight = inputHeight + inputExtra + insets.bottom;
+  const messageMaxWidth = isTablet
+    ? isLargeTablet
+      ? "70%"
+      : "75%"
+    : isLandscape
+      ? "60%"
+      : "85%";
+
   useEffect(() => {
     setMessages(initialMessages || []);
+    if (initialMessages.length > 0) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideUpAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
   }, [initialMessages]);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (flatListRef.current && messages.length) {
       setTimeout(() => {
@@ -89,6 +145,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
         Alert.alert("Error", "An unexpected error occurred. Please try again.");
       }
     }
+  };
+
+  const handleTyping = (text: string) => {
+    setMessageText(text);
+    setIsTyping(true);
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 1000);
   };
 
   const handleLongPress = (message: Message) => {
@@ -166,114 +235,243 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     );
   };
 
-  // Format timestamp for display
   const formatTimestamp = (timestamp?: string) => {
     if (!timestamp) return "Sending...";
-
     const messageDate = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - messageDate.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-
-    return messageDate.toLocaleDateString();
+    return messageDate.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  const renderMessage = ({ item }: { item: Message; index: number }) => {
+  const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isOwnMessage = item.senderId === user?.id.toString();
+    const showAvatar =
+      index === 0 || messages[index - 1]?.senderId !== item.senderId;
 
     return (
-      <TouchableOpacity
-        onLongPress={() => handleLongPress(item)}
-        activeOpacity={0.7}
+      <Animated.View
         style={[
           styles.messageWrapper,
           isOwnMessage ? styles.ownMessageWrapper : styles.otherMessageWrapper,
+          {
+            opacity: fadeAnim,
+            transform: [
+              {
+                translateY: slideUpAnim.interpolate({
+                  inputRange: [0, 50],
+                  outputRange: [0, index * 3],
+                }),
+              },
+            ],
+            maxWidth: messageMaxWidth,
+            marginHorizontal: isTablet ? "auto" : 0,
+          },
         ]}
       >
-        {!isOwnMessage && (
-          <Text
-            style={[
-              styles.senderName,
-              { color: theme.colors.onSurfaceVariant },
-            ]}
-          >
-            {item.senderName || otherUserName}
-          </Text>
-        )}
-        <View
-          style={[
-            styles.messageContainer,
-            isOwnMessage ? styles.ownMessage : styles.otherMessage,
-            !isOwnMessage && { backgroundColor: theme.colors.surfaceVariant },
-          ]}
-        >
-          <Text
-            style={[
-              styles.messageText,
-              {
-                color: isOwnMessage ? "#FFFFFF" : theme.colors.onSurface,
-              },
-            ]}
-          >
-            {item.message}
-          </Text>
+        {!isOwnMessage && showAvatar && (
           <View
             style={[
-              styles.messageFooter,
+              styles.avatarContainer,
+              { marginRight: getResponsiveValue(8, 12, 16) },
+            ]}
+          >
+            <View
+              style={[
+                styles.avatar,
+                {
+                  backgroundColor: stringToHslColor(
+                    otherUserId || otherUserName || "user"
+                  ),
+                  width: getResponsiveValue(32, 40, 48),
+                  height: getResponsiveValue(32, 40, 48),
+                  borderRadius: getResponsiveValue(16, 20, 24),
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.avatarText,
+                  { fontSize: getResponsiveValue(14, 16, 18) },
+                ]}
+              >
+                {otherUserName?.charAt(0).toUpperCase() || "U"}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        <TouchableOpacity
+          onLongPress={() => handleLongPress(item)}
+          activeOpacity={0.8}
+          delayLongPress={300}
+          style={[
+            isOwnMessage
+              ? styles.ownMessageWrapper
+              : styles.otherMessageWrapper,
+            { maxWidth: "100%" },
+          ]}
+        >
+          <View
+            style={[
+              styles.messageBubble,
               isOwnMessage
-                ? styles.ownMessageFooter
-                : styles.otherMessageFooter,
+                ? styles.ownMessageBubble
+                : styles.otherMessageBubble,
+              {
+                paddingHorizontal: getResponsiveValue(12, 16, 20),
+                paddingVertical: getResponsiveValue(10, 12, 14),
+                borderRadius: getResponsiveValue(18, 20, 22),
+                backgroundColor: isOwnMessage
+                  ? theme.colors.primary
+                  : theme.colors.surfaceVariant,
+              },
             ]}
           >
             <Text
               style={[
-                styles.timestamp,
+                styles.messageText,
                 {
                   color: isOwnMessage
-                    ? "#FFFFFF80"
-                    : theme.colors.onSurfaceVariant,
+                    ? theme.colors.onPrimary
+                    : theme.colors.onSurface,
+                  fontSize: getResponsiveValue(16, 17, 18),
+                  lineHeight: getResponsiveValue(22, 24, 26),
                 },
               ]}
             >
-              {formatTimestamp(item.timestamp)}
+              {item.message}
             </Text>
-            {isOwnMessage && (
-              <MaterialCommunityIcons
-                name={item.read ? "check-all" : "check"}
-                size={14}
-                color={item.read ? "#4CAF50" : "#FFFFFF80"}
-                style={styles.readIcon}
-              />
-            )}
+
+            <View style={styles.messageFooter}>
+              <Text
+                style={[
+                  styles.timestamp,
+                  {
+                    color: isOwnMessage
+                      ? theme.colors.onPrimary + "AA"
+                      : theme.colors.onSurfaceVariant,
+                    fontSize: getResponsiveValue(11, 12, 13),
+                  },
+                ]}
+              >
+                {formatTimestamp(item.timestamp)}
+              </Text>
+
+              {isOwnMessage && (
+                <View style={styles.readStatus}>
+                  <MaterialCommunityIcons
+                    name={item.read ? "check-all" : "check"}
+                    size={getResponsiveValue(12, 14, 16)}
+                    color={item.read ? "#4CAF50" : "#FFFFFF80"}
+                    style={styles.readIcon}
+                  />
+                </View>
+              )}
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
+
+  const renderHeader = () => (
+    <View
+      style={[
+        styles.header,
+        {
+          height: headerHeight,
+          paddingTop: getResponsiveValue(6, 8, 10),
+          paddingHorizontal: getResponsiveValue(16, 24, 32),
+          backgroundColor: theme.colors.surface,
+        },
+      ]}
+    >
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <MaterialCommunityIcons
+          name="chevron-left"
+          size={getResponsiveValue(24, 28, 32)}
+          color={theme.colors.primary}
+        />
+      </TouchableOpacity>
+
+      <View style={styles.headerContent}>
+        <View style={styles.headerUserInfo}>
+          <View
+            style={[
+              styles.headerAvatar,
+              {
+                backgroundColor: stringToHslColor(
+                  otherUserId || otherUserName || "user"
+                ),
+                width: getResponsiveValue(40, 48, 56),
+                height: getResponsiveValue(40, 48, 56),
+                borderRadius: getResponsiveValue(20, 24, 28),
+                marginRight: getResponsiveValue(12, 16, 20),
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.headerAvatarText,
+                { fontSize: getResponsiveValue(18, 20, 22) },
+              ]}
+            >
+              {otherUserName?.charAt(0).toUpperCase() || "U"}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                styles.headerName,
+                {
+                  color: theme.colors.onSurface,
+                  fontSize: getResponsiveValue(16, 18, 20),
+                },
+              ]}
+            >
+              {otherUserName || "Unknown User"}
+            </Text>
+            <Text
+              style={[
+                styles.headerStatus,
+                {
+                  color: theme.colors.primary,
+                  fontSize: getResponsiveValue(13, 14, 15),
+                },
+              ]}
+            >
+              {isTyping ? "Typing..." : "Online"}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
 
   if (loading) {
     return (
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
       >
-        <Text style={{ color: theme.colors.onSurface }}>
-          Loading messages...
-        </Text>
+        <ActivityIndicator
+          size={isTablet ? "large" : "small"}
+          color={theme.colors.primary}
+        />
         <Text
-          style={{
-            color: theme.colors.onSurfaceVariant,
-            fontSize: 12,
-            marginTop: 8,
-          }}
+          style={[
+            styles.loadingText,
+            {
+              color: theme.colors.onSurface,
+              fontSize: getResponsiveValue(16, 18, 20),
+              marginTop: getResponsiveValue(16, 20, 24),
+            },
+          ]}
         >
-          Debug: User {user?.id || "Not logged in"} chatting with {otherUserId}
+          Loading conversation...
         </Text>
       </View>
     );
@@ -281,110 +479,257 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
 
   return (
     <SafeAreaView
+      edges={["left", "right", "bottom"]}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
-        keyboardVerticalOffset={keyboardOffset}
+        keyboardVerticalOffset={
+          Platform.OS === "ios" ? headerHeight + insets.top : 0
+        }
       >
-        <View
-          style={[
-            styles.header,
-            {
-              borderBottomColor: theme.colors.outline,
-              backgroundColor: theme.colors.surface,
-            },
-          ]}
-        >
-          <Text style={[styles.headerText, { color: theme.colors.onSurface }]}>
-            Chat with {otherUserName || "Unknown User"}
-          </Text>
-        </View>
+        {renderHeader()}
 
         <FlatList
           data={messages}
           ref={flatListRef}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.id || Math.random().toString()}
+          keyExtractor={(item) =>
+            item.id || `${item.timestamp}-${Math.random()}`
+          }
           style={styles.messagesList}
-          contentContainerStyle={styles.messagesContainer}
+          contentContainerStyle={[
+            styles.messagesContainer,
+            {
+              paddingHorizontal: getResponsiveValue(8, 16, 24),
+              paddingTop: getResponsiveValue(16, 20, 24),
+              paddingBottom: totalInputHeight + getResponsiveValue(8, 10, 12),
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
             if (messages.length > 0) {
               flatListRef.current?.scrollToEnd({ animated: true });
             }
           }}
-          onLayout={() => {
-            if (messages.length > 0) {
-              flatListRef.current?.scrollToEnd({ animated: false });
-            }
-          }}
+          ListEmptyComponent={
+            <View
+              style={[styles.emptyChatContainer, { marginTop: height * 0.3 }]}
+            >
+              <MaterialCommunityIcons
+                name="message-text-outline"
+                size={getResponsiveValue(64, 80, 96)}
+                color={theme.colors.onSurfaceVariant}
+                style={{ opacity: 0.5 }}
+              />
+              <Text
+                style={[
+                  styles.emptyChatText,
+                  {
+                    color: theme.colors.onSurfaceVariant,
+                    fontSize: getResponsiveValue(18, 20, 22),
+                    marginTop: getResponsiveValue(16, 20, 24),
+                  },
+                ]}
+              >
+                Start a conversation with {otherUserName}
+              </Text>
+              <Text
+                style={[
+                  styles.emptyChatSubtext,
+                  {
+                    color: theme.colors.onSurfaceVariant,
+                    fontSize: getResponsiveValue(14, 16, 18),
+                  },
+                ]}
+              >
+                Send a message to begin chatting
+              </Text>
+            </View>
+          }
         />
 
         <View
           style={[
-            styles.inputContainer,
+            styles.inputWrapper,
             {
-              borderTopColor: theme.colors.outline,
-              backgroundColor: theme.colors.surface,
+              height: inputHeight + getResponsiveValue(16, 18, 20),
+              bottom: 0,
+              paddingBottom: 0,
+              paddingHorizontal: getResponsiveValue(12, 16, 20),
             },
           ]}
         >
-          <TextInput
+          <View
             style={[
-              styles.textInput,
+              styles.inputContainer,
               {
-                backgroundColor: theme.colors.surfaceVariant,
-                color: theme.colors.onSurface,
-                borderColor: theme.colors.outline,
+                backgroundColor: theme.colors.surface,
+                borderRadius: getResponsiveValue(25, 30, 35),
+                paddingHorizontal: getResponsiveValue(12, 16, 20),
               },
             ]}
-            value={messageText}
-            onChangeText={setMessageText}
-            placeholder="Type a message..."
-            placeholderTextColor={theme.colors.onSurfaceVariant}
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              {
-                backgroundColor: messageText.trim()
-                  ? theme.colors.primary
-                  : theme.colors.outline,
-                opacity: messageText.trim() ? 1 : 0.5,
-              },
-            ]}
-            onPress={handleSendMessage}
-            disabled={!messageText.trim()}
           >
-            <MaterialCommunityIcons name="send" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
+            <TextInput
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: theme.colors.surfaceVariant,
+                  color: theme.colors.onSurface,
+                  fontSize: getResponsiveValue(16, 17, 18),
+                  height: getResponsiveValue(56, 64, 72),
+                  borderRadius: getResponsiveValue(20, 24, 28),
+                  paddingHorizontal: getResponsiveValue(16, 20, 24),
+                },
+              ]}
+              value={messageText}
+              onChangeText={handleTyping}
+              placeholder={`Message ${otherUserName}...`}
+              placeholderTextColor={theme.colors.onSurfaceVariant + "80"}
+              multiline
+              maxLength={500}
+            />
+
+            {messageText.trim() ? (
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    width: getResponsiveValue(40, 48, 56),
+                    height: getResponsiveValue(40, 48, 56),
+                    borderRadius: getResponsiveValue(20, 24, 28),
+                    marginLeft: getResponsiveValue(4, 6, 8),
+                  },
+                ]}
+                onPress={handleSendMessage}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons
+                  name="send"
+                  size={getResponsiveValue(20, 24, 28)}
+                  color="#FFFFFF"
+                />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.emojiButton,
+                  { marginLeft: getResponsiveValue(6, 8, 10) },
+                ]}
+                onPress={() => setShowEmojiPicker(true)}
+              >
+                <MaterialCommunityIcons
+                  name="emoticon-outline"
+                  size={getResponsiveValue(24, 28, 32)}
+                  color={theme.colors.onSurfaceVariant}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
+
+        {/* Emoji Picker Modal */}
+        <Modal
+          visible={showEmojiPicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowEmojiPicker(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowEmojiPicker(false)}
+          >
+            <View
+              style={{
+                backgroundColor: theme.colors.surface,
+                position: "absolute",
+                bottom: inputHeight + 10,
+                left: getResponsiveValue(12, 16, 20),
+                right: getResponsiveValue(12, 16, 20),
+                borderRadius: getResponsiveValue(12, 14, 16),
+                padding: getResponsiveValue(12, 16, 20),
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.1,
+                shadowRadius: 12,
+                elevation: 8,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  justifyContent: "space-between",
+                }}
+              >
+                {[
+                  "😀",
+                  "😃",
+                  "😂",
+                  "😍",
+                  "👍",
+                  "🔥",
+                  "🙏",
+                  "🎉",
+                  "🤔",
+                  "😅",
+                  "😢",
+                  "😎",
+                ].map((emoji) => (
+                  <TouchableOpacity
+                    key={emoji}
+                    onPress={() => {
+                      setMessageText((s) => s + emoji);
+                      setShowEmojiPicker(false);
+                    }}
+                    style={{
+                      padding: getResponsiveValue(8, 10, 12),
+                      width: "25%",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: getResponsiveValue(20, 24, 28) }}>
+                      {emoji}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {/* Edit Message Modal */}
         <Modal
           visible={showEditModal}
           transparent={true}
-          animationType="slide"
+          animationType="fade"
           onRequestClose={() => setShowEditModal(false)}
         >
-          <View
-            style={[
-              styles.modalOverlay,
-              { backgroundColor: "rgba(0, 0, 0, 0.5)" },
-            ]}
-          >
+          <View style={styles.modalOverlay}>
             <View
               style={[
                 styles.modalContent,
-                { backgroundColor: theme.colors.surface },
+                {
+                  backgroundColor: theme.colors.surface,
+                  width: isTablet ? (isLargeTablet ? "40%" : "50%") : "90%",
+                  maxWidth: 500,
+                  borderRadius: getResponsiveValue(20, 24, 28),
+                  padding: getResponsiveValue(20, 24, 28),
+                },
               ]}
             >
               <Text
-                style={[styles.modalTitle, { color: theme.colors.onSurface }]}
+                style={[
+                  styles.modalTitle,
+                  {
+                    color: theme.colors.onSurface,
+                    fontSize: getResponsiveValue(18, 20, 22),
+                    marginBottom: getResponsiveValue(16, 20, 24),
+                  },
+                ]}
               >
                 Edit Message
               </Text>
@@ -392,28 +737,42 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
                 style={[
                   styles.editInput,
                   {
-                    backgroundColor: theme.colors.surface,
+                    backgroundColor: theme.colors.surfaceVariant + "40",
                     color: theme.colors.onSurface,
-                    borderColor: theme.colors.outline,
+                    fontSize: getResponsiveValue(16, 17, 18),
+                    minHeight: getResponsiveValue(100, 120, 140),
+                    borderRadius: getResponsiveValue(12, 14, 16),
+                    padding: getResponsiveValue(16, 20, 24),
+                    marginBottom: getResponsiveValue(20, 24, 28),
                   },
                 ]}
                 value={editText}
                 onChangeText={setEditText}
                 multiline
                 autoFocus
+                placeholder="Edit your message..."
+                placeholderTextColor={theme.colors.onSurfaceVariant + "80"}
               />
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[
                     styles.modalButton,
-                    { backgroundColor: theme.colors.outline },
+                    styles.cancelButton,
+                    {
+                      borderColor: theme.colors.outline,
+                      padding: getResponsiveValue(12, 14, 16),
+                      borderRadius: getResponsiveValue(8, 10, 12),
+                    },
                   ]}
                   onPress={() => setShowEditModal(false)}
                 >
                   <Text
                     style={[
                       styles.modalButtonText,
-                      { color: theme.colors.onSurface },
+                      {
+                        color: theme.colors.onSurface,
+                        fontSize: getResponsiveValue(14, 16, 18),
+                      },
                     ]}
                   >
                     Cancel
@@ -422,14 +781,22 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
                 <TouchableOpacity
                   style={[
                     styles.modalButton,
-                    { backgroundColor: theme.colors.primary },
+                    styles.saveButton,
+                    {
+                      backgroundColor: theme.colors.primary,
+                      padding: getResponsiveValue(12, 14, 16),
+                      borderRadius: getResponsiveValue(8, 10, 12),
+                    },
                   ]}
                   onPress={handleEditMessage}
                 >
                   <Text
                     style={[
                       styles.modalButtonText,
-                      { color: theme.colors.onPrimary },
+                      {
+                        color: "#FFFFFF",
+                        fontSize: getResponsiveValue(14, 16, 18),
+                      },
                     ]}
                   >
                     Save
@@ -448,140 +815,195 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingVertical: 0,
-    paddingHorizontal: commonSpacing.medium,
-    borderBottomWidth: 1,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  headerText: {
-    fontSize: commonFontSizes.title,
-    fontWeight: "bold",
+  loadingText: {
+    opacity: 0.7,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.05)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    zIndex: 10,
+  },
+  backButton: {
+    marginRight: 12,
+  },
+  headerContent: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerUserInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  headerAvatar: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerAvatarText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  headerName: {
+    fontWeight: "700",
+  },
+  headerStatus: {
+    fontWeight: "500",
+    marginTop: 2,
   },
   messagesList: {
     flex: 1,
   },
   messagesContainer: {
-    paddingHorizontal: commonSpacing.medium,
-    paddingTop: 0,
-    paddingBottom: 0,
+    flexGrow: 1,
   },
   messageWrapper: {
-    marginBottom: commonSpacing.small / 2, // Half spacing for tight layout
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "flex-end",
   },
   ownMessageWrapper: {
     alignSelf: "flex-end",
-    maxWidth: "80%",
   },
   otherMessageWrapper: {
     alignSelf: "flex-start",
-    maxWidth: "80%",
   },
-  messageContainer: {
-    paddingHorizontal: commonSpacing.medium,
-    paddingVertical: commonSpacing.small / 2,
-    borderRadius: isSmallScreen ? 16 : 18,
-    minWidth: 50,
+  avatarContainer: {
+    marginBottom: 4,
   },
-  ownMessage: {
-    backgroundColor: "#0084FF",
+  avatar: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  messageBubble: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  ownMessageBubble: {
+    backgroundColor: "#007AFF",
     borderBottomRightRadius: 4,
   },
-  otherMessage: {
+  otherMessageBubble: {
+    backgroundColor: "#F0F0F0",
     borderBottomLeftRadius: 4,
   },
-  senderName: {
-    fontSize: commonFontSizes.small,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
   messageText: {
-    fontSize: commonFontSizes.medium,
-    lineHeight: commonFontSizes.medium + 6,
+    flexWrap: "wrap",
   },
   messageFooter: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     marginTop: 4,
   },
-  ownMessageFooter: {
-    justifyContent: "flex-end",
-  },
-  otherMessageFooter: {
-    justifyContent: "flex-start",
-  },
   timestamp: {
-    fontSize: commonFontSizes.small - 1,
-    opacity: 0.8,
+    opacity: 0.7,
+  },
+  readStatus: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   readIcon: {
     marginLeft: 4,
   },
+  emptyChatContainer: {
+    alignItems: "center",
+  },
+  emptyChatText: {
+    fontWeight: "600",
+    opacity: 0.7,
+    textAlign: "center",
+  },
+  emptyChatSubtext: {
+    opacity: 0.5,
+    textAlign: "center",
+    marginTop: 8,
+  },
+  inputWrapper: {
+    backgroundColor: "transparent",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    paddingVertical: 0,
-    paddingHorizontal: commonSpacing.small,
-    borderTopWidth: 1,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   textInput: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: isSmallScreen ? 18 : 20,
-    paddingHorizontal: commonSpacing.medium,
-    paddingVertical: commonSpacing.small + 2,
-    marginRight: commonSpacing.medium,
-    maxHeight: 100,
-    minHeight: isSmallScreen ? 36 : 40,
-    fontSize: commonFontSizes.medium,
-    lineHeight: commonFontSizes.medium + 4,
+    paddingVertical: 8,
   },
   sendButton: {
-    width: isSmallScreen ? 36 : 40,
-    height: isSmallScreen ? 36 : 40,
-    borderRadius: isSmallScreen ? 18 : 20,
     justifyContent: "center",
     alignItems: "center",
+  },
+  emojiButton: {
+    padding: 8,
   },
   modalOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
   modalContent: {
-    borderRadius: isSmallScreen ? 10 : 12,
-    padding: commonSpacing.medium,
-    width: isTablet ? "60%" : "90%",
-    maxWidth: isTablet ? 500 : 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalTitle: {
-    fontSize: commonFontSizes.large,
-    fontWeight: "bold",
-    marginBottom: commonSpacing.medium,
+    fontWeight: "700",
     textAlign: "center",
   },
   editInput: {
     borderWidth: 1,
-    borderRadius: isSmallScreen ? 6 : 8,
-    padding: commonSpacing.medium,
-    fontSize: commonFontSizes.medium,
-    minHeight: isSmallScreen ? 72 : 80,
-    marginBottom: commonSpacing.medium,
+    lineHeight: 22,
   },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 8,
+  },
+  cancelButton: {
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  saveButton: {
     alignItems: "center",
   },
   modalButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
     fontWeight: "600",
   },
 });

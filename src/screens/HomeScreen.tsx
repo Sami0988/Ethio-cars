@@ -12,7 +12,6 @@ import {
   Animated,
   Dimensions,
   FlatList,
-  Platform,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -51,6 +50,20 @@ import {
 import { useThemeStore } from "../features/theme/theme.store";
 
 const { width, height } = Dimensions.get("window");
+
+// Responsive utilities
+const isSmallScreen = width < 375;
+const isTablet = width >= 768;
+const isLargeTablet = width >= 1024;
+
+const getResponsiveValue = (
+  phone: number,
+  tablet: number,
+  largeTablet?: number
+) => {
+  if (isLargeTablet && largeTablet) return largeTablet;
+  return isTablet ? tablet : phone;
+};
 
 const HomeScreen: React.FC = () => {
   const theme = useTheme();
@@ -287,6 +300,10 @@ const HomeScreen: React.FC = () => {
   // Safe area insets used for spacing
   const insets = useSafeAreaInsets();
 
+  // Approximate header height (used as fallback until we measure it)
+  const headerHeight = 140 + (showSearch ? 56 : 0);
+  const [measuredHeaderHeight, setMeasuredHeaderHeight] = useState<number>(0);
+
   // Get unique key for each item
   const getItemKey = (item: CarListing, index: number): string => {
     if (!item?.listing_id) {
@@ -305,7 +322,13 @@ const HomeScreen: React.FC = () => {
 
     const headerTranslateY = headerScrollAnim.interpolate({
       inputRange: [0, 80],
-      outputRange: [0, -60],
+      // don't translate the header further than its height so it doesn't disappear
+      outputRange: [
+        0,
+        -(measuredHeaderHeight > 0
+          ? Math.min(measuredHeaderHeight, 120)
+          : Math.abs(Math.max(-headerHeight, -60))),
+      ],
       extrapolate: "clamp",
     });
 
@@ -318,10 +341,11 @@ const HomeScreen: React.FC = () => {
 
     return (
       <Animated.View
+        onLayout={(e) => setMeasuredHeaderHeight(e.nativeEvent.layout.height)}
         style={[
           styles.headerContainer,
           {
-            paddingTop: insets.top + (Platform.OS === "ios" ? 4 : 2),
+            paddingTop: insets.top,
             opacity: headerOpacity,
             transform: [{ translateY: headerTranslateY }],
           },
@@ -821,10 +845,10 @@ const HomeScreen: React.FC = () => {
             styles.fixedHeader,
             {
               backgroundColor: theme.colors.surface,
-              // lift into the status bar so the header background covers it
-              top: -insets.top,
-              paddingTop: insets.top + 4,
-              paddingHorizontal: 16,
+              // Remove all padding to align with screen top
+              top: 0,
+              paddingTop: 0,
+              paddingHorizontal: getResponsiveValue(12, 16, 20),
               shadowColor: theme.colors.shadow,
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.1,
@@ -888,9 +912,8 @@ const HomeScreen: React.FC = () => {
         contentContainerStyle={[
           styles.listContainer,
           {
-            paddingTop: !showSearch
-              ? insets.top + (Platform.OS === "ios" ? 8 : 4)
-              : insets.top + 2,
+            // Add comfortable padding to show welcome text below fixed header
+            paddingTop: getResponsiveValue(56, 64, 72),
             paddingBottom: insets.bottom + 24,
           },
         ]}
@@ -995,15 +1018,18 @@ const styles = StyleSheet.create({
     zIndex: 100,
     borderBottomWidth: 0,
     elevation: 6,
+    height: getResponsiveValue(40, 48, 56),
   },
   fixedHeaderContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    height: 32,
+    height: getResponsiveValue(32, 40, 48),
+    paddingHorizontal: getResponsiveValue(12, 16, 20),
+    paddingVertical: 0,
   },
   brandText: {
-    fontSize: 22,
+    fontSize: getResponsiveValue(18, 22, 26),
     fontWeight: "800",
     fontFamily: "System",
     letterSpacing: -0.5,
@@ -1036,7 +1062,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     // padding is applied dynamically using safe area insets
-    paddingBottom: 8,
+    paddingBottom: getResponsiveValue(0, 1, 2),
     backgroundColor: "transparent",
   },
   topBar: {
@@ -1057,19 +1083,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   welcomeContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 4,
+    paddingHorizontal: getResponsiveValue(16, 20, 24),
+    marginBottom: getResponsiveValue(0, 1, 2),
+    marginTop: getResponsiveValue(0, 1, 2),
   },
   welcomeText: {
-    fontSize: 28,
+    fontSize: getResponsiveValue(24, 28, 32),
     fontWeight: "bold",
     fontFamily: "System",
-    lineHeight: 32,
+    lineHeight: getResponsiveValue(28, 32, 36),
+    marginBottom: 0,
   },
   subWelcomeText: {
-    fontSize: 16,
+    fontSize: getResponsiveValue(14, 16, 18),
     fontFamily: "System",
-    marginTop: 6,
+    marginTop: getResponsiveValue(0, 1, 2),
   },
   searchContainer: {
     paddingHorizontal: 20,
