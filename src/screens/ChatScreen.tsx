@@ -1,5 +1,6 @@
+// src/screens/ChatScreen.tsx
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -17,6 +18,12 @@ import { useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "../features/auth/auth.store";
 import { Message, useMessaging } from "../services/messaging.service";
+import {
+  commonFontSizes,
+  commonSpacing,
+  isSmallScreen,
+  isTablet,
+} from "../utils/responsive";
 
 interface ChatScreenProps {
   route: {
@@ -36,24 +43,51 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const theme = useTheme();
   const {
-    messages,
+    messages: initialMessages,
     loading,
-    sendNewMessage,
-    markAsRead,
     editExistingMessage,
     deleteExistingMessage,
-  } = useMessaging(otherUserId);
+    sendNewMessage,
+  } = useMessaging(otherUserId, otherUserName);
   const { user } = useAuthStore();
 
   // Get screen dimensions for responsive keyboard offset
   const screenHeight = Dimensions.get("window").height;
   const keyboardOffset =
-    Platform.OS === "ios" ? screenHeight * 0.18 : screenHeight * 0.05; // 18% for iOS, 5% for Android
+    Platform.OS === "ios" ? screenHeight * 0.18 : screenHeight * 0.05;
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const flatListRef = useRef<FlatList<Message> | null>(null);
+
+  // Use messages directly from Firebase as they are stored (oldest first)
+  useEffect(() => {
+    setMessages(initialMessages || []);
+  }, [initialMessages]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (flatListRef.current && messages.length) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
 
   const handleSendMessage = async () => {
     if (messageText.trim()) {
-      await sendNewMessage(messageText.trim(), listingId);
-      setMessageText("");
+      try {
+        const result = await sendNewMessage(messageText.trim(), listingId);
+        if (result!.success) {
+          setMessageText("");
+        } else {
+          Alert.alert(
+            "Error",
+            result!.error || "Failed to send message. Please try again."
+          );
+        }
+      } catch (error) {
+        Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      }
     }
   };
 
@@ -68,14 +102,20 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           {
             text: "Edit",
             onPress: () => {
-              setEditingMessage(message.id);
-              setEditText(message.message);
-              setShowEditModal(true);
+              if (message.id) {
+                setEditingMessage(message.id);
+                setEditText(message.message);
+                setShowEditModal(true);
+              }
             },
           },
           {
             text: "Delete",
-            onPress: () => handleDeleteMessage(message.id),
+            onPress: () => {
+              if (message.id) {
+                handleDeleteMessage(message.id);
+              }
+            },
             style: "destructive",
           },
           {
@@ -95,7 +135,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
         setEditingMessage(null);
         setEditText("");
       } else {
-        console.error("Failed to edit message:", result.error);
         Alert.alert("Error", "Failed to edit message. Please try again.");
       }
     }
@@ -114,10 +153,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           text: "Delete",
           onPress: async () => {
             const result = await deleteExistingMessage(messageId);
-            if (result.success) {
-              // Message will be removed from the list automatically via real-time listener
-            } else {
-              console.error("Failed to delete message:", result.error);
+            if (!result.success) {
               Alert.alert(
                 "Error",
                 "Failed to delete message. Please try again."
@@ -130,18 +166,52 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     );
   };
 
-  const renderMessage = ({ item }: { item: Message }) => {
+  // Format timestamp for display
+  const formatTimestamp = (timestamp?: string) => {
+    if (!timestamp) return "Sending...";
+
+    const messageDate = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - messageDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return messageDate.toLocaleDateString();
+  };
+
+  const renderMessage = ({ item }: { item: Message; index: number }) => {
     const isOwnMessage = item.senderId === user?.id.toString();
 
     return (
       <TouchableOpacity
         onLongPress={() => handleLongPress(item)}
         activeOpacity={0.7}
+        style={[
+          styles.messageWrapper,
+          isOwnMessage ? styles.ownMessageWrapper : styles.otherMessageWrapper,
+        ]}
       >
+        {!isOwnMessage && (
+          <Text
+            style={[
+              styles.senderName,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            {item.senderName || otherUserName}
+          </Text>
+        )}
         <View
           style={[
             styles.messageContainer,
             isOwnMessage ? styles.ownMessage : styles.otherMessage,
+            !isOwnMessage && { backgroundColor: theme.colors.surfaceVariant },
           ]}
         >
           <Text
@@ -154,7 +224,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           >
             {item.message}
           </Text>
-          <View style={styles.messageFooter}>
+          <View
+            style={[
+              styles.messageFooter,
+              isOwnMessage
+                ? styles.ownMessageFooter
+                : styles.otherMessageFooter,
+            ]}
+          >
             <Text
               style={[
                 styles.timestamp,
@@ -165,9 +242,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
                 },
               ]}
             >
-              {new Date(
-                item.timestamp?.toDate?.() || item.timestamp
-              ).toLocaleTimeString()}
+              {formatTimestamp(item.timestamp)}
             </Text>
             {isOwnMessage && (
               <MaterialCommunityIcons
@@ -191,6 +266,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
         <Text style={{ color: theme.colors.onSurface }}>
           Loading messages...
         </Text>
+        <Text
+          style={{
+            color: theme.colors.onSurfaceVariant,
+            fontSize: 12,
+            marginTop: 8,
+          }}
+        >
+          Debug: User {user?.id || "Not logged in"} chatting with {otherUserId}
+        </Text>
       </View>
     );
   }
@@ -204,31 +288,54 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
         style={styles.container}
         keyboardVerticalOffset={keyboardOffset}
       >
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            {
+              borderBottomColor: theme.colors.outline,
+              backgroundColor: theme.colors.surface,
+            },
+          ]}
+        >
           <Text style={[styles.headerText, { color: theme.colors.onSurface }]}>
-            Chat with {otherUserName}
+            Chat with {otherUserName || "Unknown User"}
           </Text>
         </View>
 
         <FlatList
           data={messages}
+          ref={flatListRef}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id || Math.random().toString()}
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContainer}
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => {
+            if (messages.length > 0) {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
+          onLayout={() => {
+            if (messages.length > 0) {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }
+          }}
         />
 
         <View
           style={[
             styles.inputContainer,
-            { borderTopColor: theme.colors.outline },
+            {
+              borderTopColor: theme.colors.outline,
+              backgroundColor: theme.colors.surface,
+            },
           ]}
         >
           <TextInput
             style={[
               styles.textInput,
               {
-                backgroundColor: theme.colors.surface,
+                backgroundColor: theme.colors.surfaceVariant,
                 color: theme.colors.onSurface,
                 borderColor: theme.colors.outline,
               },
@@ -243,7 +350,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           <TouchableOpacity
             style={[
               styles.sendButton,
-              { backgroundColor: theme.colors.primary },
+              {
+                backgroundColor: messageText.trim()
+                  ? theme.colors.primary
+                  : theme.colors.outline,
+                opacity: messageText.trim() ? 1 : 0.5,
+              },
             ]}
             onPress={handleSendMessage}
             disabled={!messageText.trim()}
@@ -259,9 +371,23 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           animationType="slide"
           onRequestClose={() => setShowEditModal(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Edit Message</Text>
+          <View
+            style={[
+              styles.modalOverlay,
+              { backgroundColor: "rgba(0, 0, 0, 0.5)" },
+            ]}
+          >
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[styles.modalTitle, { color: theme.colors.onSurface }]}
+              >
+                Edit Message
+              </Text>
               <TextInput
                 style={[
                   styles.editInput,
@@ -300,7 +426,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
                   ]}
                   onPress={handleEditMessage}
                 >
-                  <Text style={styles.modalButtonText}>Save</Text>
+                  <Text
+                    style={[
+                      styles.modalButtonText,
+                      { color: theme.colors.onPrimary },
+                    ]}
+                  >
+                    Save
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -316,65 +449,54 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
+    paddingVertical: 0,
+    paddingHorizontal: commonSpacing.medium,
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
   },
   headerText: {
-    fontSize: 18,
+    fontSize: commonFontSizes.title,
     fontWeight: "bold",
   },
   messagesList: {
     flex: 1,
   },
   messagesContainer: {
-    padding: 16,
+    paddingHorizontal: commonSpacing.medium,
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  messageWrapper: {
+    marginBottom: commonSpacing.small / 2, // Half spacing for tight layout
+  },
+  ownMessageWrapper: {
+    alignSelf: "flex-end",
+    maxWidth: "80%",
+  },
+  otherMessageWrapper: {
+    alignSelf: "flex-start",
+    maxWidth: "80%",
   },
   messageContainer: {
-    maxWidth: "80%",
-    marginVertical: 4,
-    padding: 12,
-    borderRadius: 16,
+    paddingHorizontal: commonSpacing.medium,
+    paddingVertical: commonSpacing.small / 2,
+    borderRadius: isSmallScreen ? 16 : 18,
+    minWidth: 50,
   },
   ownMessage: {
-    alignSelf: "flex-end",
-    backgroundColor: "#2196F3",
+    backgroundColor: "#0084FF",
+    borderBottomRightRadius: 4,
   },
   otherMessage: {
-    alignSelf: "flex-start",
-    backgroundColor: "#F5F5F5",
+    borderBottomLeftRadius: 4,
+  },
+  senderName: {
+    fontSize: commonFontSizes.small,
+    fontWeight: "600",
+    marginBottom: 2,
   },
   messageText: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  timestamp: {
-    fontSize: 12,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderTopWidth: 1,
-    paddingBottom: Platform.OS === "ios" ? 20 : 16,
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginRight: 12,
-    maxHeight: 120,
-    minHeight: 50,
-    fontSize: 16,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
+    fontSize: commonFontSizes.medium,
+    lineHeight: commonFontSizes.medium + 6,
   },
   messageFooter: {
     flexDirection: "row",
@@ -382,35 +504,69 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     marginTop: 4,
   },
+  ownMessageFooter: {
+    justifyContent: "flex-end",
+  },
+  otherMessageFooter: {
+    justifyContent: "flex-start",
+  },
+  timestamp: {
+    fontSize: commonFontSizes.small - 1,
+    opacity: 0.8,
+  },
   readIcon: {
     marginLeft: 4,
   },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingVertical: 0,
+    paddingHorizontal: commonSpacing.small,
+    borderTopWidth: 1,
+  },
+  textInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: isSmallScreen ? 18 : 20,
+    paddingHorizontal: commonSpacing.medium,
+    paddingVertical: commonSpacing.small + 2,
+    marginRight: commonSpacing.medium,
+    maxHeight: 100,
+    minHeight: isSmallScreen ? 36 : 40,
+    fontSize: commonFontSizes.medium,
+    lineHeight: commonFontSizes.medium + 4,
+  },
+  sendButton: {
+    width: isSmallScreen ? 36 : 40,
+    height: isSmallScreen ? 36 : 40,
+    borderRadius: isSmallScreen ? 18 : 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 20,
-    width: "90%",
-    maxWidth: 400,
+    borderRadius: isSmallScreen ? 10 : 12,
+    padding: commonSpacing.medium,
+    width: isTablet ? "60%" : "90%",
+    maxWidth: isTablet ? 500 : 400,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: commonFontSizes.large,
     fontWeight: "bold",
-    marginBottom: 16,
+    marginBottom: commonSpacing.medium,
     textAlign: "center",
   },
   editInput: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    minHeight: 80,
-    marginBottom: 16,
+    borderRadius: isSmallScreen ? 6 : 8,
+    padding: commonSpacing.medium,
+    fontSize: commonFontSizes.medium,
+    minHeight: isSmallScreen ? 72 : 80,
+    marginBottom: commonSpacing.medium,
   },
   modalButtons: {
     flexDirection: "row",

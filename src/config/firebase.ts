@@ -1,13 +1,16 @@
-// Import the functions you need from the Firebase SDK
+// serc/config/firebase.ts
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getDatabase } from "firebase/database";
 import {
   addDoc,
+  and,
   collection,
   deleteDoc,
   doc,
   getFirestore,
   limit,
+  or,
   orderBy,
   query,
   serverTimestamp,
@@ -20,6 +23,7 @@ const firebaseConfig = {
   projectId: "ethiocars-messaging",
   apiKey: "AIzaSyCYT3-sZSEWiCZ7zMH-JYQ7nAjjqzoW_nQ",
   authDomain: "ethiocars-messaging.firebaseapp.com",
+  databaseURL: "https://ethiocars-messaging-default-rtdb.firebaseio.com/",
   storageBucket: "ethiocars-messaging.firebasestorage.app",
   messagingSenderId: "871913850490",
   appId: "1:871913850490:web:8ea21f833363d226521dc3",
@@ -29,9 +33,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
+const database = getDatabase(app);
 
 // Export Firebase services
-export { app, auth, firestore };
+export { app, auth, database, firestore };
 
 // Helper functions for messaging
 export const sendMessage = async (
@@ -63,6 +68,29 @@ export const getMessages = (userId1: string, userId2: string) => {
     messagesRef,
     where("senderId", "in", [userId1, userId2]),
     where("receiverId", "in", [userId1, userId2]),
+    orderBy("timestamp", "desc"),
+    limit(50)
+  );
+};
+
+// New function to get messages for a specific user (only messages from other user)
+export const getMessagesFromUser = (
+  currentUserId: string,
+  otherUserId: string
+) => {
+  const messagesRef = collection(firestore, "messages");
+  return query(
+    messagesRef,
+    or(
+      and(
+        where("senderId", "==", otherUserId),
+        where("receiverId", "==", currentUserId)
+      ),
+      and(
+        where("senderId", "==", currentUserId),
+        where("receiverId", "==", otherUserId)
+      )
+    ),
     orderBy("timestamp", "desc"),
     limit(50)
   );
