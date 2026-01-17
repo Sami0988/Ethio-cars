@@ -4,7 +4,7 @@
     "slug": "EthioCarsApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icon.png",
     "scheme": "ethiocarsapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -18,10 +18,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ethiocars.app"
+      "bundleIdentifier": "com.ethiocars.app",
+      "icon": "./assets/icon.png"
     },
     "android": {
       "package": "com.ethiocars.app",
+      "icon": "./assets/android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
