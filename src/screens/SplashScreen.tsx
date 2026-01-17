@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View } from "react-native";
+import { Image as RNImage, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const PRIMARY = "#dc2828";
@@ -64,9 +64,15 @@ export const SplashScreen: React.FC = () => {
               elevation: 8,
             }}
           >
-            <Text style={{ fontSize: 56, color: "white", fontWeight: "bold" }}>
-              🚗
-            </Text>
+            <RNImage
+              source={require("../../assets/images/icon.png")}
+              style={{
+                height: 80,
+                width: 80,
+                borderRadius: 20,
+                resizeMode: "contain",
+              }}
+            />
           </View>
         </View>
 

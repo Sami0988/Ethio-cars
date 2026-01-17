@@ -21,8 +21,10 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { customColors } from "../constants/colors";
+import { useAuthStore } from "../features/auth/auth.store";
 import { useDeleteCar, useUpdateCar } from "../features/cars/car.hooks";
 import { useThemeStore } from "../features/theme/theme.store";
 
@@ -111,6 +113,8 @@ const CarDetailScreen: React.FC = () => {
   const { id } = useLocalSearchParams();
   const { isDarkMode } = useThemeStore();
   const colors = customColors[isDarkMode ? "dark" : "light"];
+  const insets = useSafeAreaInsets();
+  const { isAuthenticated } = useAuthStore();
 
   const [carDetail, setCarDetail] = useState<CarDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -148,8 +152,23 @@ const CarDetailScreen: React.FC = () => {
   };
 
   const handleCall = () => {
+    // Remove authentication requirement - allow anyone to call seller
     if (carDetail?.seller?.phone) {
       Linking.openURL(`tel:${carDetail.seller.phone}`);
+    } else {
+      alert("Seller phone number not available");
+    }
+  };
+
+  const handleMessage = () => {
+    // Remove authentication requirement - allow anyone to message seller
+    if (carDetail?.seller?.phone) {
+      const message = `Hi, I'm interested in your ${carDetail?.make} ${carDetail?.model} (Listing ID: ${carDetail?.listing_id}). Please provide more details.`;
+      Linking.openURL(
+        `sms:${carDetail.seller.phone}?body=${encodeURIComponent(message)}`
+      );
+    } else {
+      alert("Seller phone number not available");
     }
   };
 
@@ -645,7 +664,10 @@ const CarDetailScreen: React.FC = () => {
       <View
         style={[
           styles.bottomActions,
-          { backgroundColor: theme.colors.surface },
+          {
+            backgroundColor: theme.colors.surface,
+            paddingBottom: insets.bottom + 16, // Add safe area padding
+          },
         ]}
       >
         <Button
@@ -657,6 +679,15 @@ const CarDetailScreen: React.FC = () => {
         >
           Call Seller
         </Button>
+        <Button
+          mode="outlined"
+          onPress={handleMessage}
+          style={[styles.messageButton, { borderColor: theme.colors.primary }]}
+          icon="message"
+          textColor={theme.colors.primary}
+        >
+          Message
+        </Button>
       </View>
     </View>
   );
@@ -665,6 +696,63 @@ const CarDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  headerTitle: {
+    flex: 1,
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  imageGallery: {
+    position: "relative",
+    height: 250,
+    backgroundColor: "#f8f9fa",
+  },
+  mainImage: {
+    width: "100%",
+    height: "100%",
+  },
+  imagePlaceholder: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#e9ecef",
+  },
+  navButton: {
+    position: "absolute",
+    top: "50%",
+    transform: [{ translateY: -20 }],
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
+  },
+  prevButton: {
+    left: 16,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  nextButton: {
+    right: 16,
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
   loadingContainer: {
     flex: 1,
@@ -686,228 +774,168 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginTop: 16,
-    marginBottom: 8,
-    fontFamily: "System",
   },
   errorSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
+    color: "#666",
+    marginTop: 8,
     textAlign: "center",
-    marginBottom: 24,
-    fontFamily: "System",
   },
   retryButton: {
-    paddingHorizontal: 24,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: getSpacing(12, 16, 20),
-    paddingVertical: getSpacing(6, 8, 10),
-    elevation: 2,
-    zIndex: 100,
-  },
-  headerTitle: {
-    flex: 1,
-    justifyContent: "center",
-    textAlign: "center",
-    fontSize: getFontSize(14, 16, 18),
-    fontWeight: "bold",
-    fontFamily: "System",
-    margin: getSpacing(20, 25, 30),
-    alignItems: "center",
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    fontFamily: "System",
-  },
-  imageGallery: {
-    position: "relative",
-    height: getSpacing(200, 250, 300),
-  },
-  mainImage: {
-    width: "100%",
-    height: "100%",
-  },
-  imagePlaceholder: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  imageIndicator: {
-    position: "absolute",
-    bottom: 16,
-    right: 16,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  imageIndicatorText: {
-    fontSize: 12,
-    fontWeight: "600",
-    fontFamily: "System",
-  },
-  navButton: {
-    position: "absolute",
-    top: "50%",
-    transform: [{ translateY: -20 }],
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  prevButton: {
-    left: 16,
-  },
-  nextButton: {
-    right: 16,
+    marginTop: 20,
   },
   card: {
-    margin: getSpacing(12, 16, 20),
-    padding: getSpacing(16, 20, 24),
-    borderRadius: 16,
+    margin: 16,
+    borderRadius: 12,
+    overflow: "hidden",
     elevation: 2,
-  },
-  carHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
-  titleSection: {
-    flex: 1,
-  },
-  carTitle: {
-    fontSize: getFontSize(20, 24, 28),
-    fontWeight: "bold",
-    marginBottom: getSpacing(6, 8, 10),
-    fontFamily: "System",
-  },
-  verifiedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  conditionBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  conditionText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "600",
-    fontFamily: "System",
-  },
-  saveButton: {
-    padding: 8,
-  },
-  priceSection: {
-    marginBottom: 20,
-  },
-  price: {
-    fontSize: getFontSize(24, 28, 32),
-    fontWeight: "bold",
-    fontFamily: "System",
-  },
-  negotiable: {
-    fontSize: 14,
-    marginTop: 4,
-    fontFamily: "System",
-  },
-  quickStats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  statItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  statText: {
-    fontSize: 14,
-    fontWeight: "500",
-    fontFamily: "System",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   sectionTitle: {
-    fontSize: getFontSize(16, 18, 20),
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: getSpacing(10, 12, 14),
-    fontFamily: "System",
+    marginBottom: 16,
+  },
+  priceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  priceLabel: {
+    fontSize: 14,
+    color: "#666",
+    marginRight: 8,
+  },
+  price: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#2ecc71",
+  },
+  negotiable: {
+    fontSize: 12,
+    color: "#666",
+    marginLeft: 8,
+    fontStyle: "italic",
+  },
+  detailsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 16,
+  },
+  detailItem: {
+    width: "50%",
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  detailIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+  },
+  detailText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  descriptionContainer: {
+    marginBottom: 16,
+  },
+  descriptionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 8,
   },
   description: {
-    fontSize: 15,
-    lineHeight: 24,
-    fontFamily: "System",
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#666",
+  },
+  featuresContainer: {
+    marginBottom: 16,
+  },
+  featuresTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 12,
   },
   featuresGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
   },
   featureItem: {
+    width: "50%",
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    width: "48%",
+    marginBottom: 8,
+  },
+  featureIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 8,
   },
   featureText: {
     fontSize: 14,
-    fontFamily: "System",
-    flex: 1,
+    color: "#333",
+  },
+  sellerContainer: {
+    marginBottom: 16,
+  },
+  sellerTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 12,
   },
   sellerInfo: {
     flexDirection: "row",
-    gap: 16,
+    alignItems: "center",
   },
   sellerAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
   },
   sellerDetails: {
     flex: 1,
   },
   sellerName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     marginBottom: 4,
-    fontFamily: "System",
   },
   sellerType: {
     fontSize: 14,
+    color: "#666",
     marginBottom: 4,
-    fontFamily: "System",
   },
   sellerAddress: {
-    fontSize: 13,
-    marginBottom: 4,
-    fontFamily: "System",
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
   },
-  listingCount: {
-    fontSize: 13,
-    fontFamily: "System",
+  sellerListings: {
+    fontSize: 12,
+    color: "#666",
+  },
+  locationContainer: {
+    marginBottom: 16,
+  },
+  locationTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 12,
   },
   locationInfo: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
   },
   locationText: {
-    fontSize: 15,
-    fontFamily: "System",
+    fontSize: 14,
+    color: "#333",
+    marginLeft: 8,
   },
   bottomPadding: {
     height: 100,
@@ -924,15 +952,88 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(0,0,0,0.1)",
   },
+  callButton: {
+    flex: 1,
+    borderRadius: 12,
+    height: 48,
+  },
   messageButton: {
     flex: 1,
     borderRadius: 12,
     height: 48,
   },
-  callButton: {
-    flex: 1,
+  // Missing styles for image indicators
+  imageIndicator: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 12,
-    height: 48,
+  },
+  imageIndicatorText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  // Missing styles for car header section
+  carHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  titleSection: {
+    flex: 1,
+    marginRight: 16,
+  },
+  carTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  verifiedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  conditionBadge: {
+    backgroundColor: "#e8f5e8",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  conditionText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#2ecc71",
+  },
+  saveButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "#f8f9fa",
+  },
+  priceSection: {
+    marginBottom: 16,
+  },
+  quickStats: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  statItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+  },
+  statText: {
+    fontSize: 14,
+  },
+  listingCount: {
+    fontSize: 12,
+    color: "#666",
   },
 });
 

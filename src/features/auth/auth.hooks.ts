@@ -30,12 +30,19 @@ export const useLogout = () => {
     mutationFn: () => authService.logout(),
     onSuccess: () => {
       logout();
-      router.replace("/(auth)/login");
+      // Show logout success message
+      Alert.alert(
+        "Success",
+        "Logout successful! Redirecting to home screen...",
+      );
+      setTimeout(() => {
+        router.replace("/(tabs)"); // Redirect to home screen instead of login
+      }, 1500);
     },
     onError: (error: any) => {
       console.error("Logout error:", error);
       logout();
-      router.replace("/(auth)/login");
+      router.replace("/(tabs)"); // Redirect to home screen instead of login
     },
   });
 };

@@ -8,12 +8,30 @@
     "scheme": "ethiocarsapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "cli": {
+      "appVersionSource": "local"
+    },
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f8f6f6"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ethiocars.app"
     },
     "android": {
-      "package": "com.ethiocars.app"
+      "package": "com.ethiocars.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "splash": {
+        "image": "./assets/images/icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#f8f6f6"
+      }
     },
     "web": {
       "output": "static",

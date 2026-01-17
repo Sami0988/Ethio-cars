@@ -1,5 +1,13 @@
 //src/services/messaging.service.ts
-import { child, get, onValue, push, ref } from "firebase/database";
+import {
+  child,
+  get,
+  onValue,
+  push,
+  ref,
+  remove,
+  update,
+} from "firebase/database";
 import { useEffect, useState } from "react";
 import { database } from "../config/firebase";
 import { useAuthStore } from "../features/auth/auth.store";
@@ -279,16 +287,41 @@ export const useMessaging = (otherUserId: string, otherUserName?: string) => {
       );
     },
     editExistingMessage: async (messageId: string, newMessage: string) => {
-      // For Firebase Realtime Database, we need to update the message
-      // This would require implementing an update function
-      console.log("Edit message:", messageId, newMessage);
-      return { success: true, error: undefined };
+      if (!messageId || !newMessage.trim()) {
+        return { success: false, error: "Invalid message ID or message text" };
+      }
+
+      try {
+        const messageRef = ref(database, `${MESSAGES_REF}${messageId}`);
+        await update(messageRef, {
+          message: newMessage.trim(),
+          timestamp: new Date().toISOString(), // Update timestamp to show when edited
+        });
+        console.log("Message edited successfully:", messageId);
+        return { success: true };
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "An unknown error occurred";
+        console.error("Error editing message:", errorMessage);
+        return { success: false, error: errorMessage };
+      }
     },
     deleteExistingMessage: async (messageId: string) => {
-      // For Firebase Realtime Database, we need to remove the message
-      // This would require implementing a delete function
-      console.log("Delete message:", messageId);
-      return { success: true, error: undefined };
+      if (!messageId) {
+        return { success: false, error: "Invalid message ID" };
+      }
+
+      try {
+        const messageRef = ref(database, `${MESSAGES_REF}${messageId}`);
+        await remove(messageRef);
+        console.log("Message deleted successfully:", messageId);
+        return { success: true };
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "An unknown error occurred";
+        console.error("Error deleting message:", errorMessage);
+        return { success: false, error: errorMessage };
+      }
     },
   };
 };

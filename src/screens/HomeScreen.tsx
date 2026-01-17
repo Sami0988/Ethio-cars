@@ -60,7 +60,7 @@ const isLargeTablet = width >= 1024;
 const getResponsiveValue = (
   phone: number,
   tablet: number,
-  largeTablet?: number
+  largeTablet?: number,
 ) => {
   if (isLargeTablet && largeTablet) return largeTablet;
   return isTablet ? tablet : phone;
@@ -131,7 +131,7 @@ const HomeScreen: React.FC = () => {
 
       // Refetch all data
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   // Extract all listings - FIXED: Remove duplicates
@@ -142,7 +142,7 @@ const HomeScreen: React.FC = () => {
 
     // Remove duplicates using a Set
     const uniqueItems = Array.from(
-      new Map(allItems.map((item) => [item.listing_id, item])).values()
+      new Map(allItems.map((item) => [item.listing_id, item])).values(),
     );
 
     return uniqueItems;
@@ -153,7 +153,7 @@ const HomeScreen: React.FC = () => {
   // Handle scroll for animations
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: headerScrollAnim } } }],
-    { useNativeDriver: false }
+    { useNativeDriver: false },
   );
 
   // Load more function
@@ -220,7 +220,7 @@ const HomeScreen: React.FC = () => {
             text: "Sign Up",
             onPress: () => router.push("/(auth)/register"),
           },
-        ]
+        ],
       );
       return;
     }
@@ -233,7 +233,7 @@ const HomeScreen: React.FC = () => {
     if (!phoneNumber) {
       Alert.alert(
         "Please Try Again Later",
-        "Phone number not available at the moment."
+        "Phone number not available at the moment.",
       );
       return;
     }
@@ -242,7 +242,7 @@ const HomeScreen: React.FC = () => {
     Linking.openURL(`tel:${phoneNumber}`).catch(() => {
       Alert.alert(
         "Please Try Again Later",
-        "Unable to make call at the moment. Please try again later."
+        "Unable to make call at the moment. Please try again later.",
       );
     });
   };
@@ -266,7 +266,7 @@ const HomeScreen: React.FC = () => {
             text: "Sign Up",
             onPress: () => router.push("/(auth)/register"),
           },
-        ]
+        ],
       );
       return;
     }

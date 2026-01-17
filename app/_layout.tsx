@@ -59,24 +59,27 @@ export default function RootLayout() {
       try {
         const onboardingFlag = await webStorage.getItem("seen_onboarding");
 
-        // Small delay to allow auth store to hydrate from persist
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        // Increased delay to ensure splash screen is visible
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        if (!onboardingFlag) {
+        if (isAuthenticated) {
+          // User is authenticated, always go to home tabs (priority over onboarding)
+          setInitialRoute("/(tabs)");
+        } else if (!onboardingFlag) {
           setInitialRoute("/onboarding");
         } else {
-          // After onboarding, go directly to home tabs
+          // User not authenticated, go to home tabs (since messaging is free)
           setInitialRoute("/(tabs)");
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
-        setInitialRoute("/(auth)/login");
+        setInitialRoute("/(tabs)"); // Default to home on error
       } finally {
         setLoading(false);
       }
     };
     init();
-  }, [isAuthenticated]);
+  }, [isAuthenticated]); // Add isAuthenticated dependency to react to auth changes
 
   // While deciding, show splash once
   if (loading || !initialRoute) {

@@ -147,7 +147,7 @@ const ProfileScreen: React.FC = () => {
       Alert.alert(
         "Permission Required",
         `Please grant permission to access ${type === "camera" ? "camera" : "photo library"}.`,
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
       return false;
     }
@@ -222,7 +222,7 @@ const ProfileScreen: React.FC = () => {
             Alert.alert("Success", "Profile photo removed!");
           },
         },
-      ]
+      ],
     );
   };
 
@@ -811,19 +811,29 @@ const ProfileScreen: React.FC = () => {
                 >
                   4.8 (24 reviews)
                 </Chip>
-                <MaterialCommunityIcons
-                  name="map-marker"
-                  size={14}
-                  color={theme.colors.onSurfaceVariant}
-                />
-                <Text
-                  style={[
-                    styles.metaText,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
+                <TouchableOpacity
+                  onPress={() =>
+                    Alert.alert(
+                      "Coming Soon",
+                      "Location change feature will be available soon!",
+                      [{ text: "OK", style: "cancel" }],
+                    )
+                  }
                 >
-                  Addis Ababa, Ethiopia
-                </Text>
+                  <MaterialCommunityIcons
+                    name="map-marker"
+                    size={14}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                  <Text
+                    style={[
+                      styles.metaText,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Addis Ababa, Ethiopia
+                  </Text>
+                </TouchableOpacity>
               </View>
               <Text
                 style={[
@@ -1298,7 +1308,7 @@ const ProfileScreen: React.FC = () => {
               Alert.alert(
                 "Not supported",
                 "This feature is currently not supported.",
-                [{ text: "OK" }]
+                [{ text: "OK" }],
               )
             }
           />
@@ -1334,7 +1344,7 @@ const ProfileScreen: React.FC = () => {
               Alert.alert(
                 "Not supported",
                 "This feature is currently not supported.",
-                [{ text: "OK" }]
+                [{ text: "OK" }],
               )
             }
           />
@@ -1370,7 +1380,7 @@ const ProfileScreen: React.FC = () => {
               Alert.alert(
                 "Not supported",
                 "This feature is currently not supported.",
-                [{ text: "OK" }]
+                [{ text: "OK" }],
               )
             }
           />
@@ -1452,7 +1462,7 @@ const ProfileScreen: React.FC = () => {
             onPress={() => {
               Alert.alert(
                 "Share Profile",
-                "Profile sharing feature would open here"
+                "Profile sharing feature would open here",
               );
             }}
           />
@@ -1531,11 +1541,11 @@ const ProfileScreen: React.FC = () => {
                     onPress: () => {
                       Alert.alert(
                         "Account Deletion",
-                        "Account deletion feature would be implemented here"
+                        "Account deletion feature would be implemented here",
                       );
                     },
                   },
-                ]
+                ],
               )
             }
           />

@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useFormik } from "formik";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Animated,
   Easing,
   KeyboardAvoidingView,
@@ -16,6 +17,8 @@ import {
   Card,
   Divider,
   HelperText,
+  IconButton,
+  Snackbar,
   Surface,
   Text,
   TextInput,
@@ -23,6 +26,7 @@ import {
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useAuthStore } from "../../features/auth/auth.store";
+import { useThemeStore } from "../../features/theme/theme.store";
 import {
   commonFontSizes,
   commonSpacing,
@@ -34,10 +38,13 @@ import { LoginFormData, loginSchema } from "../../utils/validation";
 const LoginScreen: React.FC = () => {
   const router = useRouter();
   const theme = useTheme();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError, isAuthenticated } =
+    useAuthStore();
+  const { isDarkMode } = useThemeStore();
   const [showPassword, setShowPassword] = useState(false);
   const [slideAnim] = useState(new Animated.Value(0));
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   useEffect(() => {
     // Staggered animations
@@ -57,6 +64,25 @@ const LoginScreen: React.FC = () => {
     ]).start();
   }, []);
 
+  // Handle navigation after successful login
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Show success message briefly before navigating
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        router.replace("/(tabs)"); // Go directly to home screen
+      }, 1500); // Show message for 1.5 seconds
+    }
+  }, [isAuthenticated, router]);
+
+  // Handle error messages
+  useEffect(() => {
+    if (error) {
+      // Error is now properly normalized in the auth store
+      // No additional handling needed here
+    }
+  }, [error]);
+
   const formik = useFormik<LoginFormData>({
     initialValues: {
       email: "",
@@ -66,19 +92,28 @@ const LoginScreen: React.FC = () => {
     onSubmit: async (values) => {
       try {
         clearError();
+        setShowSuccessMessage(false);
         await login(values);
       } catch (err) {
-        // Error handled by store
+        // Error handled by store - stays on login screen
       }
     },
   });
 
   const handleForgotPassword = () => {
-    router.push("/screens/auth/ForgotPasswordScreen");
+    Alert.alert(
+      "Coming Soon",
+      "Password reset feature will be available soon!",
+      [{ text: "OK", style: "cancel" }],
+    );
   };
 
   const handleSignUp = () => {
     router.push("/(auth)/register");
+  };
+
+  const handleBackToHome = () => {
+    router.replace("/(tabs)");
   };
 
   const handleGoogleLogin = () => {
@@ -118,6 +153,17 @@ const LoginScreen: React.FC = () => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {/* Back Button */}
+      <View style={styles.backButtonContainer}>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          iconColor={theme.colors.onSurface}
+          onPress={handleBackToHome}
+          style={styles.backButton}
+        />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
@@ -133,29 +179,44 @@ const LoginScreen: React.FC = () => {
               <Avatar.Icon
                 size={100}
                 icon="car"
-                color="#fff"
+                color={theme.colors.onPrimary}
                 style={[styles.logo, { backgroundColor: theme.colors.primary }]}
               />
               <MaterialCommunityIcons
                 name="car-sports"
                 size={40}
-                color="#fff"
+                color={theme.colors.onPrimary}
                 style={styles.carIcon}
               />
             </Animated.View>
 
-            <Text variant="headlineLarge" style={styles.title}>
+            <Text
+              variant="headlineLarge"
+              style={[styles.title, { color: theme.colors.onSurface }]}
+            >
               Welcome to EthioCars
             </Text>
-            <Text variant="bodyLarge" style={styles.subtitle}>
+            <Text
+              variant="bodyLarge"
+              style={[
+                styles.subtitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
               Sign in to access Ethiopia's largest automotive marketplace
             </Text>
           </View>
 
           {/* Login Card */}
-          <Card style={styles.card} elevation={4}>
+          <Card
+            style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            elevation={4}
+          >
             <Card.Content>
-              <Text variant="titleLarge" style={styles.cardTitle}>
+              <Text
+                variant="titleLarge"
+                style={[styles.cardTitle, { color: theme.colors.onSurface }]}
+              >
                 Sign In to Your Account
               </Text>
 
@@ -168,11 +229,15 @@ const LoginScreen: React.FC = () => {
                 error={!!(formik.touched.email && formik.errors.email)}
                 left={<TextInput.Icon icon="email" />}
                 mode="outlined"
-                style={styles.input}
+                style={[
+                  styles.input,
+                  { backgroundColor: theme.colors.surface },
+                ]}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                outlineColor="#E5E7EB"
+                outlineColor={isDarkMode ? "#374151" : "#E5E7EB"}
                 activeOutlineColor={theme.colors.primary}
+                textColor={theme.colors.onSurface}
               />
               <HelperText
                 type="error"
@@ -197,9 +262,13 @@ const LoginScreen: React.FC = () => {
                   />
                 }
                 mode="outlined"
-                style={styles.input}
-                outlineColor="#E5E7EB"
+                style={[
+                  styles.input,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+                outlineColor={isDarkMode ? "#374151" : "#E5E7EB"}
                 activeOutlineColor={theme.colors.primary}
+                textColor={theme.colors.onSurface}
               />
               <HelperText
                 type="error"
@@ -225,20 +294,41 @@ const LoginScreen: React.FC = () => {
                 onPress={() => formik.handleSubmit()}
                 loading={isLoading}
                 disabled={isLoading}
-                style={styles.loginButton}
+                style={[
+                  styles.loginButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
                 icon="login"
                 contentStyle={styles.buttonContent}
+                buttonColor={theme.colors.primary}
+                textColor={theme.colors.onPrimary}
               >
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
 
               {/* Divider */}
               <View style={styles.dividerContainer}>
-                <Divider style={styles.divider} />
-                <Text variant="bodySmall" style={styles.dividerText}>
+                <Divider
+                  style={[
+                    styles.divider,
+                    { backgroundColor: isDarkMode ? "#374151" : "#E5E7EB" },
+                  ]}
+                />
+                <Text
+                  variant="bodySmall"
+                  style={[
+                    styles.dividerText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
                   OR CONTINUE WITH
                 </Text>
-                <Divider style={styles.divider} />
+                <Divider
+                  style={[
+                    styles.divider,
+                    { backgroundColor: isDarkMode ? "#374151" : "#E5E7EB" },
+                  ]}
+                />
               </View>
 
               {/* Social Login */}
@@ -246,7 +336,10 @@ const LoginScreen: React.FC = () => {
                 <Button
                   mode="outlined"
                   onPress={handleGoogleLogin}
-                  style={styles.socialButton}
+                  style={[
+                    styles.socialButton,
+                    { borderColor: isDarkMode ? "#374151" : "#E5E7EB" },
+                  ]}
                   icon={() => (
                     <MaterialCommunityIcons
                       name="google"
@@ -255,21 +348,26 @@ const LoginScreen: React.FC = () => {
                     />
                   )}
                   contentStyle={styles.socialButtonContent}
+                  textColor={theme.colors.onSurface}
                 >
                   Google
                 </Button>
                 <Button
                   mode="outlined"
                   onPress={handleAppleLogin}
-                  style={styles.socialButton}
+                  style={[
+                    styles.socialButton,
+                    { borderColor: isDarkMode ? "#374151" : "#E5E7EB" },
+                  ]}
                   icon={() => (
                     <MaterialCommunityIcons
                       name="apple"
                       size={20}
-                      color="#000"
+                      color={isDarkMode ? "#FFFFFF" : "#000"}
                     />
                   )}
                   contentStyle={styles.socialButtonContent}
+                  textColor={theme.colors.onSurface}
                 >
                   Apple
                 </Button>
@@ -277,7 +375,12 @@ const LoginScreen: React.FC = () => {
 
               {/* Register Link */}
               <View style={styles.registerContainer}>
-                <Text variant="bodyMedium">Don't have an account?</Text>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: theme.colors.onSurfaceVariant }}
+                >
+                  Don't have an account?
+                </Text>
                 <Button
                   mode="text"
                   onPress={handleSignUp}
@@ -292,8 +395,17 @@ const LoginScreen: React.FC = () => {
           </Card>
 
           {/* Features Showcase */}
-          <Surface style={styles.featuresSurface} elevation={2}>
-            <Text variant="titleSmall" style={styles.featuresTitle}>
+          <Surface
+            style={[
+              styles.featuresSurface,
+              { backgroundColor: theme.colors.surface },
+            ]}
+            elevation={2}
+          >
+            <Text
+              variant="titleSmall"
+              style={[styles.featuresTitle, { color: theme.colors.onSurface }]}
+            >
               Why Choose EthioCars?
             </Text>
             <View style={styles.featuresGrid}>
@@ -330,7 +442,13 @@ const LoginScreen: React.FC = () => {
                       color={feature.color}
                     />
                   </View>
-                  <Text variant="bodySmall" style={styles.featureLabel}>
+                  <Text
+                    variant="bodySmall"
+                    style={[
+                      styles.featureLabel,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
                     {feature.label}
                   </Text>
                 </Animated.View>
@@ -339,6 +457,32 @@ const LoginScreen: React.FC = () => {
           </Surface>
         </Animated.View>
       </ScrollView>
+
+      {/* Success Message */}
+      <Snackbar
+        visible={showSuccessMessage}
+        onDismiss={() => setShowSuccessMessage(false)}
+        duration={1500}
+        style={{ backgroundColor: "#10B981" }}
+      >
+        <Text style={{ color: "#fff", fontWeight: "600" }}>
+          Login Successful! Redirecting to home...
+        </Text>
+      </Snackbar>
+
+      {/* Error Message */}
+      <Snackbar
+        visible={!!error}
+        onDismiss={clearError}
+        duration={4000}
+        style={{ backgroundColor: "#EF4444" }}
+      >
+        <Text style={{ color: "#fff", fontWeight: "600" }}>
+          {error === "Login failed" || error === "Invalid credentials"
+            ? "Invalid Credentials"
+            : error}
+        </Text>
+      </Snackbar>
     </KeyboardAvoidingView>
   );
 };
@@ -346,6 +490,16 @@ const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  backButtonContainer: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    zIndex: 10,
+  },
+  backButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 20,
   },
   scrollContainer: {
     flexGrow: 1,

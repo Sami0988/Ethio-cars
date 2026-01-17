@@ -31,14 +31,14 @@ const storage = {
           // Fallback to localStorage if SecureStore fails and if available
           console.warn(
             "SecureStore not available or failed, falling back to localStorage if available:",
-            secureStoreError
+            secureStoreError,
           );
           if (typeof localStorage !== "undefined") {
             const value = localStorage.getItem(name);
             return value ? JSON.parse(value) : null;
           } else {
             console.warn(
-              "localStorage is not available in this environment; returning null."
+              "localStorage is not available in this environment; returning null.",
             );
             return null;
           }
@@ -62,13 +62,13 @@ const storage = {
           // Fallback to localStorage if SecureStore fails and if available
           console.warn(
             "SecureStore not available or failed, falling back to localStorage if available:",
-            secureStoreError
+            secureStoreError,
           );
           if (typeof localStorage !== "undefined") {
             localStorage.setItem(name, JSON.stringify(value));
           } else {
             console.warn(
-              "localStorage is not available in this environment; skipping persist."
+              "localStorage is not available in this environment; skipping persist.",
             );
           }
         }
@@ -90,13 +90,13 @@ const storage = {
           // Fallback to localStorage if SecureStore fails and if available
           console.warn(
             "SecureStore not available or failed, falling back to localStorage if available:",
-            secureStoreError
+            secureStoreError,
           );
           if (typeof localStorage !== "undefined") {
             localStorage.removeItem(name);
           } else {
             console.warn(
-              "localStorage is not available in this environment; skipping remove."
+              "localStorage is not available in this environment; skipping remove.",
             );
           }
         }
@@ -138,18 +138,39 @@ export const useAuthStore = create<AuthStore>()(
           } else {
             const errorMsg =
               response.error || response.message || "Login failed";
+            // Normalize error message for invalid credentials
+            const normalizedError =
+              errorMsg.toLowerCase().includes("invalid") ||
+              errorMsg.toLowerCase().includes("credential") ||
+              errorMsg.toLowerCase().includes("password") ||
+              errorMsg.toLowerCase().includes("email") ||
+              errorMsg.toLowerCase().includes("unauthorized")
+                ? "Invalid Credentials"
+                : errorMsg;
+
             set({
               isLoading: false,
-              error: errorMsg,
+              error: normalizedError,
             });
-            return Promise.reject(new Error(errorMsg));
+            return Promise.reject(new Error(normalizedError));
           }
         } catch (error: any) {
+          // Normalize error message for invalid credentials
+          const errorMessage = error.message || "Login failed";
+          const normalizedError =
+            errorMessage.toLowerCase().includes("invalid") ||
+            errorMessage.toLowerCase().includes("credential") ||
+            errorMessage.toLowerCase().includes("password") ||
+            errorMessage.toLowerCase().includes("email") ||
+            errorMessage.toLowerCase().includes("unauthorized")
+              ? "Invalid Credentials"
+              : errorMessage;
+
           set({
             isLoading: false,
-            error: error.message || "Login failed",
+            error: normalizedError,
           });
-          return Promise.reject(error);
+          return Promise.reject(new Error(normalizedError));
         }
       },
 
@@ -280,8 +301,8 @@ export const useAuthStore = create<AuthStore>()(
           }
         };
       },
-    }
-  )
+    },
+  ),
 );
 
 // Hook to initialize and validate auth state

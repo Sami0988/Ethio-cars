@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -16,8 +16,6 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-
-const { width, height } = Dimensions.get("window");
 
 // Fallback for web platform
 const webStorage = {
@@ -56,13 +54,26 @@ const slides = [
   },
 ] as const;
 
-const Slide = ({ item }: { item: (typeof slides)[0] }) => {
+const Slide = ({
+  item,
+  screenWidth,
+  screenHeight,
+}: {
+  item: (typeof slides)[0];
+  screenWidth: number;
+  screenHeight: number;
+}) => {
   return (
-    <View style={styles.slideContainer}>
+    <View
+      style={[
+        styles.slideContainer,
+        { width: screenWidth, height: screenHeight * 0.85 },
+      ]}
+    >
       {/* Background Gradient */}
       <LinearGradient
         colors={item.gradientColors}
-        style={styles.gradientBackground}
+        style={[styles.gradientBackground, { height: screenHeight * 0.45 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
@@ -71,15 +82,63 @@ const Slide = ({ item }: { item: (typeof slides)[0] }) => {
       <View style={styles.slideContent}>
         {/* Image with container */}
         <View style={styles.imageContainer}>
-          <View style={styles.imageWrapper}>
-            <Image source={item.image} style={styles.slideImage} />
+          <View
+            style={[
+              styles.imageWrapper,
+              {
+                width: screenWidth * 0.65,
+                height: screenWidth * 0.65,
+                borderRadius: screenWidth * 0.35,
+                padding: screenWidth * 0.04,
+              },
+            ]}
+          >
+            <Image
+              source={item.image}
+              style={[
+                styles.slideImage,
+                {
+                  borderRadius: screenWidth * 0.3,
+                },
+              ]}
+            />
           </View>
         </View>
 
         {/* Text Content */}
-        <View style={styles.textContainer}>
-          <Text style={styles.slideTitle}>{item.title}</Text>
-          <Text style={styles.slideDescription}>{item.description}</Text>
+        <View
+          style={[
+            styles.textContainer,
+            {
+              paddingHorizontal: screenWidth * 0.05,
+              marginTop: -screenHeight * 0.02,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.slideTitle,
+              {
+                fontSize: screenWidth * 0.08,
+                lineHeight: screenWidth * 0.095,
+                marginBottom: screenHeight * 0.02,
+              },
+            ]}
+          >
+            {item.title}
+          </Text>
+          <Text
+            style={[
+              styles.slideDescription,
+              {
+                fontSize: screenWidth * 0.042,
+                lineHeight: screenHeight * 0.032,
+                paddingHorizontal: screenWidth * 0.025,
+              },
+            ]}
+          >
+            {item.description}
+          </Text>
         </View>
       </View>
     </View>
@@ -88,20 +147,34 @@ const Slide = ({ item }: { item: (typeof slides)[0] }) => {
 
 export default function OnboardingScreen() {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [screenDimensions, setScreenDimensions] = useState(
+    Dimensions.get("window"),
+  );
   const ref = useRef<FlatList>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  useEffect(() => {
+    const onChange = (result: any) => {
+      setScreenDimensions(result.window);
+    };
+
+    const subscription = Dimensions.addEventListener("change", onChange);
+    return () => subscription?.remove();
+  }, []);
+
+  const { width: screenWidth, height: screenHeight } = screenDimensions;
+
   const updateCurrentSlideIndex = (e: any) => {
     const contentOffsetX = e.nativeEvent.contentOffset.x;
-    const currentIndex = Math.round(contentOffsetX / width);
+    const currentIndex = Math.round(contentOffsetX / screenWidth);
     setCurrentSlideIndex(currentIndex);
   };
 
   const goToNextSlide = () => {
     const nextSlideIndex = currentSlideIndex + 1;
     if (nextSlideIndex < slides.length) {
-      const offset = nextSlideIndex * width;
+      const offset = nextSlideIndex * screenWidth;
       ref?.current?.scrollToOffset({ offset });
       setCurrentSlideIndex(nextSlideIndex);
     } else {
@@ -144,31 +217,48 @@ export default function OnboardingScreen() {
       <View style={styles.container}>
         {/* Skip button */}
         <Pressable
-          style={[styles.skipButton, { top: insets.top + 12 }]}
+          style={[
+            styles.skipButton,
+            { top: insets.top + 12, right: screenWidth * 0.06 },
+          ]}
           onPress={skip}
         >
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={[styles.skipText, { fontSize: screenWidth * 0.037 }]}>
+            Skip
+          </Text>
         </Pressable>
 
         {/* Slides */}
         <FlatList
           ref={ref}
           data={slides}
-          renderItem={({ item }) => <Slide item={item} />}
+          renderItem={({ item }) => (
+            <Slide
+              item={item}
+              screenWidth={screenWidth}
+              screenHeight={screenHeight}
+            />
+          )}
           horizontal
           showsHorizontalScrollIndicator={false}
           pagingEnabled
           bounces={false}
           onMomentumScrollEnd={updateCurrentSlideIndex}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.flatListContent}
+          contentContainerStyle={[
+            styles.flatListContent,
+            { width: screenWidth * slides.length },
+          ]}
         />
 
         {/* Bottom controls */}
         <View
           style={[
             styles.bottomContainer,
-            { paddingBottom: 20 + insets.bottom },
+            {
+              paddingBottom: 20 + insets.bottom,
+              paddingHorizontal: screenWidth * 0.08,
+            },
           ]}
         >
           <Pagination />
@@ -182,24 +272,55 @@ export default function OnboardingScreen() {
           >
             <LinearGradient
               colors={["#5A67D8", "#4C51BF"]}
-              style={styles.buttonGradient}
+              style={[
+                styles.buttonGradient,
+                {
+                  paddingVertical: screenHeight * 0.025,
+                  paddingHorizontal: screenWidth * 0.08,
+                },
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.buttonText}>
+              <Text
+                style={[styles.buttonText, { fontSize: screenWidth * 0.045 }]}
+              >
                 {currentSlideIndex === slides.length - 1
                   ? "Get Started"
                   : "Next"}
               </Text>
               {currentSlideIndex < slides.length - 1 && (
-                <Text style={styles.buttonArrow}>→</Text>
+                <Text
+                  style={[
+                    styles.buttonArrow,
+                    {
+                      fontSize: screenWidth * 0.05,
+                      marginLeft: screenWidth * 0.02,
+                    },
+                  ]}
+                >
+                  →
+                </Text>
               )}
             </LinearGradient>
           </Pressable>
 
           {/* Progress indicator */}
-          <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>
+          <View
+            style={[
+              styles.progressContainer,
+              { marginTop: screenHeight * 0.037 },
+            ]}
+          >
+            <Text
+              style={[
+                styles.progressText,
+                {
+                  fontSize: screenWidth * 0.035,
+                  marginBottom: screenHeight * 0.02,
+                },
+              ]}
+            >
               {currentSlideIndex + 1} / {slides.length}
             </Text>
             <View style={styles.progressBar}>
@@ -227,7 +348,6 @@ const styles = StyleSheet.create({
   skipButton: {
     position: "absolute",
     top: 60,
-    right: 24,
     zIndex: 10,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -235,7 +355,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.15)",
   },
   skipText: {
-    fontSize: 15,
     fontWeight: "500",
     color: "rgba(0, 0, 0, 0.7)",
   },
@@ -243,8 +362,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   slideContainer: {
-    width,
-    height: height * 0.85,
     position: "relative",
   },
   gradientBackground: {
@@ -252,27 +369,21 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: height * 0.6,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
   },
   slideContent: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 100,
-    paddingHorizontal: 32,
+    justifyContent: "center", // Adjusted to center text vertically
+    paddingTop: 50, // Reduced padding to move text up
   },
   imageContainer: {
     alignItems: "center",
     justifyContent: "center",
   },
   imageWrapper: {
-    width: width * 0.75,
-    height: width * 0.75,
-    borderRadius: width * 0.4,
     backgroundColor: "rgba(255, 255, 255, 0.15)",
-    padding: 20,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -282,38 +393,31 @@ const styles = StyleSheet.create({
     shadowRadius: 30,
     elevation: 10,
     transform: [{ translateY: -20 }],
+    alignItems: "center",
+    justifyContent: "center",
   },
   slideImage: {
     width: "100%",
     height: "100%",
     resizeMode: "contain",
-    borderRadius: width * 0.35,
   },
   textContainer: {
     alignItems: "center",
-    paddingHorizontal: 20,
     marginBottom: 60,
   },
   slideTitle: {
-    fontSize: 32,
     fontWeight: "800",
     color: "#1A202C",
     textAlign: "center",
-    marginBottom: 20,
-    lineHeight: 38,
     letterSpacing: -0.5,
   },
   slideDescription: {
-    fontSize: 17,
     color: "#4A5568",
     textAlign: "center",
-    lineHeight: 26,
     fontWeight: "400",
     opacity: 0.85,
-    paddingHorizontal: 10,
   },
   bottomContainer: {
-    paddingHorizontal: 32,
     paddingBottom: 50,
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 30,
@@ -368,8 +472,6 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   buttonGradient: {
-    paddingVertical: 20,
-    paddingHorizontal: 32,
     borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -377,25 +479,19 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#FFFFFF",
-    fontSize: 18,
     fontWeight: "600",
     letterSpacing: 0.5,
   },
   buttonArrow: {
     color: "#FFFFFF",
-    fontSize: 20,
-    marginLeft: 8,
     fontWeight: "500",
   },
   progressContainer: {
-    marginTop: 30,
     alignItems: "center",
   },
   progressText: {
-    fontSize: 14,
     color: "#718096",
     fontWeight: "500",
-    marginBottom: 8,
   },
   progressBar: {
     width: "100%",

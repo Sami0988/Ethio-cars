@@ -323,7 +323,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
                 paddingVertical: getResponsiveValue(10, 12, 14),
                 borderRadius: getResponsiveValue(18, 20, 22),
                 backgroundColor: isOwnMessage
-                  ? theme.colors.primary
+                  ? theme.dark
+                    ? theme.colors.primary
+                    : "#E3F2FD"
                   : theme.colors.surfaceVariant,
               },
             ]}
@@ -333,7 +335,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
                 styles.messageText,
                 {
                   color: isOwnMessage
-                    ? theme.colors.onPrimary
+                    ? theme.dark
+                      ? theme.colors.onPrimary
+                      : "#1565C0"
                     : theme.colors.onSurface,
                   fontSize: getResponsiveValue(16, 17, 18),
                   lineHeight: getResponsiveValue(22, 24, 26),
@@ -349,7 +353,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
                   styles.timestamp,
                   {
                     color: isOwnMessage
-                      ? theme.colors.onPrimary + "AA"
+                      ? theme.dark
+                        ? theme.colors.onPrimary + "AA"
+                        : "#1565C0AA"
                       : theme.colors.onSurfaceVariant,
                     fontSize: getResponsiveValue(11, 12, 13),
                   },
