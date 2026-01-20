@@ -51,8 +51,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "1615a13a-065e-445c-9664-bb398548fc6b"
+        "projectId": "9170f5a8-86dc-4f70-8e34-3a1e10cd5db1"
       }
-    }
+    },
+    "owner": "zsami11"
   }
 }

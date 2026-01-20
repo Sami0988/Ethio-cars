@@ -33,37 +33,62 @@ const webStorage = {
 export default function RootLayout() {
   const [initialRoute, setInitialRoute] = useState<InitialRoute | null>(null);
   const [loading, setLoading] = useState(true);
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, initializeAuth } = useAuthStore();
 
   useEffect(() => {
     const init = async () => {
       try {
+        // Initialize auth state first
+        await initializeAuth();
+
         const onboardingFlag = await webStorage.getItem("seen_onboarding");
 
         // Increased delay to ensure splash screen is visible
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
+        // Check current auth state after initialization
+        const currentState = useAuthStore.getState();
+
         // Only set initial route if it hasn't been set yet
         if (!initialRoute) {
-          if (isAuthenticated) {
+          if (currentState.isAuthenticated) {
             // User is authenticated, always go to home tabs (priority over onboarding)
             setInitialRoute("/(tabs)");
           } else if (!onboardingFlag) {
             setInitialRoute("/onboarding");
           } else {
-            // User not authenticated, go to home tabs (since messaging is free)
-            setInitialRoute("/(tabs)");
+            // User not authenticated, go to login
+            setInitialRoute("/(auth)/login");
           }
-        } else {
         }
       } catch (error) {
-        setInitialRoute("/(tabs)"); // Default to home on error
+        console.error("Initialization error:", error);
+        setInitialRoute("/(auth)/login"); // Default to login on error
       } finally {
         setLoading(false);
       }
     };
     init();
-  }, []); // Remove isAuthenticated dependency - only run once
+  }, []); // Remove dependencies - only run once on mount
+
+  // Listen for auth state changes after initial load
+  useEffect(() => {
+    if (initialRoute && !loading) {
+      if (isAuthenticated && initialRoute !== "/(tabs)") {
+        // User just logged in, redirect to tabs
+        setInitialRoute("/(tabs)");
+      } else if (!isAuthenticated && initialRoute === "/(tabs)") {
+        // User just logged out, check onboarding status
+        webStorage.getItem("seen_onboarding").then((onboardingFlag) => {
+          if (onboardingFlag) {
+            setInitialRoute("/(auth)/login");
+          } else {
+            setInitialRoute("/onboarding");
+          }
+        });
+      }
+    }
+  }, [isAuthenticated, initialRoute, loading]);
 
   // While deciding, show splash once
   if (loading || !initialRoute) {
