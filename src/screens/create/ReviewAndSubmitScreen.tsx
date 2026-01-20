@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button, Switch, useTheme } from "react-native-paper";
+import { Button, useTheme } from "react-native-paper";
 import { useCreateCar } from "../../features/cars/car.hooks";
 import { VehicleData } from "../../types/vehicle";
 
@@ -91,7 +91,6 @@ export default function ReviewAndSubmitScreen({
 
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [publishOption, setPublishOption] = useState("now");
-  const [priceAlerts, setPriceAlerts] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
 
   // Animation values
@@ -139,7 +138,7 @@ export default function ReviewAndSubmitScreen({
     if (!termsAccepted) {
       Alert.alert(
         "Terms Required",
-        "Please accept the Terms of Service to publish your listing."
+        "Please accept the Terms of Service to publish your listing.",
       );
       return;
     }
@@ -177,7 +176,7 @@ export default function ReviewAndSubmitScreen({
       if (!VALID_TRANSMISSIONS.includes(transmission)) {
         Alert.alert(
           "Validation Error",
-          `Invalid transmission: ${transmission}`
+          `Invalid transmission: ${transmission}`,
         );
         return;
       }
@@ -230,7 +229,7 @@ export default function ReviewAndSubmitScreen({
 
             if (!VALID_IMAGE_TYPES.includes(imageType)) {
               console.warn(
-                `Invalid image type: ${imageType}, using 'exterior'`
+                `Invalid image type: ${imageType}, using 'exterior'`,
               );
             }
 
@@ -244,7 +243,7 @@ export default function ReviewAndSubmitScreen({
           }) || [],
       };
 
-     // Simulate API call with delay
+      // Simulate API call with delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const result = await createCarMutation.mutateAsync(apiData);
@@ -267,14 +266,13 @@ export default function ReviewAndSubmitScreen({
               // Share functionality here
             },
           },
-        ]
+        ],
       );
     } catch (error: any) {
-
       Alert.alert(
         "Publish Failed",
         "There was an error publishing your listing. Please try again.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
     } finally {
       setIsPublishing(false);
@@ -336,7 +334,7 @@ export default function ReviewAndSubmitScreen({
   const renderSection = (
     title: string,
     step: number,
-    children: React.ReactNode
+    children: React.ReactNode,
   ) => (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -878,7 +876,7 @@ export default function ReviewAndSubmitScreen({
                 {vehicleData?.condition || "Not specified"}
               </Text>
             </View>
-          </View>
+          </View>,
         )}
 
         {/* Technical Details */}
@@ -946,7 +944,7 @@ export default function ReviewAndSubmitScreen({
                 {vehicleData?.drive_type || "Not specified"}
               </Text>
             </View>
-          </View>
+          </View>,
         )}
 
         {/* Photos */}
@@ -988,143 +986,8 @@ export default function ReviewAndSubmitScreen({
                 </Text>
               </View>
             )}
-          </View>
+          </View>,
         )}
-
-        {/* Publish Settings */}
-        <View
-          style={[
-            styles.settingsCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-        >
-          <Text
-            style={[styles.settingsTitle, { color: theme.colors.onBackground }]}
-          >
-            Publish Settings
-          </Text>
-
-          <View style={styles.publishOptions}>
-            <TouchableOpacity
-              style={[
-                styles.publishOption,
-                publishOption === "now" && styles.publishOptionSelected,
-                publishOption === "now" && {
-                  borderColor: theme.colors.primary,
-                },
-              ]}
-              onPress={() => setPublishOption("now")}
-            >
-              <View style={styles.optionHeader}>
-                <Ionicons
-                  name={
-                    publishOption === "now"
-                      ? "radio-button-on"
-                      : "radio-button-off"
-                  }
-                  size={24}
-                  color={
-                    publishOption === "now"
-                      ? theme.colors.primary
-                      : theme.colors.onSurfaceVariant
-                  }
-                />
-                <Text
-                  style={[
-                    styles.optionTitle,
-                    { color: theme.colors.onSurface },
-                  ]}
-                >
-                  Publish Now
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.optionDescription,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                List your vehicle immediately
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.publishOption,
-                publishOption === "later" && styles.publishOptionSelected,
-                publishOption === "later" && {
-                  borderColor: theme.colors.primary,
-                },
-              ]}
-              onPress={() => setPublishOption("later")}
-            >
-              <View style={styles.optionHeader}>
-                <Ionicons
-                  name={
-                    publishOption === "later"
-                      ? "radio-button-on"
-                      : "radio-button-off"
-                  }
-                  size={24}
-                  color={
-                    publishOption === "later"
-                      ? theme.colors.primary
-                      : theme.colors.onSurfaceVariant
-                  }
-                />
-                <Text
-                  style={[
-                    styles.optionTitle,
-                    { color: theme.colors.onSurface },
-                  ]}
-                >
-                  Schedule for Later
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.optionDescription,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Choose a specific date and time
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.switchRow}>
-            <View style={styles.switchContent}>
-              <View style={styles.switchHeader}>
-                <Ionicons name="notifications" size={20} color="#3B82F6" />
-                <Text
-                  style={[
-                    styles.switchTitle,
-                    { color: theme.colors.onSurface },
-                  ]}
-                >
-                  Price Alerts
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.switchDescription,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Get notified when similar cars are listed
-              </Text>
-            </View>
-            <Switch
-              value={priceAlerts}
-              onValueChange={setPriceAlerts}
-              color={theme.colors.primary}
-              trackColor={{
-                false: theme.colors.surfaceVariant,
-                true: theme.colors.primary + "40",
-              }}
-            />
-          </View>
-        </View>
 
         {/* Terms & Conditions */}
         <View
@@ -1340,8 +1203,8 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: isSmallScreen ? 16 : 20,
-      paddingTop: 60,
-      paddingBottom: 16,
+      paddingTop: 15,
+      paddingBottom: 8,
       backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.outline + "20",

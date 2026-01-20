@@ -50,10 +50,10 @@ export default function LocationAndDetailsScreen({
   } = useLocation();
 
   const [description, setDescription] = useState(
-    vehicleData?.description || ""
+    vehicleData?.description || "",
   );
   const [contactPreference, setContactPreference] = useState(
-    vehicleData?.contactPreference || "in_app"
+    vehicleData?.contactPreference || "in_app",
   );
   const [availability, setAvailability] = useState({
     weekends: true,
@@ -66,28 +66,20 @@ export default function LocationAndDetailsScreen({
 
   // State for manual location inputs
   const [selectedRegion, setSelectedRegion] = useState(
-    vehicleData?.location?.region || ""
-  );
-  const [selectedZone, setSelectedZone] = useState(
-    vehicleData?.location?.zone || ""
-  );
-  const [selectedCity, setSelectedCity] = useState(
-    vehicleData?.location?.city || ""
+    vehicleData?.location?.region || "",
   );
   const [selectedRegionId, setSelectedRegionId] = useState<number | undefined>(
-    vehicleData?.location?.region_id
+    vehicleData?.location?.region_id,
   );
   const [selectedZoneId, setSelectedZoneId] = useState<number | undefined>(
-    vehicleData?.location?.zone_id
+    vehicleData?.location?.zone_id,
   );
   const [selectedTownId, setSelectedTownId] = useState<number | undefined>(
-    vehicleData?.location?.town_id
+    vehicleData?.location?.town_id,
   );
 
   // State for modals
   const [showRegionModal, setShowRegionModal] = useState(false);
-  const [showZoneModal, setShowZoneModal] = useState(false);
-  const [showCityModal, setShowCityModal] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   // Animation values
@@ -132,7 +124,7 @@ export default function LocationAndDetailsScreen({
           duration: 1000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
@@ -236,33 +228,6 @@ export default function LocationAndDetailsScreen({
     return found;
   };
 
-  // Get zones for selected region
-  const getZonesForSelectedRegion = () => {
-    const regionData = getRegionData(selectedRegion);
-    if (!regionData) return [];
-
-    if (Array.isArray(regionData.zones)) return regionData.zones;
-    if (Array.isArray(regionData.subRegions)) return regionData.subRegions;
-    return [];
-  };
-
-  // Get cities for selected region
-  const getCitiesForSelectedRegion = () => {
-    const regionData = getRegionData(selectedRegion);
-    if (!regionData) return [];
-
-    if (Array.isArray(regionData.cities)) return regionData.cities;
-    if (Array.isArray(regionData.areas)) return regionData.areas;
-    return [];
-  };
-
-  const availableZones = getZonesForSelectedRegion().map(
-    (zone: any) => zone.name
-  );
-  const availableCities = getCitiesForSelectedRegion().map(
-    (city: any) => city.name
-  );
-
   const handleUseLocation = async () => {
     setIsGettingLocation(true);
     // First try to request permissions
@@ -274,7 +239,7 @@ export default function LocationAndDetailsScreen({
         [
           { text: "Enter Manually", style: "cancel" },
           { text: "Open Settings", onPress: openAppSettings },
-        ]
+        ],
       );
       setIsGettingLocation(false);
       return;
@@ -284,10 +249,8 @@ export default function LocationAndDetailsScreen({
 
     if (locationData) {
       setSelectedRegion(locationData.region || "");
-      setSelectedZone(locationData.zone || "");
-      setSelectedCity(locationData.city || "");
 
-      // Try to find and set the region ID
+      // Try to find and set region ID
       if (locationData.region) {
         const regionData = getRegionData(locationData.region);
         if (regionData) {
@@ -297,8 +260,8 @@ export default function LocationAndDetailsScreen({
 
       Alert.alert(
         "Location Found",
-        `Found your location: ${locationData.region}, ${locationData.city}`,
-        [{ text: "OK" }]
+        `Found your location: ${locationData.region}`,
+        [{ text: "OK" }],
       );
     } else if (error) {
       const isLocationServicesError =
@@ -321,7 +284,7 @@ export default function LocationAndDetailsScreen({
                 { text: "Cancel", style: "cancel" },
                 { text: "Open Settings", onPress: openAppSettings },
               ]
-            : [{ text: "OK" }]
+            : [{ text: "OK" }],
       );
     }
     setIsGettingLocation(false);
@@ -333,7 +296,7 @@ export default function LocationAndDetailsScreen({
       Alert.alert(
         "Location Required",
         "Please select a region for your listing.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
       return;
     }
@@ -343,7 +306,7 @@ export default function LocationAndDetailsScreen({
       Alert.alert(
         "Description Too Short",
         "Please provide a detailed description (at least 50 characters) about your vehicle.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
       return;
     }
@@ -351,8 +314,6 @@ export default function LocationAndDetailsScreen({
     const listingData = {
       location: {
         region: selectedRegion,
-        zone: selectedZone,
-        city: selectedCity,
         address: location.address,
         coordinates:
           location.latitude && location.longitude
@@ -368,11 +329,7 @@ export default function LocationAndDetailsScreen({
       const locationUpdate = {
         location: {
           region: selectedRegion,
-          zone: selectedZone,
-          city: selectedCity,
           region_id: selectedRegionId,
-          zone_id: selectedZoneId,
-          town_id: selectedTownId,
           address: listingData.location.address,
         },
         description: listingData.description,
@@ -466,7 +423,7 @@ export default function LocationAndDetailsScreen({
     items: string[],
     selectedValue: string,
     onSelect: (value: string) => void,
-    disabled?: boolean
+    disabled?: boolean,
   ) => (
     <Modal
       visible={visible}
@@ -612,9 +569,9 @@ export default function LocationAndDetailsScreen({
 
   const descriptionScore = Math.min(
     Math.round((description.length / 2000) * 100),
-    100
+    100,
   );
-  const locationComplete = selectedRegion && selectedCity;
+  const locationComplete = selectedRegion;
   const isReadyToContinue = locationComplete && description.length >= 50;
 
   return (
@@ -1019,116 +976,6 @@ export default function LocationAndDetailsScreen({
                 name="chevron-down"
                 size={20}
                 color={theme.colors.onSurfaceVariant}
-              />
-            </TouchableOpacity>
-
-            {/* Zone */}
-            <TouchableOpacity
-              style={[
-                styles.locationInput,
-                { backgroundColor: theme.colors.surface },
-                !selectedRegion && styles.locationInputDisabled,
-                selectedZone && styles.locationInputFilled,
-                selectedZone && { borderColor: "#10B981" },
-              ]}
-              onPress={() => selectedRegion && setShowZoneModal(true)}
-              disabled={!selectedRegion}
-            >
-              <View style={styles.locationInputIcon}>
-                <Ionicons
-                  name="map"
-                  size={20}
-                  color={
-                    selectedZone ? "#10B981" : theme.colors.onSurfaceVariant
-                  }
-                />
-              </View>
-              <View style={styles.locationInputContent}>
-                <Text
-                  style={[
-                    styles.locationInputLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Zone
-                </Text>
-                <Text
-                  style={[
-                    styles.locationInputValue,
-                    {
-                      color: selectedZone
-                        ? theme.colors.onSurface
-                        : theme.colors.onSurfaceVariant,
-                      opacity: !selectedRegion ? 0.5 : 1,
-                    },
-                  ]}
-                >
-                  {selectedZone || "Select Zone"}
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={
-                  !selectedRegion
-                    ? theme.colors.onSurfaceVariant + "80"
-                    : theme.colors.onSurfaceVariant
-                }
-              />
-            </TouchableOpacity>
-
-            {/* City */}
-            <TouchableOpacity
-              style={[
-                styles.locationInput,
-                { backgroundColor: theme.colors.surface },
-                !selectedRegion && styles.locationInputDisabled,
-                selectedCity && styles.locationInputFilled,
-                selectedCity && { borderColor: "#F59E0B" },
-              ]}
-              onPress={() => selectedRegion && setShowCityModal(true)}
-              disabled={!selectedRegion}
-            >
-              <View style={styles.locationInputIcon}>
-                <Ionicons
-                  name="business"
-                  size={20}
-                  color={
-                    selectedCity ? "#F59E0B" : theme.colors.onSurfaceVariant
-                  }
-                />
-              </View>
-              <View style={styles.locationInputContent}>
-                <Text
-                  style={[
-                    styles.locationInputLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  City *
-                </Text>
-                <Text
-                  style={[
-                    styles.locationInputValue,
-                    {
-                      color: selectedCity
-                        ? theme.colors.onSurface
-                        : theme.colors.onSurfaceVariant,
-                      opacity: !selectedRegion ? 0.5 : 1,
-                    },
-                  ]}
-                >
-                  {selectedCity || "Select City"}
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={
-                  !selectedRegion
-                    ? theme.colors.onSurfaceVariant + "80"
-                    : theme.colors.onSurfaceVariant
-                }
               />
             </TouchableOpacity>
           </View>
@@ -1632,8 +1479,6 @@ export default function LocationAndDetailsScreen({
         selectedRegion,
         (regionName) => {
           setSelectedRegion(regionName);
-          setSelectedZone("");
-          setSelectedCity("");
           // Set the region ID when region is selected
           const regionData = getRegionData(regionName);
           if (regionData) {
@@ -1641,44 +1486,7 @@ export default function LocationAndDetailsScreen({
             setSelectedRegionId(regionData.region_id);
           }
         },
-        isLoadingLocations
-      )}
-
-      {renderSelectionModal(
-        showZoneModal,
-        () => setShowZoneModal(false),
-        "Select Zone",
-        availableZones,
-        selectedZone,
-        (zoneName) => {
-          setSelectedZone(zoneName);
-          setSelectedCity("");
-          // Find the zone object and set its ID
-          const zones = getZonesForSelectedRegion();
-          const zoneData = zones.find((z: any) => z.name === zoneName);
-          if (zoneData) {
-            setSelectedZoneId(zoneData.zone_id);
-          }
-        },
-        !selectedRegion
-      )}
-
-      {renderSelectionModal(
-        showCityModal,
-        () => setShowCityModal(false),
-        "Select City",
-        availableCities,
-        selectedCity,
-        (cityName) => {
-          setSelectedCity(cityName);
-          // Find the town object and set its ID
-          const towns = getCitiesForSelectedRegion();
-          const townData = towns.find((t: any) => t.name === cityName);
-          if (townData) {
-            setSelectedTownId(townData.town_id);
-          }
-        },
-        !selectedRegion
+        isLoadingLocations,
       )}
     </View>
   );
@@ -1696,8 +1504,8 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: isSmallScreen ? 16 : 20,
-      paddingTop: 60,
-      paddingBottom: 16,
+      paddingTop: 15,
+      paddingBottom: 8,
       backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.outline + "20",

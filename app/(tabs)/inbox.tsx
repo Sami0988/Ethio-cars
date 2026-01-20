@@ -1,6 +1,5 @@
-import InboxMessageScreen from "@/src/screens/InboxMessageScreen";
+import MyPostsScreen from "@/src/screens/main/MyPostsScreen";
 
-export default function InboxScreen() {
-  return <InboxMessageScreen />;
+export default function MyPostsTab() {
+  return <MyPostsScreen />;
 }
-

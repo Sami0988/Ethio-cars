@@ -24,8 +24,6 @@ import {
   ActivityIndicator,
   Button,
   Chip,
-  Divider,
-  IconButton,
   Searchbar,
   Surface,
   Text,
@@ -35,7 +33,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import CarCard from "../components/CarCard";
 import FilterModal from "../components/FilterModal";
-import { customColors } from "../constants/colors";
 import { useAuthStore } from "../features/auth/auth.store";
 import {
   useCarPriceRange,
@@ -48,7 +45,6 @@ import {
   CarListing,
   SORT_OPTIONS,
 } from "../features/cars/car.types";
-import { useThemeStore } from "../features/theme/theme.store";
 
 const { width, height } = Dimensions.get("window");
 
@@ -70,8 +66,6 @@ const HomeScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
-  const { isDarkMode, toggleTheme, themeMode } = useThemeStore();
-  const colors = customColors[isDarkMode ? "dark" : "light"];
 
   // States
   const [searchQuery, setSearchQuery] = useState("");
@@ -301,7 +295,7 @@ const HomeScreen: React.FC = () => {
       }
 
       // show scroll-to-top button after a threshold
-      setShowScrollTop(value > 400);
+      setShowScrollTop(value > 200);
     });
 
     return () => {
@@ -344,12 +338,8 @@ const HomeScreen: React.FC = () => {
       extrapolate: "clamp",
     });
 
-    const chipBg = isDarkMode
-      ? (theme.colors.surfaceVariant ?? "#374151")
-      : (theme.colors.primary ?? "#3B82F6");
-    const chipText = isDarkMode
-      ? (theme.colors.onSurface ?? "#F9FAFB")
-      : (theme.colors.onPrimary ?? "#FFFFFF");
+    const chipBg = "#F3F4F6";
+    const chipText = "#374151";
 
     return (
       <Animated.View
@@ -357,26 +347,15 @@ const HomeScreen: React.FC = () => {
         style={[
           styles.headerContainer,
           {
-            paddingTop: insets.top,
             opacity: headerOpacity,
             transform: [{ translateY: headerTranslateY }],
           },
         ]}
       >
-        {/* Welcome Message */}
-        <View style={styles.welcomeContainer}>
-          <Text style={[styles.welcomeText, { color: theme.colors.onSurface }]}>
-            {user
-              ? `Welcome back, ${user.first_name || user.username}!`
-              : "Welcome to EthioCars!"}
-          </Text>
-          <Text
-            style={[
-              styles.subWelcomeText,
-              { color: theme.colors.onSurfaceVariant },
-            ]}
-          >
-            {totalListings.toLocaleString()} cars available
+        {/* EthioCars Logo */}
+        <View style={styles.logoContainer}>
+          <Text style={[styles.logoText, { color: theme.colors.primary }]}>
+            EthioCars 
           </Text>
         </View>
 
@@ -446,68 +425,7 @@ const HomeScreen: React.FC = () => {
                   { color: theme.colors.onSurfaceVariant },
                 ]}
               >
-                Cars Listed
-              </Text>
-            </View>
-          </View>
-
-          <Divider style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <View style={styles.carIconContainer}>
-              <MaterialCommunityIcons
-                name="car"
-                size={28}
-                color={isDarkMode ? "#FFFFFF" : "#5a5959ff"}
-              />
-            </View>
-            <View style={styles.statTextContainer}>
-              <Text
-                style={[styles.statNumber, { color: theme.colors.onSurface }]}
-              >
-                {priceRangeData?.data?.min_price
-                  ? `ETB ${priceRangeData.data.min_price.toLocaleString()}`
-                  : "100k"}
-              </Text>
-              <Text
-                style={[
-                  styles.statLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Starting From
-              </Text>
-            </View>
-          </View>
-
-          <Divider style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <View
-              style={[
-                styles.statIconContainer,
-                { backgroundColor: "#3B82F620" },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="shield-check"
-                size={20}
-                color="#3B82F6"
-              />
-            </View>
-            <View style={styles.statTextContainer}>
-              <Text
-                style={[styles.statNumber, { color: theme.colors.onSurface }]}
-              >
-                98%
-              </Text>
-              <Text
-                style={[
-                  styles.statLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Verified
+                Currently available cars
               </Text>
             </View>
           </View>
@@ -835,7 +753,6 @@ const HomeScreen: React.FC = () => {
       listing={item}
       index={index}
       onPress={() => router.push(`/car/${item.listing_id}`)}
-      onSavePress={() => {}}
       onMessagePress={() => handleMessagePress(item)}
     />
   );
@@ -845,77 +762,16 @@ const HomeScreen: React.FC = () => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <StatusBar
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
+        barStyle="dark-content"
         backgroundColor={theme.colors.background}
       />
-
-      {/* Fixed Header */}
-      {!showSearch && (
-        <View
-          style={[
-            styles.fixedHeader,
-            {
-              backgroundColor: theme.colors.surface,
-              // Ensure no padding at all
-              top: 0,
-              paddingTop: 0,
-              marginTop: 0,
-              paddingHorizontal: getResponsiveValue(12, 16, 20),
-              shadowColor: theme.colors.shadow,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-            },
-          ]}
-        >
-          <View style={styles.fixedHeaderContent}>
-            <View style={styles.leftHeaderSection}>
-              <View
-                style={[
-                  styles.carIconContainer,
-                  { shadowColor: isDarkMode ? "#FFFFFF" : "#000000" },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="car"
-                  size={28}
-                  color={isDarkMode ? "#FFFFFF" : "#000000"}
-                />
-              </View>
-            </View>
-
-            <Text style={[styles.brandText, { color: theme.colors.primary }]}>
-              EthioCars
-            </Text>
-
-            <View style={styles.rightHeaderSection}>
-              <IconButton
-                icon={
-                  isDarkMode ? "white-balance-sunny" : "moon-waning-crescent"
-                }
-                size={20}
-                iconColor={isDarkMode ? "#FFD700" : "#4A5568"}
-                onPress={() => {
-                  toggleTheme();
-                }}
-                style={[
-                  styles.themeButton,
-                  {
-                    backgroundColor: theme.colors.surfaceVariant + "20",
-                  },
-                ]}
-              />
-            </View>
-          </View>
-        </View>
-      )}
 
       {/* Main Content */}
       <FlatList
         ref={scrollRef}
         data={allListings}
         renderItem={renderCarItem}
-        keyExtractor={getItemKey}
+        keyExtractor={(item) => item.listing_id.toString()}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.listContainer,
@@ -964,35 +820,32 @@ const HomeScreen: React.FC = () => {
         </View>
       )}
 
-      <Animated.View
-        style={[
-          styles.fabContainer,
-          {
-            opacity: fabAnim,
-            transform: [{ scale: fabAnim }],
-          },
-        ]}
-      >
-        {showScrollTop && (
+      {/* Scroll to Top Button */}
+      {true && (
+        <Animated.View
+          style={[
+            styles.scrollTopContainer,
+            {
+              opacity: 1,
+              transform: [{ scale: 1 }],
+            },
+          ]}
+        >
           <TouchableOpacity
             style={[
-              styles.fab,
-              styles.secondaryFab,
-              { backgroundColor: theme.colors.surface },
+              styles.scrollTopButton,
+              { backgroundColor: theme.colors.primary },
             ]}
             onPress={() =>
               scrollRef.current?.scrollToOffset({ offset: 0, animated: true })
             }
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons
-              name="arrow-up"
-              size={20}
-              color={theme.colors.primary}
-            />
+            <MaterialCommunityIcons name="arrow-up" size={24} color="white" />
+            <Text style={styles.scrollTopText}>Top</Text>
           </TouchableOpacity>
-        )}
-      </Animated.View>
+        </Animated.View>
+      )}
 
       {/* Filter Modal */}
       <FilterModal
@@ -1076,8 +929,8 @@ const styles = StyleSheet.create({
     // padding is applied dynamically using safe area insets
     paddingBottom: getResponsiveValue(0, 1, 2),
     backgroundColor: "transparent",
-    paddingVertical: getResponsiveValue(12, 16, 20),
-    minHeight: getResponsiveValue(140, 160, 180),
+    paddingVertical: 0,
+    minHeight: getResponsiveValue(25, 30, 35),
   },
   topBar: {
     flexDirection: "row",
@@ -1112,6 +965,18 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveValue(14, 16, 18),
     fontFamily: "System",
     marginTop: getResponsiveValue(0, 1, 2),
+  },
+  logoContainer: {
+    alignItems: "flex-start",
+    paddingTop: 0,
+    paddingBottom: getResponsiveValue(4, 6, 8),
+    paddingLeft: getResponsiveValue(16, 20, 24),
+  },
+  logoText: {
+    fontSize: getResponsiveValue(24, 28, 32),
+    fontWeight: "bold",
+    fontFamily: "System",
+    letterSpacing: -0.5,
   },
   searchContainer: {
     paddingHorizontal: 20,
@@ -1359,6 +1224,32 @@ const styles = StyleSheet.create({
   },
   secondaryFab: {
     elevation: 4,
+  },
+  scrollTopContainer: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    zIndex: 1000,
+  },
+  scrollTopButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 25,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    gap: 6,
+  },
+  scrollTopText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "System",
   },
 });
 

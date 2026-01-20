@@ -6,7 +6,6 @@ import { Platform } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { ThemeProvider } from "../src/components/providers/ThemeProvider";
 import { useAuthStore } from "../src/features/auth/auth.store";
-import { useThemeStore } from "../src/features/theme/theme.store";
 import { SplashScreen as EthioSplash } from "../src/screens/SplashScreen";
 import "./safeAreaTrace";
 
@@ -31,24 +30,6 @@ const webStorage = {
   },
 };
 
-// Themed wrapper component
-const ThemedSafeArea = ({ children }: { children: React.ReactNode }) => {
-  const { isDarkMode } = useThemeStore();
-  const backgroundColor = isDarkMode ? "#121212" : "#FFFFFF";
-
-  return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor,
-      }}
-      edges={["top", "left", "right"]}
-    >
-      {children}
-    </SafeAreaView>
-  );
-};
-
 export default function RootLayout() {
   const [initialRoute, setInitialRoute] = useState<InitialRoute | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,14 +43,24 @@ export default function RootLayout() {
         // Increased delay to ensure splash screen is visible
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        if (isAuthenticated) {
-          // User is authenticated, always go to home tabs (priority over onboarding)
-          setInitialRoute("/(tabs)");
-        } else if (!onboardingFlag) {
-          setInitialRoute("/onboarding");
+        // Only set initial route if it hasn't been set yet
+        if (!initialRoute) {
+          console.log("🏠 Setting initial route...");
+          console.log("🔑 isAuthenticated:", isAuthenticated);
+          if (isAuthenticated) {
+            // User is authenticated, always go to home tabs (priority over onboarding)
+            console.log("🏠 Setting initial route to /(tabs)");
+            setInitialRoute("/(tabs)");
+          } else if (!onboardingFlag) {
+            console.log("🎯 Setting initial route to /onboarding");
+            setInitialRoute("/onboarding");
+          } else {
+            // User not authenticated, go to home tabs (since messaging is free)
+            console.log("🏠 Setting initial route to /(tabs) (default)");
+            setInitialRoute("/(tabs)");
+          }
         } else {
-          // User not authenticated, go to home tabs (since messaging is free)
-          setInitialRoute("/(tabs)");
+          console.log("⚠️ Initial route already set to:", initialRoute);
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
@@ -79,7 +70,7 @@ export default function RootLayout() {
       }
     };
     init();
-  }, [isAuthenticated]); // Add isAuthenticated dependency to react to auth changes
+  }, []); // Remove isAuthenticated dependency - only run once
 
   // While deciding, show splash once
   if (loading || !initialRoute) {
@@ -91,14 +82,21 @@ export default function RootLayout() {
   }
 
   // After decision, render app stack and perform a single redirect
+  console.log("🚀 About to render Redirect with href:", initialRoute);
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <ThemedSafeArea>
+          <SafeAreaView
+            style={{
+              flex: 1,
+              backgroundColor: "#FFFFFF",
+            }}
+            edges={["top", "left", "right"]}
+          >
             <Stack screenOptions={{ headerShown: false }} />
-            <Redirect href={initialRoute} />
-          </ThemedSafeArea>
+            {initialRoute && <Redirect href={initialRoute} />}
+          </SafeAreaView>
         </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

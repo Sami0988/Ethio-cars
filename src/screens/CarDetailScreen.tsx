@@ -2,7 +2,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Dimensions,
   Image,
   Linking,
@@ -25,8 +24,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { customColors } from "../constants/colors";
 import { useAuthStore } from "../features/auth/auth.store";
-import { useDeleteCar, useUpdateCar } from "../features/cars/car.hooks";
-import { useThemeStore } from "../features/theme/theme.store";
 
 const { width, height } = Dimensions.get("window");
 
@@ -111,21 +108,14 @@ const CarDetailScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { isDarkMode } = useThemeStore();
-  const colors = customColors[isDarkMode ? "dark" : "light"];
+  const colors = customColors["light"];
   const insets = useSafeAreaInsets();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
 
   const [carDetail, setCarDetail] = useState<CarDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  // Delete car mutation
-  const deleteCarMutation = useDeleteCar();
-
-  // Update car mutation
-  const updateCarMutation = useUpdateCar();
 
   useEffect(() => {
     fetchCarDetail();
@@ -135,7 +125,7 @@ const CarDetailScreen: React.FC = () => {
     try {
       setIsLoading(true);
       const response = await fetch(
-        `https://ethiocars.com/mobile-api/v1/cars/view/${id}`
+        `https://ethiocars.com/mobile-api/v1/cars/view/${id}`,
       );
       const data = await response.json();
 
@@ -165,7 +155,7 @@ const CarDetailScreen: React.FC = () => {
     if (carDetail?.seller?.phone) {
       const message = `Hi, I'm interested in your ${carDetail?.make} ${carDetail?.model} (Listing ID: ${carDetail?.listing_id}). Please provide more details.`;
       Linking.openURL(
-        `sms:${carDetail.seller.phone}?body=${encodeURIComponent(message)}`
+        `sms:${carDetail.seller.phone}?body=${encodeURIComponent(message)}`,
       );
     } else {
       alert("Seller phone number not available");
@@ -181,58 +171,6 @@ const CarDetailScreen: React.FC = () => {
     } catch (error) {
       console.error("Error sharing:", error);
     }
-  };
-
-  const handleDeleteCar = () => {
-    Alert.alert(
-      "Delete Car Listing",
-      "Are you sure you want to delete this car listing? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            deleteCarMutation.mutate(carDetail!.listing_id, {
-              onSuccess: (response: any) => {
-                if (response.success) {
-                  Alert.alert("Success", "Car listing deleted successfully", [
-                    {
-                      text: "OK",
-                      onPress: () => router.back(),
-                    },
-                  ]);
-                } else {
-                  Alert.alert(
-                    "Error",
-                    response.message || "Failed to delete car listing"
-                  );
-                }
-              },
-              onError: (error: any) => {
-                Alert.alert(
-                  "Error",
-                  error?.response?.data?.message ||
-                    error?.message ||
-                    "Failed to delete car listing"
-                );
-              },
-            });
-          },
-        },
-      ]
-    );
-  };
-
-  const handleEditCar = () => {
-    // Navigate to edit screen with car data
-    router.push({
-      pathname: "/edit-car",
-      params: { id: carDetail?.listing_id.toString() },
-    });
   };
 
   const handleNextImage = () => {
@@ -267,6 +205,8 @@ const CarDetailScreen: React.FC = () => {
         return "#6B7280";
     }
   };
+
+  const isOwner = carDetail?.seller?.user_id === user?.id;
 
   if (isLoading) {
     return (
@@ -416,41 +356,34 @@ const CarDetailScreen: React.FC = () => {
                     Verified Dealer
                   </Chip>
                 )}
-                <View
-                  style={[
-                    styles.conditionBadge,
-                    { backgroundColor: getConditionColor(carDetail.condition) },
-                  ]}
-                >
-                  <Text style={styles.conditionText}>
-                    {carDetail.condition}
-                  </Text>
-                </View>
               </View>
             </View>
-            <TouchableOpacity style={styles.saveButton}>
-              <MaterialCommunityIcons
-                name="heart-outline"
-                size={24}
-                color={theme.colors.primary}
-              />
-            </TouchableOpacity>
           </View>
 
           <View style={styles.priceSection}>
             <Text style={[styles.price, { color: theme.colors.primary }]}>
               {formatPrice(carDetail.price)}
             </Text>
-            {carDetail.negotiable && (
-              <Text
+            <View style={styles.conditionRow}>
+              <View
                 style={[
-                  styles.negotiable,
-                  { color: theme.colors.onSurfaceVariant },
+                  styles.conditionBadge,
+                  { backgroundColor: getConditionColor(carDetail.condition) },
                 ]}
               >
-                Price is negotiable
-              </Text>
-            )}
+                <Text style={styles.conditionText}>{carDetail.condition}</Text>
+              </View>
+              {carDetail.negotiable && (
+                <Text
+                  style={[
+                    styles.negotiable,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Price is negotiable
+                </Text>
+              )}
+            </View>
           </View>
 
           <View style={styles.quickStats}>
@@ -576,63 +509,6 @@ const CarDetailScreen: React.FC = () => {
           </Card>
         )}
 
-        {/* Seller Info */}
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text
-            style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
-          >
-            Seller Information
-          </Text>
-          <View style={styles.sellerInfo}>
-            <View
-              style={[
-                styles.sellerAvatar,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name={carDetail.seller.is_dealer ? "store" : "account"}
-                size={32}
-                color={theme.colors.primary}
-              />
-            </View>
-            <View style={styles.sellerDetails}>
-              <Text
-                style={[styles.sellerName, { color: theme.colors.onSurface }]}
-              >
-                {carDetail.seller.company_name || carDetail.seller.name}
-              </Text>
-              <Text
-                style={[
-                  styles.sellerType,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                {carDetail.seller.is_dealer ? "Car Dealer" : "Private Seller"}
-              </Text>
-              {carDetail.seller.company_address && (
-                <Text
-                  style={[
-                    styles.sellerAddress,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  {carDetail.seller.company_address},{" "}
-                  {carDetail.seller.company_city}
-                </Text>
-              )}
-              <Text
-                style={[
-                  styles.listingCount,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                {carDetail.seller.other_listings_count} other listings
-              </Text>
-            </View>
-          </View>
-        </Card>
-
         {/* Location */}
         <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <Text
@@ -649,46 +525,51 @@ const CarDetailScreen: React.FC = () => {
             <Text
               style={[styles.locationText, { color: theme.colors.onSurface }]}
             >
-              {carDetail.location.region}
-              {carDetail.location.zone && `, ${carDetail.location.zone}`}
-              {carDetail.location.town && `, ${carDetail.location.town}`}
+              {carDetail.location?.town ||
+                carDetail.location?.region ||
+                "Ethiopia"}
             </Text>
           </View>
         </Card>
 
-        {/* Bottom padding */}
-        <View style={styles.bottomPadding} />
+        {/* Bottom padding - More padding for owners since no bottom actions */}
+        <View style={[styles.bottomPadding, { height: isOwner ? 20 : 100 }]} />
       </ScrollView>
 
-      {/* Fixed Bottom Actions */}
-      <View
-        style={[
-          styles.bottomActions,
-          {
-            backgroundColor: theme.colors.surface,
-            paddingBottom: insets.bottom + 16, // Add safe area padding
-          },
-        ]}
-      >
-        <Button
-          mode="contained"
-          onPress={handleCall}
-          style={[styles.callButton, { backgroundColor: "#4CAF50" }]}
-          icon="phone"
-          textColor="#FFFFFF"
+      {/* Fixed Bottom Actions - Only show for non-owners */}
+      {!isOwner && (
+        <View
+          style={[
+            styles.bottomActions,
+            {
+              backgroundColor: theme.colors.surface,
+              paddingBottom: insets.bottom + 16, // Add safe area padding
+            },
+          ]}
         >
-          Call Seller
-        </Button>
-        <Button
-          mode="outlined"
-          onPress={handleMessage}
-          style={[styles.messageButton, { borderColor: theme.colors.primary }]}
-          icon="message"
-          textColor={theme.colors.primary}
-        >
-          Message
-        </Button>
-      </View>
+          <Button
+            mode="contained"
+            onPress={handleCall}
+            style={[styles.callButton, { backgroundColor: "#4CAF50" }]}
+            icon="phone"
+            textColor="#FFFFFF"
+          >
+            Call Seller
+          </Button>
+          <Button
+            mode="outlined"
+            onPress={handleMessage}
+            style={[
+              styles.messageButton,
+              { borderColor: theme.colors.primary },
+            ]}
+            icon="message"
+            textColor={theme.colors.primary}
+          >
+            Message
+          </Button>
+        </View>
+      )}
     </View>
   );
 };
@@ -700,8 +581,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
@@ -713,7 +594,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    alignItems: "center",
+    alignItems: "flex-start",
+    marginLeft: 8,
   },
   title: {
     fontSize: 18,
@@ -1009,13 +891,18 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#2ecc71",
   },
-  saveButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: "#f8f9fa",
-  },
   priceSection: {
     marginBottom: 16,
+  },
+  priceWithNegotiable: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  priceAndCondition: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   quickStats: {
     flexDirection: "row",
@@ -1034,6 +921,11 @@ const styles = StyleSheet.create({
   listingCount: {
     fontSize: 12,
     color: "#666",
+  },
+  conditionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
 });
 

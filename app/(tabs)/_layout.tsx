@@ -26,7 +26,7 @@ export default function TabLayout() {
           duration: 1200,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     pulse.start();
 
@@ -137,7 +137,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="inbox"
         options={{
-          title: "Inbox",
+          title: "My Posts",
           tabBarIcon: ({ color, size, focused }) => (
             <View
               style={
@@ -146,16 +146,9 @@ export default function TabLayout() {
             >
               <View style={styles.iconWrapper}>
                 <MaterialCommunityIcons
-                  name="email"
+                  name="car-multiple"
                   size={focused ? 24 : size}
                   color={color}
-                />
-                {/* Notification badge */}
-                <View
-                  style={[
-                    styles.badge,
-                    { backgroundColor: theme.colors.error },
-                  ]}
                 />
               </View>
               {focused && (

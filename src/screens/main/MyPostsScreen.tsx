@@ -1,7 +1,7 @@
 import { getFontSize, getSpacing } from "@/src/utils/responsive";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import { FlatList, Image, StyleSheet, View } from "react-native";
+import React from "react";
+import { Alert, FlatList, Image, StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -12,32 +12,64 @@ import {
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { useCarListings } from "../../features/cars/car.hooks";
+import { useAuthStore } from "../../features/auth/auth.store";
+import { useCarListings, useDeleteCar } from "../../features/cars/car.hooks";
 import { CarListing } from "../../features/cars/car.types";
 
 const MyPostsScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const deleteMutation = useDeleteCar();
+  const { isAuthenticated } = useAuthStore();
 
   const {
     data: listingsData,
     isLoading,
     error,
     refetch,
-  } = useCarListings(
-    1,
-    20,
-    selectedStatus === "all" ? undefined : selectedStatus
-  );
+  } = useCarListings(1, 20);
   const listings = listingsData?.data?.listings || [];
 
-  const statusFilters = [
-    { id: "all", label: "All Posts" },
-    { id: "Active", label: "Active" },
-    { id: "Pending", label: "Pending" },
-    { id: "Sold", label: "Sold" },
-  ];
+  // Unauthenticated UI
+  if (!isAuthenticated) {
+    return (
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={styles.signInPrompt}>
+          <MaterialCommunityIcons
+            name="account-circle-outline"
+            size={80}
+            color={theme.colors.onBackground}
+          />
+          <Text
+            style={[styles.signInTitle, { color: theme.colors.onBackground }]}
+          >
+            Please signup or login first
+          </Text>
+          <Text
+            style={[
+              styles.signInSubtitle,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            Sign in to manage your posts and access all features
+          </Text>
+          <Button
+            mode="contained"
+            style={[
+              styles.signInButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => router.push("/(auth)/login")}
+            textColor={theme.colors.onPrimary}
+          >
+            Sign In
+          </Button>
+        </View>
+      </View>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -63,6 +95,34 @@ const MyPostsScreen: React.FC = () => {
       default:
         return "alert-circle";
     }
+  };
+
+  const handleDelete = (listingId: number) => {
+    Alert.alert(
+      "Delete Listing",
+      "Are you sure you want to delete this car listing? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            deleteMutation.mutate(listingId, {
+              onSuccess: () => {
+                Alert.alert("Success", "Listing deleted successfully");
+                refetch();
+              },
+              onError: (error: any) => {
+                Alert.alert("Error", "Failed to delete listing");
+              },
+            });
+          },
+        },
+      ],
+    );
   };
 
   const renderListing = ({ item }: { item: CarListing }) => (
@@ -110,17 +170,11 @@ const MyPostsScreen: React.FC = () => {
             <Text style={styles.carTitle}>
               {item.year} {item.make} {item.model}
             </Text>
-            <Text style={styles.listingId}>ID: {item.listing_id}</Text>
           </View>
         </View>
 
         <View style={styles.listingDetails}>
           <View style={styles.detailItem}>
-            <MaterialCommunityIcons
-              name="currency-etb"
-              size={16}
-              color="#6B7280"
-            />
             <Text style={styles.detailText}>
               ETB {item.price.toLocaleString()}
             </Text>
@@ -153,7 +207,14 @@ const MyPostsScreen: React.FC = () => {
             icon="pencil"
             mode="contained-tonal"
             size={20}
-            onPress={() => router.push(`/edit/${item.listing_id}`)}
+            onPress={() => router.push(`/edit-car/${item.listing_id}`)}
+          />
+          <IconButton
+            icon="delete"
+            mode="contained-tonal"
+            size={20}
+            onPress={() => handleDelete(item.listing_id)}
+            style={styles.deleteButton}
           />
         </View>
       </Card.Content>
@@ -195,37 +256,12 @@ const MyPostsScreen: React.FC = () => {
         style={[styles.header, { backgroundColor: theme.colors.surface }]}
       >
         <View style={styles.headerContent}>
-          <IconButton
-            icon="arrow-left"
-            size={24}
-            iconColor={theme.colors.onSurface}
-            onPress={() => router.back()}
-          />
           <Text style={[styles.title, { color: theme.colors.onSurface }]}>
             My Posts
           </Text>
           <View style={styles.headerSpacer} />
         </View>
       </Surface>
-
-      {/* Status Filters */}
-      <View style={styles.filtersContainer}>
-        {statusFilters.map((filter) => (
-          <Chip
-            key={filter.id}
-            selected={selectedStatus === filter.id}
-            onPress={() => setSelectedStatus(filter.id)}
-            style={styles.filterChip}
-            textStyle={
-              selectedStatus === filter.id
-                ? styles.selectedFilterText
-                : styles.filterText
-            }
-          >
-            {filter.label}
-          </Chip>
-        ))}
-      </View>
 
       {/* Listings */}
       <FlatList
@@ -246,13 +282,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  signInPrompt: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  signInTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  signInSubtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  signInButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+  },
   header: {
     elevation: 2,
   },
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
-    padding: getSpacing(12, 16, 20),
+    padding: getSpacing(4, 6, 8),
   },
   title: {
     fontSize: getFontSize(18, 20, 22),
@@ -262,21 +321,6 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: getSpacing(40, 48, 56),
-  },
-  filtersContainer: {
-    flexDirection: "row",
-    paddingHorizontal: getSpacing(12, 16, 20),
-    paddingVertical: getSpacing(12, 16, 20),
-    gap: getSpacing(6, 8, 10),
-  },
-  filterChip: {
-    backgroundColor: "#F3F4F6",
-  },
-  filterText: {
-    color: "#374151",
-  },
-  selectedFilterText: {
-    color: "#FFFFFF",
   },
   listContainer: {
     paddingHorizontal: getSpacing(12, 16, 20),
@@ -358,6 +402,9 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  deleteButton: {
+    backgroundColor: "#FEE2E2",
   },
   emptyState: {
     flex: 1,

@@ -1,12 +1,11 @@
-// screens/profile/EditProfileScreen.tsx
-import { useRouter } from "expo-router";
+﻿import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,25 +14,17 @@ import {
 } from "react-native";
 import {
   Avatar,
-  Chip,
-  Divider,
-  List,
-  Portal,
+  Button as PaperButton,
   Snackbar,
   Surface,
-  Switch,
   Text,
   TextInput,
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { apiClient } from "../../api/apiClient";
-import {
-  Button,
-  IconButton as CustomIconButton,
-} from "../../components/common/buttons";
+import { Button } from "../../components/common/buttons";
 import { useAuthStore } from "../../features/auth/auth.store";
-import { useAndroidBackHandler } from "../../hooks/useAndroidBackHandler";
 import { ImageType, useImagePicker } from "../../hooks/useImagePicker";
 import { isUnder10MB } from "../../utils/imageProcessor";
 
@@ -90,10 +81,10 @@ interface ApiResponse<T = any> {
   error?: string;
 }
 
-const EditProfileScreen: React.FC = () => {
+const UpdateProfileScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, isAuthenticated } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -132,7 +123,7 @@ const EditProfileScreen: React.FC = () => {
   } = useImagePicker();
 
   const [initialProfile, setInitialProfile] = useState<Partial<UserProfile>>(
-    {}
+    {},
   );
   const [snackbar, setSnackbar] = useState({
     visible: false,
@@ -141,8 +132,18 @@ const EditProfileScreen: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    console.log("🚀 UpdateProfileScreen mounted");
+    console.log("🔑 isAuthenticated:", isAuthenticated);
+
+    // Only fetch profile if user is authenticated
+    if (isAuthenticated) {
+      console.log("✅ User is authenticated, fetching profile...");
+      fetchProfile();
+    } else {
+      console.log("❌ User not authenticated, setting loading to false");
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
 
   // Process picked image and upload it
   useEffect(() => {
@@ -159,9 +160,12 @@ const EditProfileScreen: React.FC = () => {
 
   const fetchProfile = async () => {
     try {
+      console.log("🔄 Starting to fetch profile...");
       setLoading(true);
       const response =
         await apiClient.get<ApiResponse<UserProfile>>("/user/profile");
+
+      console.log("📊 Profile response:", response.data);
 
       if (response.data.success && response.data.data) {
         const profileData = response.data.data;
@@ -180,17 +184,33 @@ const EditProfileScreen: React.FC = () => {
           username: profileData.username,
           email: profileData.email,
         });
+        console.log("✅ Profile data loaded and updated in auth store");
       } else {
         showSnackbar(
           response.data.message || "Failed to load profile",
-          "error"
+          "error",
         );
       }
     } catch (error: any) {
-      console.error("Fetch profile error:", error);
+      console.error("❌ Fetch profile error:", error);
+      console.error("❌ Error status:", error.response?.status);
+      console.error("❌ Error data:", error.response?.data);
+
+      // Handle authentication errors
+      if (error.response?.status === 401) {
+        console.log("🔐 401 error - redirecting to login");
+        showSnackbar("Session expired. Please login again.", "error");
+        // Store the intended redirect path
+        SecureStore.setItemAsync("redirect_after_login", "/profile");
+        setTimeout(() => {
+          router.replace("/(auth)/login");
+        }, 1500);
+        return;
+      }
+
       showSnackbar(
         error.response?.data?.message || "Failed to load profile",
-        "error"
+        "error",
       );
     } finally {
       setLoading(false);
@@ -239,14 +259,14 @@ const EditProfileScreen: React.FC = () => {
       } else {
         showSnackbar(
           response.data.message || "Failed to upload photo",
-          "error"
+          "error",
         );
       }
     } catch (error: any) {
       console.error("Upload error:", error);
       showSnackbar(
         error.response?.data?.error || "Failed to upload profile photo",
-        "error"
+        "error",
       );
     } finally {
       setUploadingPhoto(false);
@@ -259,7 +279,7 @@ const EditProfileScreen: React.FC = () => {
     setUploadingPhoto(true);
     try {
       const response = await apiClient.delete<ApiResponse>(
-        "/user/profile/photo"
+        "/user/profile/photo",
       );
 
       if (response.data.success) {
@@ -274,14 +294,14 @@ const EditProfileScreen: React.FC = () => {
       } else {
         showSnackbar(
           response.data.message || "Failed to remove photo",
-          "error"
+          "error",
         );
       }
     } catch (error: any) {
       console.error("Remove error:", error);
       showSnackbar(
         error.response?.data?.error || "Failed to remove profile photo",
-        "error"
+        "error",
       );
     } finally {
       setUploadingPhoto(false);
@@ -332,7 +352,7 @@ const EditProfileScreen: React.FC = () => {
       Alert.alert(
         "View Photo",
         "Profile photo preview.\n\nTo implement full-screen viewer, add react-native-image-viewing library.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
     }
     hideBottomSheet();
@@ -350,7 +370,7 @@ const EditProfileScreen: React.FC = () => {
           style: "destructive",
           onPress: handleRemoveProfilePhoto,
         },
-      ]
+      ],
     );
   };
 
@@ -386,7 +406,7 @@ const EditProfileScreen: React.FC = () => {
 
       const response = await apiClient.put<ApiResponse>(
         "/user/profile",
-        updateData
+        updateData,
       );
 
       if (response.data.success) {
@@ -409,19 +429,19 @@ const EditProfileScreen: React.FC = () => {
         });
 
         setTimeout(() => {
-          router.replace("/profile");
+          router.replace("/(tabs)");
         }, 1500);
       } else {
         showSnackbar(
           response.data.message || "Failed to update profile",
-          "error"
+          "error",
         );
       }
     } catch (error: any) {
       console.error("Save error:", error);
       showSnackbar(
         error.response?.data?.error || "Failed to update profile",
-        "error"
+        "error",
       );
     } finally {
       setSaving(false);
@@ -440,7 +460,7 @@ const EditProfileScreen: React.FC = () => {
             showSnackbar("Verification code sent", "success");
           },
         },
-      ]
+      ],
     );
   };
 
@@ -456,7 +476,7 @@ const EditProfileScreen: React.FC = () => {
             router.push("/verification/trusted-seller");
           },
         },
-      ]
+      ],
     );
   };
 
@@ -473,7 +493,7 @@ const EditProfileScreen: React.FC = () => {
             showSnackbar("Account deletion request sent", "success");
           },
         },
-      ]
+      ],
     );
   };
 
@@ -527,338 +547,49 @@ const EditProfileScreen: React.FC = () => {
     return !compare(initialProfile, profile) || !!pickedImage;
   }, [initialProfile, profile, pickedImage]);
 
-  // Android back handler: confirm leaving if unsaved changes
-  useAndroidBackHandler(() => {
-    if (!hasUnsavedChanges) return false;
-
-    Alert.alert(
-      "Discard changes?",
-      "You have unsaved changes. Are you sure you want to go back?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Discard",
-          style: "destructive",
-          onPress: () => router.replace("/profile"),
-        },
-      ]
-    );
-    return true;
-  });
-
-  // Image Picker Bottom Sheet Component
-  const ImagePickerBottomSheet = () => (
-    <Portal>
-      <Modal
-        visible={showImagePickerSheet}
-        transparent
-        animationType="none"
-        onRequestClose={hideBottomSheet}
+  // Unauthenticated UI
+  if (!isAuthenticated) {
+    return (
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        <TouchableOpacity
-          style={styles.bottomSheetOverlay}
-          activeOpacity={1}
-          onPress={hideBottomSheet}
-        >
-          <Animated.View
+        <View style={styles.signInPrompt}>
+          <MaterialCommunityIcons
+            name="account-circle-outline"
+            size={80}
+            color={theme.colors.onBackground}
+          />
+          <Text
+            style={[styles.signInTitle, { color: theme.colors.onBackground }]}
+          >
+            Please signup or login first
+          </Text>
+          <Text
             style={[
-              styles.bottomSheetContainer,
-              {
-                backgroundColor: theme.colors.surface,
-                transform: [{ translateY: sheetAnimation }],
-              },
+              styles.signInSubtitle,
+              { color: theme.colors.onSurfaceVariant },
             ]}
           >
-            {/* Handle */}
-            <View style={styles.bottomSheetHandle}>
-              <View
-                style={[
-                  styles.bottomSheetHandleBar,
-                  {
-                    backgroundColor: theme.colors.onSurfaceVariant,
-                  },
-                ]}
-              />
-            </View>
-
-            {/* Header */}
-            <View style={styles.bottomSheetHeader}>
-              <Text
-                style={[
-                  styles.bottomSheetTitle,
-                  { color: theme.colors.onSurface },
-                ]}
-              >
-                Profile Photo
-              </Text>
-              <Text
-                style={[
-                  styles.bottomSheetSubtitle,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Choose how to update your profile picture
-              </Text>
-            </View>
-
-            {/* Loading indicator for photo upload */}
-            {(isPicking || uploadingPhoto) && (
-              <View style={styles.uploadingContainer}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-                <Text
-                  style={[
-                    styles.uploadingText,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  {uploadingPhoto
-                    ? "Uploading photo..."
-                    : "Processing image..."}
-                </Text>
-              </View>
-            )}
-
-            {/* Current Photo Preview */}
-            {!isPicking && !uploadingPhoto && (
-              <View style={styles.currentPhotoSection}>
-                <Avatar.Image
-                  size={80}
-                  source={
-                    pickedImage?.uri
-                      ? { uri: pickedImage.uri }
-                      : profileImage
-                        ? { uri: profileImage }
-                        : profile.profile_picture
-                          ? { uri: profile.profile_picture }
-                          : require("../../../assets/images/profile.jpg")
-                  }
-                  style={styles.currentPhotoAvatar}
-                />
-                <View style={styles.currentPhotoInfo}>
-                  <Text
-                    style={[
-                      styles.currentPhotoLabel,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    Current Photo
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.viewButton}
-                    onPress={handleViewPhoto}
-                  >
-                    <MaterialCommunityIcons
-                      name="eye-outline"
-                      size={16}
-                      color={theme.colors.primary}
-                    />
-                    <Text
-                      style={[
-                        styles.viewButtonText,
-                        { color: theme.colors.primary },
-                      ]}
-                    >
-                      View
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* Options (only show when not uploading) */}
-            {!isPicking && !uploadingPhoto && (
-              <>
-                <View style={styles.optionsContainer}>
-                  {/* Take Photo Option */}
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      { backgroundColor: theme.colors.surfaceVariant },
-                    ]}
-                    onPress={handleTakePhoto}
-                    disabled={isPicking}
-                  >
-                    <View style={styles.optionIconContainer}>
-                      <View
-                        style={[
-                          styles.optionIconBackground,
-                          { backgroundColor: theme.colors.surface },
-                        ]}
-                      >
-                        <MaterialCommunityIcons
-                          name="camera"
-                          size={24}
-                          color={theme.colors.onSurface}
-                        />
-                      </View>
-                    </View>
-                    <View style={styles.optionTextContainer}>
-                      <Text
-                        style={[
-                          styles.optionTitle,
-                          { color: theme.colors.onSurface },
-                        ]}
-                      >
-                        Take Photo
-                      </Text>
-                      <Text
-                        style={[
-                          styles.optionDescription,
-                          { color: theme.colors.onSurfaceVariant },
-                        ]}
-                      >
-                        Use your camera
-                      </Text>
-                    </View>
-                    <MaterialCommunityIcons
-                      name="chevron-right"
-                      size={24}
-                      color={theme.colors.onSurfaceVariant}
-                    />
-                  </TouchableOpacity>
-
-                  {/* Choose from Gallery Option */}
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      { backgroundColor: theme.colors.surfaceVariant },
-                    ]}
-                    onPress={handleChooseFromGallery}
-                    disabled={isPicking}
-                  >
-                    <View style={styles.optionIconContainer}>
-                      <View
-                        style={[
-                          styles.optionIconBackground,
-                          { backgroundColor: theme.colors.surface },
-                        ]}
-                      >
-                        <MaterialCommunityIcons
-                          name="image-multiple"
-                          size={24}
-                          color={theme.colors.onSurface}
-                        />
-                      </View>
-                    </View>
-                    <View style={styles.optionTextContainer}>
-                      <Text
-                        style={[
-                          styles.optionTitle,
-                          { color: theme.colors.onSurface },
-                        ]}
-                      >
-                        Choose from Gallery
-                      </Text>
-                      <Text
-                        style={[
-                          styles.optionDescription,
-                          { color: theme.colors.onSurfaceVariant },
-                        ]}
-                      >
-                        Select from your photos
-                      </Text>
-                    </View>
-                    <MaterialCommunityIcons
-                      name="chevron-right"
-                      size={24}
-                      color={theme.colors.onSurfaceVariant}
-                    />
-                  </TouchableOpacity>
-
-                  {/* Remove Photo Option (if has photo) */}
-                  {(profileImage || profile.profile_picture) && (
-                    <TouchableOpacity
-                      style={[
-                        styles.optionButton,
-                        { backgroundColor: theme.colors.surfaceVariant },
-                      ]}
-                      onPress={handleRemovePhoto}
-                      disabled={uploadingPhoto}
-                    >
-                      <View style={styles.optionIconContainer}>
-                        <View
-                          style={[
-                            styles.optionIconBackground,
-                            { backgroundColor: theme.colors.surface },
-                          ]}
-                        >
-                          <MaterialCommunityIcons
-                            name="trash-can-outline"
-                            size={24}
-                            color={theme.colors.onSurface}
-                          />
-                        </View>
-                      </View>
-                      <View style={styles.optionTextContainer}>
-                        <Text
-                          style={[
-                            styles.optionTitle,
-                            { color: theme.colors.onSurface },
-                          ]}
-                        >
-                          Remove Photo
-                        </Text>
-                        <Text
-                          style={[
-                            styles.optionDescription,
-                            { color: theme.colors.onSurfaceVariant },
-                          ]}
-                        >
-                          Delete current photo
-                        </Text>
-                      </View>
-                      <MaterialCommunityIcons
-                        name="chevron-right"
-                        size={24}
-                        color={theme.colors.onSurfaceVariant}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* Cancel Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.cancelButton,
-                    { backgroundColor: theme.colors.surfaceVariant },
-                  ]}
-                  onPress={hideBottomSheet}
-                >
-                  <Text
-                    style={[
-                      styles.cancelButtonText,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Tips */}
-                <View style={styles.tipsContainer}>
-                  <MaterialCommunityIcons
-                    name="lightbulb-outline"
-                    size={16}
-                    color={theme.colors.onSurface}
-                  />
-                  <Text
-                    style={[
-                      styles.tipsText,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    Recommended: Square photo, at least 400×400 pixels
-                  </Text>
-                </View>
-              </>
-            )}
-          </Animated.View>
-        </TouchableOpacity>
-      </Modal>
-    </Portal>
-  );
+            Sign in to manage your account and access all features
+          </Text>
+          <PaperButton
+            mode="contained"
+            style={[
+              styles.signInButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => router.push("/(auth)/login")}
+            textColor={theme.colors.onPrimary}
+          >
+            Sign In
+          </PaperButton>
+        </View>
+      </View>
+    );
+  }
 
   if (loading) {
+    console.log("📱 Showing loading state...");
     return (
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -879,47 +610,20 @@ const EditProfileScreen: React.FC = () => {
       ? { uri: profile.profile_picture }
       : require("../../../assets/images/profile.jpg");
 
+  console.log("🎨 Rendering main UpdateProfileScreen UI...");
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      {/* Image Picker Bottom Sheet */}
-      <ImagePickerBottomSheet />
-
       {/* Header */}
       <Surface
         style={[styles.header, { backgroundColor: theme.colors.background }]}
         elevation={0}
       >
         <View style={styles.headerContent}>
-          <CustomIconButton
-            icon="chevron-left"
-            variant="ghost"
-            size="md"
-            onPress={() => {
-              if (hasUnsavedChanges) {
-                Alert.alert(
-                  "Discard changes?",
-                  "You have unsaved changes. Are you sure you want to go back?",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Discard",
-                      style: "destructive",
-                      onPress: () => router.replace("/profile"),
-                    },
-                  ]
-                );
-              } else {
-                router.replace("/profile");
-              }
-            }}
-            iconStyle={{
-              color: theme.colors.onBackground,
-            }}
-          />
+          <View style={styles.headerSpacer} />
           <Text style={[styles.title, { color: theme.colors.onBackground }]}>
-            Edit Profile
+            Profile Settings
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -1134,36 +838,6 @@ const EditProfileScreen: React.FC = () => {
             />
           </View>
 
-          {/* Username */}
-          <View style={styles.labeledField}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Username
-            </Text>
-            <TextInput
-              value={profile.username || ""}
-              onChangeText={(text) =>
-                setProfile({ ...profile, username: text })
-              }
-              mode="outlined"
-              outlineColor={theme.colors.outline}
-              activeOutlineColor={theme.colors.primary}
-              style={styles.textInput}
-              theme={{ roundness: 12 }}
-              textColor={theme.colors.onSurface}
-              left={
-                <TextInput.Icon
-                  icon="at"
-                  color={theme.colors.onSurfaceVariant}
-                />
-              }
-            />
-          </View>
-
           {/* Bio */}
           <View style={styles.labeledField}>
             <Text
@@ -1189,596 +863,6 @@ const EditProfileScreen: React.FC = () => {
               placeholderTextColor={theme.colors.onSurfaceVariant}
             />
           </View>
-        </Surface>
-
-        {/* Phone Number */}
-        <Surface
-          style={[
-            styles.sectionCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-          elevation={theme.dark ? 0 : 1}
-        >
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons
-              name="phone"
-              size={18}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
-            >
-              Phone Number
-            </Text>
-          </View>
-
-          <View style={styles.labeledField}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Phone Number
-            </Text>
-            <View style={styles.phoneRow}>
-              <TextInput
-                value={profile.phone || ""}
-                onChangeText={(text) => setProfile({ ...profile, phone: text })}
-                mode="outlined"
-                outlineColor={theme.colors.outline}
-                activeOutlineColor={theme.colors.primary}
-                style={[styles.textInput, styles.phoneInput]}
-                keyboardType="phone-pad"
-                theme={{ roundness: 12 }}
-                textColor={theme.colors.onSurface}
-                left={
-                  <TextInput.Icon
-                    icon="phone"
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                }
-              />
-              {profile.phone_verified ? (
-                <Chip
-                  icon="check"
-                  style={[
-                    styles.verifiedChip,
-                    {
-                      backgroundColor: theme.colors.surfaceVariant,
-                    },
-                  ]}
-                  textStyle={[
-                    styles.verifiedChipText,
-                    { color: theme.colors.onSurface },
-                  ]}
-                >
-                  Verified
-                </Chip>
-              ) : (
-                <Button
-                  label="Verify"
-                  variant="outline"
-                  size="sm"
-                  onPress={handleVerifyPhone}
-                  style={[
-                    styles.verifyButton,
-                    { borderColor: theme.colors.primary },
-                  ]}
-                  labelStyle={{ color: theme.colors.primary }}
-                />
-              )}
-            </View>
-          </View>
-        </Surface>
-
-        {/* Location */}
-        <Surface
-          style={[
-            styles.sectionCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-          elevation={theme.dark ? 0 : 1}
-        >
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons
-              name="map-marker"
-              size={18}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
-            >
-              Location
-            </Text>
-          </View>
-
-          <View style={styles.labeledField}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              City, Region
-            </Text>
-            <TextInput
-              value={`${profile.city || ""}${
-                profile.region ? `, ${profile.region}` : ""
-              }`}
-              onChangeText={(text) => setProfile({ ...profile, city: text })}
-              mode="outlined"
-              outlineColor={theme.colors.outline}
-              activeOutlineColor={theme.colors.primary}
-              style={styles.textInput}
-              theme={{ roundness: 12 }}
-              textColor={theme.colors.onSurface}
-              left={
-                <TextInput.Icon
-                  icon="map-marker"
-                  color={theme.colors.onSurfaceVariant}
-                />
-              }
-              right={
-                <TextInput.Icon
-                  icon="chevron-down"
-                  color={theme.colors.onSurfaceVariant}
-                  onPress={() => router.push("/location-selector")}
-                />
-              }
-            />
-          </View>
-        </Surface>
-
-        {/* Dealer Account */}
-        <Surface
-          style={[
-            styles.sectionCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-          elevation={theme.dark ? 0 : 1}
-        >
-          <View style={styles.switchRow}>
-            <View style={styles.switchLabelContainer}>
-              <MaterialCommunityIcons
-                name="store"
-                size={18}
-                color={theme.colors.primary}
-              />
-              <Text
-                style={[styles.switchLabel, { color: theme.colors.onSurface }]}
-              >
-                Dealer Account
-              </Text>
-            </View>
-            <Switch
-              value={profile.is_dealer || false}
-              onValueChange={(value) =>
-                setProfile({ ...profile, is_dealer: value })
-              }
-              color={theme.colors.primary}
-            />
-          </View>
-
-          {profile.is_dealer && (
-            <>
-              <Divider style={styles.divider} />
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  { color: theme.colors.onSurface },
-                ]}
-              >
-                Register as Dealer
-              </Text>
-              <Text
-                style={[
-                  styles.sectionHelper,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Unlock verified badges and analytics.
-              </Text>
-
-              {/* Company Name */}
-              <View style={styles.labeledField}>
-                <Text
-                  style={[
-                    styles.fieldLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Company Name
-                </Text>
-                <TextInput
-                  value={profile.dealer_company_name || ""}
-                  onChangeText={(text) =>
-                    setProfile({ ...profile, dealer_company_name: text })
-                  }
-                  mode="outlined"
-                  outlineColor={theme.colors.outline}
-                  activeOutlineColor={theme.colors.primary}
-                  style={styles.textInput}
-                  theme={{ roundness: 12 }}
-                  textColor={theme.colors.onSurface}
-                />
-              </View>
-
-              {/* Business License */}
-              <View style={styles.labeledField}>
-                <Text
-                  style={[
-                    styles.fieldLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Business License
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.licenseCard,
-                    {
-                      borderColor: theme.colors.outline,
-                      backgroundColor: theme.colors.surface,
-                    },
-                  ]}
-                  onPress={handlePickBusinessLicense}
-                >
-                  <MaterialCommunityIcons
-                    name="cloud-upload-outline"
-                    size={28}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                  <Text
-                    style={[
-                      styles.licenseTitle,
-                      { color: theme.colors.onSurface },
-                    ]}
-                  >
-                    Upload License (PDF/JPG)
-                  </Text>
-                  <Text
-                    style={[
-                      styles.licenseHint,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    Tap to upload your business license document.
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </Surface>
-
-        {/* Social Profiles */}
-        <Surface
-          style={[
-            styles.sectionCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-          elevation={theme.dark ? 0 : 1}
-        >
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons
-              name="share-variant"
-              size={18}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
-            >
-              Social Profiles
-            </Text>
-          </View>
-
-          <View style={styles.labeledField}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Telegram Username
-            </Text>
-            <TextInput
-              value={profile.telegram_username || ""}
-              onChangeText={(text) =>
-                setProfile({ ...profile, telegram_username: text })
-              }
-              mode="outlined"
-              outlineColor={theme.colors.outline}
-              activeOutlineColor={theme.colors.primary}
-              style={styles.textInput}
-              theme={{ roundness: 12 }}
-              textColor={theme.colors.onSurface}
-              left={
-                <TextInput.Icon
-                  icon="at"
-                  color={theme.colors.onSurfaceVariant}
-                />
-              }
-            />
-          </View>
-
-          <View style={styles.labeledField}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Facebook Profile Link
-            </Text>
-            <TextInput
-              value={profile.facebook_profile || ""}
-              onChangeText={(text) =>
-                setProfile({ ...profile, facebook_profile: text })
-              }
-              mode="outlined"
-              outlineColor={theme.colors.outline}
-              activeOutlineColor={theme.colors.primary}
-              style={styles.textInput}
-              theme={{ roundness: 12 }}
-              textColor={theme.colors.onSurface}
-              left={
-                <TextInput.Icon
-                  icon="facebook"
-                  color={theme.colors.onSurfaceVariant}
-                />
-              }
-            />
-          </View>
-
-          <View style={styles.labeledField}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Instagram Handle
-            </Text>
-            <TextInput
-              value={profile.instagram_handle || ""}
-              onChangeText={(text) =>
-                setProfile({ ...profile, instagram_handle: text })
-              }
-              mode="outlined"
-              outlineColor={theme.colors.outline}
-              activeOutlineColor={theme.colors.primary}
-              style={styles.textInput}
-              theme={{ roundness: 12 }}
-              textColor={theme.colors.onSurface}
-              left={
-                <TextInput.Icon
-                  icon="instagram"
-                  color={theme.colors.onSurfaceVariant}
-                />
-              }
-            />
-          </View>
-        </Surface>
-
-        {/* Help & Support Section */}
-        <Surface
-          style={[
-            styles.sectionCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-          elevation={theme.dark ? 0 : 1}
-        >
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons
-              name="help-circle-outline"
-              size={18}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
-            >
-              Help & Support
-            </Text>
-          </View>
-
-          <List.Item
-            title="Help Center"
-            description="FAQs and guides"
-            titleStyle={{ color: theme.colors.onSurface }}
-            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-            left={() => (
-              <View
-                style={[
-                  styles.itemIconWrap,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="lifebuoy"
-                  size={20}
-                  color={theme.colors.onSurface}
-                />
-              </View>
-            )}
-            right={() => (
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={22}
-                color={theme.colors.outline}
-              />
-            )}
-            onPress={handleHelpCenter}
-          />
-          <Divider />
-
-          <List.Item
-            title="Contact Support"
-            description="Get in touch with us"
-            titleStyle={{ color: theme.colors.onSurface }}
-            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-            left={() => (
-              <View
-                style={[
-                  styles.itemIconWrap,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="headset"
-                  size={20}
-                  color={theme.colors.onSurface}
-                />
-              </View>
-            )}
-            right={() => (
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={22}
-                color={theme.colors.outline}
-              />
-            )}
-            onPress={handleContactSupport}
-          />
-          <Divider />
-
-          <List.Item
-            title="About"
-            description="App version and information"
-            titleStyle={{ color: theme.colors.onSurface }}
-            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-            left={() => (
-              <View
-                style={[
-                  styles.itemIconWrap,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="information-outline"
-                  size={20}
-                  color={theme.colors.onSurface}
-                />
-              </View>
-            )}
-            right={() => (
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={22}
-                color={theme.colors.outline}
-              />
-            )}
-            onPress={handleAboutApp}
-          />
-        </Surface>
-
-        {/* Get Verified */}
-        <Surface
-          style={[
-            styles.verifiedSection,
-            {
-              backgroundColor: theme.colors.surfaceVariant,
-              borderColor: theme.colors.outline,
-            },
-          ]}
-          elevation={theme.dark ? 0 : 1}
-        >
-          <Text
-            style={[
-              styles.verifiedSectionTitle,
-              { color: theme.colors.onSurface },
-            ]}
-          >
-            Get Verified
-          </Text>
-          <Text
-            style={[
-              styles.verifiedSectionSubtitle,
-              { color: theme.colors.onSurfaceVariant },
-            ]}
-          >
-            Become a Trusted Seller
-          </Text>
-          <View style={styles.verifiedBulletContainer}>
-            <Text
-              style={[
-                styles.verifiedBullet,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              • Verified phone number
-            </Text>
-            <Text
-              style={[
-                styles.verifiedBullet,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              • Profile photo
-            </Text>
-            <Text
-              style={[
-                styles.verifiedBullet,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              • Government issued ID
-            </Text>
-          </View>
-          <Button
-            label="Apply for Verification"
-            variant="primary"
-            size="md"
-            onPress={handleBecomeVerified}
-            style={[
-              styles.applyButton,
-              { backgroundColor: theme.colors.primary },
-            ]}
-            labelStyle={{ color: theme.colors.onPrimary }}
-          />
-        </Surface>
-
-        {/* Danger Zone */}
-        <Surface
-          style={[
-            styles.dangerSection,
-            {
-              backgroundColor: theme.colors.surfaceVariant,
-              borderColor: theme.colors.outline,
-            },
-          ]}
-          elevation={theme.dark ? 0 : 1}
-        >
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons
-              name="alert-circle"
-              size={18}
-              color={theme.colors.onSurface}
-            />
-            <Text
-              style={[styles.dangerTitle, { color: theme.colors.onSurface }]}
-            >
-              Danger Zone
-            </Text>
-          </View>
-
-          <Text
-            style={[
-              styles.dangerDescription,
-              { color: theme.colors.onSurfaceVariant },
-            ]}
-          >
-            Once you delete your account, there is no going back. Please be
-            certain.
-          </Text>
-
-          <Button
-            label="I want to delete my account"
-            variant="danger"
-            icon="trash-can"
-            onPress={handleDeleteAccount}
-            style={[styles.deleteButton, { borderColor: theme.colors.primary }]}
-            labelStyle={{ color: theme.colors.primary }}
-          />
         </Surface>
 
         {/* Bottom Save Button */}
@@ -1821,6 +905,29 @@ const EditProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  signInPrompt: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  signInTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  signInSubtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  signInButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -1948,14 +1055,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  sectionSubtitle: {
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  sectionHelper: {
-    fontSize: 12,
-    marginBottom: 12,
-  },
   labeledField: {
     marginBottom: 12,
   },
@@ -1965,106 +1064,6 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: "transparent",
-  },
-  phoneRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    columnGap: 10,
-  },
-  phoneInput: {
-    flex: 1,
-  },
-  verifyButton: {
-    minWidth: 80,
-    borderWidth: 1,
-  },
-  verifiedChip: {
-    height: 32,
-    justifyContent: "center",
-  },
-  verifiedChipText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  switchRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  switchLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    columnGap: 10,
-  },
-  switchLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  divider: {
-    marginVertical: 14,
-  },
-  licenseCard: {
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    rowGap: 4,
-  },
-  licenseTitle: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  licenseHint: {
-    fontSize: 12,
-    textAlign: "center",
-  },
-  verifiedSection: {
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  verifiedSectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  verifiedSectionSubtitle: {
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  verifiedBulletContainer: {
-    marginBottom: 12,
-  },
-  verifiedBullet: {
-    fontSize: 13,
-    marginBottom: 2,
-  },
-  applyButton: {
-    borderRadius: 999,
-    height: 44,
-  },
-  dangerSection: {
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  dangerTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  dangerDescription: {
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  deleteButton: {
-    borderWidth: 1,
   },
   saveButtonContainer: {
     marginTop: 4,
@@ -2076,146 +1075,6 @@ const styles = StyleSheet.create({
   snackbar: {
     borderRadius: 8,
   },
-  // Bottom Sheet Styles
-  bottomSheetOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  bottomSheetContainer: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === "ios" ? 34 : 24,
-    maxHeight: height * 0.8,
-  },
-  bottomSheetHandle: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  bottomSheetHandleBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-  },
-  bottomSheetHeader: {
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    alignItems: "center",
-  },
-  bottomSheetTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  bottomSheetSubtitle: {
-    fontSize: 14,
-    textAlign: "center",
-    opacity: 0.7,
-  },
-  uploadingContainer: {
-    padding: 40,
-    alignItems: "center",
-  },
-  uploadingText: {
-    marginTop: 12,
-    fontSize: 14,
-  },
-  currentPhotoSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    marginHorizontal: 16,
-    borderRadius: 16,
-    marginBottom: 20,
-  },
-  currentPhotoAvatar: {
-    marginRight: 16,
-  },
-  currentPhotoInfo: {
-    flex: 1,
-  },
-  currentPhotoLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  viewButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  viewButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginLeft: 4,
-  },
-  optionsContainer: {
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 20,
-  },
-  optionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 16,
-  },
-  optionIconContainer: {
-    marginRight: 16,
-  },
-  optionIconBackground: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  optionTextContainer: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  optionDescription: {
-    fontSize: 13,
-    opacity: 0.7,
-  },
-  cancelButton: {
-    marginHorizontal: 20,
-    padding: 16,
-    borderRadius: 16,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  tipsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginHorizontal: 20,
-    gap: 8,
-  },
-  tipsText: {
-    fontSize: 12,
-    flex: 1,
-    fontStyle: "italic",
-  },
-  // List item icon style for Help & Support
-  itemIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 16,
-    marginRight: 8,
-  },
 });
 
-export default EditProfileScreen;
+export default UpdateProfileScreen;

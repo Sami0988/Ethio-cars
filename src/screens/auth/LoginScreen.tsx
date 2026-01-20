@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { useFormik } from "formik";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Animated,
   Easing,
   KeyboardAvoidingView,
@@ -15,18 +15,15 @@ import {
   Avatar,
   Button,
   Card,
-  Divider,
   HelperText,
   IconButton,
   Snackbar,
-  Surface,
   Text,
   TextInput,
   useTheme,
 } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useAuthStore } from "../../features/auth/auth.store";
-import { useThemeStore } from "../../features/theme/theme.store";
 import {
   commonFontSizes,
   commonSpacing,
@@ -40,7 +37,6 @@ const LoginScreen: React.FC = () => {
   const theme = useTheme();
   const { login, isLoading, error, clearError, isAuthenticated } =
     useAuthStore();
-  const { isDarkMode } = useThemeStore();
   const [showPassword, setShowPassword] = useState(false);
   const [slideAnim] = useState(new Animated.Value(0));
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -69,8 +65,25 @@ const LoginScreen: React.FC = () => {
     if (isAuthenticated) {
       // Show success message briefly before navigating
       setShowSuccessMessage(true);
-      setTimeout(() => {
-        router.replace("/(tabs)"); // Go directly to home screen
+      setTimeout(async () => {
+        try {
+          // Check if there's a stored redirect path
+          const redirectPath = await SecureStore.getItemAsync(
+            "redirect_after_login",
+          );
+          if (redirectPath) {
+            // Clear stored redirect
+            await SecureStore.deleteItemAsync("redirect_after_login");
+            // Navigate to intended destination
+            router.replace(redirectPath);
+          } else {
+            // Default to home screen
+            router.replace("/(tabs)");
+          }
+        } catch (error) {
+          console.error("Error checking redirect path:", error);
+          router.replace("/(tabs)");
+        }
       }, 1500); // Show message for 1.5 seconds
     }
   }, [isAuthenticated, router]);
@@ -100,28 +113,12 @@ const LoginScreen: React.FC = () => {
     },
   });
 
-  const handleForgotPassword = () => {
-    Alert.alert(
-      "Coming Soon",
-      "Password reset feature will be available soon!",
-      [{ text: "OK", style: "cancel" }],
-    );
-  };
-
   const handleSignUp = () => {
     router.push("/(auth)/register");
   };
 
   const handleBackToHome = () => {
     router.replace("/(tabs)");
-  };
-
-  const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth
-  };
-
-  const handleAppleLogin = () => {
-    // TODO: Implement Apple Sign In
   };
 
   // Animation styles
@@ -140,13 +137,6 @@ const LoginScreen: React.FC = () => {
       },
     ],
   };
-
-  const features = [
-    { icon: "shield-check", label: "Secure", color: "#10B981" },
-    { icon: "car", label: "10K+ Cars", color: "#3B82F6" },
-    { icon: "map-marker", label: "Ethiopia", color: "#DC2626" },
-    { icon: "star", label: "Verified", color: "#F59E0B" },
-  ];
 
   return (
     <KeyboardAvoidingView
@@ -235,7 +225,7 @@ const LoginScreen: React.FC = () => {
                 ]}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                outlineColor={isDarkMode ? "#374151" : "#E5E7EB"}
+                outlineColor="#E5E7EB"
                 activeOutlineColor={theme.colors.primary}
                 textColor={theme.colors.onSurface}
               />
@@ -266,7 +256,7 @@ const LoginScreen: React.FC = () => {
                   styles.input,
                   { backgroundColor: theme.colors.surface },
                 ]}
-                outlineColor={isDarkMode ? "#374151" : "#E5E7EB"}
+                outlineColor="#E5E7EB"
                 activeOutlineColor={theme.colors.primary}
                 textColor={theme.colors.onSurface}
               />
@@ -276,17 +266,6 @@ const LoginScreen: React.FC = () => {
               >
                 {formik.errors.password}
               </HelperText>
-
-              {/* Forgot Password */}
-              <Button
-                mode="text"
-                onPress={handleForgotPassword}
-                style={styles.forgotButton}
-                textColor={theme.colors.primary}
-                compact
-              >
-                Forgot Password?
-              </Button>
 
               {/* Login Button */}
               <Button
@@ -305,73 +284,6 @@ const LoginScreen: React.FC = () => {
               >
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
-
-              {/* Divider */}
-              <View style={styles.dividerContainer}>
-                <Divider
-                  style={[
-                    styles.divider,
-                    { backgroundColor: isDarkMode ? "#374151" : "#E5E7EB" },
-                  ]}
-                />
-                <Text
-                  variant="bodySmall"
-                  style={[
-                    styles.dividerText,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  OR CONTINUE WITH
-                </Text>
-                <Divider
-                  style={[
-                    styles.divider,
-                    { backgroundColor: isDarkMode ? "#374151" : "#E5E7EB" },
-                  ]}
-                />
-              </View>
-
-              {/* Social Login */}
-              <View style={styles.socialContainer}>
-                <Button
-                  mode="outlined"
-                  onPress={handleGoogleLogin}
-                  style={[
-                    styles.socialButton,
-                    { borderColor: isDarkMode ? "#374151" : "#E5E7EB" },
-                  ]}
-                  icon={() => (
-                    <MaterialCommunityIcons
-                      name="google"
-                      size={20}
-                      color="#DB4437"
-                    />
-                  )}
-                  contentStyle={styles.socialButtonContent}
-                  textColor={theme.colors.onSurface}
-                >
-                  Google
-                </Button>
-                <Button
-                  mode="outlined"
-                  onPress={handleAppleLogin}
-                  style={[
-                    styles.socialButton,
-                    { borderColor: isDarkMode ? "#374151" : "#E5E7EB" },
-                  ]}
-                  icon={() => (
-                    <MaterialCommunityIcons
-                      name="apple"
-                      size={20}
-                      color={isDarkMode ? "#FFFFFF" : "#000"}
-                    />
-                  )}
-                  contentStyle={styles.socialButtonContent}
-                  textColor={theme.colors.onSurface}
-                >
-                  Apple
-                </Button>
-              </View>
 
               {/* Register Link */}
               <View style={styles.registerContainer}>
@@ -393,68 +305,6 @@ const LoginScreen: React.FC = () => {
               </View>
             </Card.Content>
           </Card>
-
-          {/* Features Showcase */}
-          <Surface
-            style={[
-              styles.featuresSurface,
-              { backgroundColor: theme.colors.surface },
-            ]}
-            elevation={2}
-          >
-            <Text
-              variant="titleSmall"
-              style={[styles.featuresTitle, { color: theme.colors.onSurface }]}
-            >
-              Why Choose EthioCars?
-            </Text>
-            <View style={styles.featuresGrid}>
-              {features.map((feature, index) => (
-                <Animated.View
-                  key={feature.label}
-                  style={[
-                    styles.featureItem,
-                    {
-                      opacity: slideAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 1],
-                      }),
-                      transform: [
-                        {
-                          translateY: slideAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [30, 0],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.featureIconContainer,
-                      { backgroundColor: `${feature.color}15` },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name={feature.icon as any}
-                      size={24}
-                      color={feature.color}
-                    />
-                  </View>
-                  <Text
-                    variant="bodySmall"
-                    style={[
-                      styles.featureLabel,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    {feature.label}
-                  </Text>
-                </Animated.View>
-              ))}
-            </View>
-          </Surface>
         </Animated.View>
       </ScrollView>
 
@@ -581,11 +431,6 @@ const styles = StyleSheet.create({
     marginBottom: commonSpacing.small,
     backgroundColor: "#fff",
   },
-  forgotButton: {
-    alignSelf: "flex-end",
-    marginTop: commonSpacing.small,
-    marginBottom: commonSpacing.medium,
-  },
   loginButton: {
     borderRadius: 12,
     paddingVertical: getSpacing(4, 6, 8),
@@ -593,34 +438,6 @@ const styles = StyleSheet.create({
   },
   buttonContent: {
     paddingVertical: getSpacing(6, 8, 10),
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: commonSpacing.medium,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E5E7EB",
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    color: "#9CA3AF",
-    fontWeight: "500",
-  },
-  socialContainer: {
-    flexDirection: "row",
-    gap: commonSpacing.small,
-    marginBottom: commonSpacing.card,
-  },
-  socialButton: {
-    flex: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-  },
-  socialButtonContent: {
-    paddingVertical: getSpacing(4, 6, 8),
   },
   registerContainer: {
     flexDirection: "row",
@@ -630,42 +447,6 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     marginLeft: commonSpacing.small,
-  },
-  featuresSurface: {
-    borderRadius: 16,
-    padding: commonSpacing.container,
-    marginBottom: commonSpacing.card,
-    backgroundColor: "#FFFFFF",
-  },
-  featuresTitle: {
-    textAlign: "center",
-    marginBottom: commonSpacing.medium,
-    fontWeight: "600",
-    color: "#374151",
-    fontSize: commonFontSizes.large,
-  },
-  featuresGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: commonSpacing.medium,
-  },
-  featureItem: {
-    alignItems: "center",
-    minWidth: "22%",
-  },
-  featureIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  featureLabel: {
-    textAlign: "center",
-    fontWeight: "500",
-    color: "#4B5563",
   },
   testimonialCard: {
     borderRadius: 16,

@@ -153,7 +153,7 @@ export default function AddPhotosScreen({
           [
             { text: "OK" },
             { text: "Settings", onPress: () => Linking.openSettings() },
-          ]
+          ],
         );
       }
     })();
@@ -206,7 +206,7 @@ export default function AddPhotosScreen({
         await addNewPhoto(
           result.assets[0].uri,
           photoType,
-          selectedSlot || undefined
+          selectedSlot || undefined,
         );
         setSelectedSlot(null);
       }
@@ -252,7 +252,7 @@ export default function AddPhotosScreen({
               ...photo,
               isUploading: false,
               uploaded: true,
-            }))
+            })),
           );
           setIsUploading(false);
         }, 1500);
@@ -289,7 +289,7 @@ export default function AddPhotosScreen({
           onPress: () => setSelectedSlot(null),
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 
@@ -320,8 +320,8 @@ export default function AddPhotosScreen({
         prev.map((photo) =>
           photo.id === newPhoto.id
             ? { ...photo, isUploading: false, uploaded: true }
-            : photo
-        )
+            : photo,
+        ),
       );
       setIsUploading(false);
     }, 1000);
@@ -332,7 +332,7 @@ export default function AddPhotosScreen({
       prev.map((photo) => ({
         ...photo,
         isCover: photo.id === photoId,
-      }))
+      })),
     );
 
     // Show success feedback
@@ -366,8 +366,8 @@ export default function AddPhotosScreen({
         onPress: () => {
           setPhotos((prev) =>
             prev.map((photo) =>
-              photo.id === photoId ? { ...photo, isUploading: true } : photo
-            )
+              photo.id === photoId ? { ...photo, isUploading: true } : photo,
+            ),
           );
 
           // Simulate AI enhancement
@@ -376,8 +376,8 @@ export default function AddPhotosScreen({
               prev.map((photo) =>
                 photo.id === photoId
                   ? { ...photo, isUploading: false, uploaded: true }
-                  : photo
-              )
+                  : photo,
+              ),
             );
             Alert.alert("Success", "Photo enhanced with AI!");
           }, 2000);
@@ -392,7 +392,7 @@ export default function AddPhotosScreen({
       Alert.alert(
         "More Photos Needed",
         "Please upload at least 3 photos of your vehicle.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
       return;
     }
@@ -400,7 +400,7 @@ export default function AddPhotosScreen({
     // Optional: Check for required slots (cover, front, side)
     const requiredSlotIds = ["cover", "front", "side"];
     const hasRequiredPhotos = requiredSlotIds.every((slotId) =>
-      photos.some((photo) => photo.slotId === slotId)
+      photos.some((photo) => photo.slotId === slotId),
     );
 
     // If you want to be strict about required photos, uncomment this:
@@ -810,7 +810,7 @@ export default function AddPhotosScreen({
                       style: "cancel",
                     },
                   ],
-                  { cancelable: true }
+                  { cancelable: true },
                 );
               }}
               style={styles.addMoreButton}
@@ -1237,8 +1237,8 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: isSmallScreen ? 16 : 20,
-      paddingTop: 60,
-      paddingBottom: 16,
+      paddingTop: 15,
+      paddingBottom: 8,
       backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.outline + "20",

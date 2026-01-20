@@ -22,7 +22,6 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useAuthStore } from "../../features/auth/auth.store";
 import {
   formatPhoneNumber,
@@ -491,51 +490,6 @@ const RegisterScreen: React.FC = () => {
               </View>
             </Card.Content>
           </Card>
-
-          {/* Features Preview */}
-          <View style={styles.featuresContainer}>
-            <Text variant="titleSmall" style={styles.featuresTitle}>
-              Why Join EthioCars?
-            </Text>
-            <View style={styles.featuresGrid}>
-              <View style={styles.featureItem}>
-                <MaterialCommunityIcons
-                  name="shield-check"
-                  size={24}
-                  color="#10B981"
-                />
-                <Text variant="bodySmall" style={styles.featureText}>
-                  Verified Sellers
-                </Text>
-              </View>
-              <View style={styles.featureItem}>
-                <MaterialCommunityIcons name="car" size={24} color="#3B82F6" />
-                <Text variant="bodySmall" style={styles.featureText}>
-                  Thousands of Cars
-                </Text>
-              </View>
-              <View style={styles.featureItem}>
-                <MaterialCommunityIcons
-                  name="map-marker"
-                  size={24}
-                  color="#DC2626"
-                />
-                <Text variant="bodySmall" style={styles.featureText}>
-                  All Ethiopian Regions
-                </Text>
-              </View>
-              <View style={styles.featureItem}>
-                <MaterialCommunityIcons
-                  name="message-text"
-                  size={24}
-                  color="#8B5CF6"
-                />
-                <Text variant="bodySmall" style={styles.featureText}>
-                  Secure Messaging
-                </Text>
-              </View>
-            </View>
-          </View>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -658,37 +612,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 20,
     marginBottom: 16,
-  },
-  featuresContainer: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-  },
-  featuresTitle: {
-    textAlign: "center",
-    fontWeight: "600",
-    marginBottom: 16,
-  },
-  featuresGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  featureItem: {
-    flex: 1,
-    minWidth: "45%",
-    alignItems: "center",
-    padding: 12,
-    backgroundColor: "white",
-    borderRadius: 8,
-    elevation: 1,
-  },
-  featureText: {
-    marginTop: 8,
-    textAlign: "center",
-    fontWeight: "500",
   },
 });
 

@@ -39,9 +39,9 @@ export default function FeaturesAndExtrasScreen({
   const [selectedFeatures, setSelectedFeatures] = useState<Set<number>>(
     new Set(
       vehicleData?.features?.map((f) =>
-        typeof f === "number" ? f : parseInt(f)
-      ) || []
-    )
+        typeof f === "number" ? f : parseInt(f),
+      ) || [],
+    ),
   );
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -199,14 +199,14 @@ export default function FeaturesAndExtrasScreen({
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter((feature: Feature) =>
-        feature.name.toLowerCase().includes(searchQuery.toLowerCase())
+        feature.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
     // Filter by category
     if (selectedCategory) {
       filtered = filtered.filter(
-        (feature: Feature) => feature.category === selectedCategory
+        (feature: Feature) => feature.category === selectedCategory,
       );
     }
 
@@ -219,7 +219,7 @@ export default function FeaturesAndExtrasScreen({
         acc[feature.category].push(feature);
         return acc;
       },
-      {} as Record<string, Feature[]>
+      {} as Record<string, Feature[]>,
     );
 
     // Sort categories and features
@@ -256,7 +256,7 @@ export default function FeaturesAndExtrasScreen({
 
   const selectAllInCategory = (category: string) => {
     const categoryFeatures = allFeatures.filter(
-      (f: Feature) => f.category === category
+      (f: Feature) => f.category === category,
     );
     const allCategoryIds = categoryFeatures.map((f: Feature) => f.feature_id);
 
@@ -724,10 +724,10 @@ export default function FeaturesAndExtrasScreen({
               const catData =
                 categoryData[category as keyof typeof categoryData];
               const categoryFeatures = allFeatures.filter(
-                (f: Feature) => f.category === category
+                (f: Feature) => f.category === category,
               );
               const selectedInCategory = categoryFeatures.filter((f: Feature) =>
-                selectedFeatures.has(f.feature_id)
+                selectedFeatures.has(f.feature_id),
               ).length;
               const isAllSelected =
                 selectedInCategory === categoryFeatures.length;
@@ -801,10 +801,10 @@ export default function FeaturesAndExtrasScreen({
                   <View style={styles.featuresGrid}>
                     {features.map((feature: Feature) => {
                       const isSelected = selectedFeatures.has(
-                        feature.feature_id
+                        feature.feature_id,
                       );
                       const importanceStyle = getImportanceStyle(
-                        feature.importance
+                        feature.importance,
                       );
 
                       return (
@@ -831,7 +831,7 @@ export default function FeaturesAndExtrasScreen({
                                 name={
                                   getFeatureIcon(
                                     feature.name,
-                                    feature.category
+                                    feature.category,
                                   ) as any
                                 }
                                 size={20}
@@ -1072,8 +1072,8 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: isSmallScreen ? 16 : 20,
-      paddingTop: 60,
-      paddingBottom: 16,
+      paddingTop: 15,
+      paddingBottom: 8,
       backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.outline + "20",

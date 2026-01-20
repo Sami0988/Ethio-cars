@@ -80,7 +80,7 @@ export const carService = {
   async getAllListings(
     page: number = 1,
     limit: number = 20,
-    filters?: CarFilters
+    filters?: CarFilters,
   ): Promise<CarListResponse> {
     // Check cache first
     const cachedData = cache.getCache(filters);
@@ -96,7 +96,7 @@ export const carService = {
         "cars/browse",
         {
           params: { limit: 1, sort: filters?.sort || "newest" },
-        }
+        },
       );
 
       total = countResponse.data.data?.pagination?.total || 133;
@@ -148,10 +148,10 @@ export const carService = {
           // Check for duplicates before adding
           const newIds = new Set(batchListings.map((item) => item.listing_id));
           const existingIds = new Set(
-            allListings.map((item) => item.listing_id)
+            allListings.map((item) => item.listing_id),
           );
           const uniqueBatchListings = batchListings.filter(
-            (item) => !existingIds.has(item.listing_id)
+            (item) => !existingIds.has(item.listing_id),
           );
 
           allListings.push(...uniqueBatchListings);
@@ -235,7 +235,7 @@ export const carService = {
   async getMyListings(
     page: number = 1,
     limit: number = 20,
-    status?: string
+    status?: string,
   ): Promise<CarListResponse> {
     const response = await apiClient.get<CarListResponse>("/cars/", {
       params: { page, limit, status },
@@ -261,7 +261,7 @@ export const carService = {
           try {
             const processedImage = await buildImagePayload(
               image.data,
-              image.type
+              image.type,
             );
             processedImages.push({
               data: processedImage.data,
@@ -290,11 +290,11 @@ export const carService = {
   // Update existing car listing
   async updateCar(
     id: number,
-    data: UpdateCarRequest
+    data: UpdateCarRequest,
   ): Promise<CarDetailResponse> {
     const response = await apiClient.put<CarDetailResponse>(
       `/cars/${id}`,
-      data
+      data,
     );
     return response.data;
   },
@@ -306,55 +306,37 @@ export const carService = {
   },
 
   // Get car makes (brands)
-  async getMakes(): Promise<{
+  async getMakes(
+    search?: string,
+    limit?: number,
+  ): Promise<{
     success: boolean;
     message: string;
     data: Make[];
   }> {
-    // First, get the total count and pagination info
-    const firstResponse = await apiClient.get("/data/makes", {
-      params: { limit: 100 },
+    // If search is provided, use search endpoint
+    if (search && search.trim()) {
+      const response = await apiClient.get("/data/makes", {
+        params: { search: search.trim() },
+      });
+      return response.data;
+    }
+
+    // Default limit to 35 if not provided
+    const apiLimit = limit || 35;
+
+    const response = await apiClient.get("/data/makes", {
+      params: { limit: apiLimit },
     });
-
-    if (!firstResponse.data.success) {
-      return firstResponse.data;
-    }
-
-    const totalMakes = firstResponse.data.data?.pagination?.total || 0;
-    const totalPages = Math.ceil(totalMakes / 100);
-
-    let allMakes: any[] = [...(firstResponse.data.data?.makes || [])];
-
-    // Fetch remaining pages if there are more
-    for (let page = 2; page <= totalPages; page++) {
-      try {
-        const response = await apiClient.get("/data/makes", {
-          params: { limit: 100, page },
-        });
-
-        if (response.data.success && response.data.data?.makes) {
-          allMakes.push(...response.data.data.makes);
-        }
-
-        // Small delay to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      } catch (error) {
-        console.error(`Error fetching page ${page}:`, error);
-        break; // Stop if we encounter an error
-      }
-    }
-
-    return {
-      success: true,
-      message: "Success",
-      data: allMakes,
-    };
+    return response.data;
   },
 
-  // Get models for a specific make
-  async getModels(
-    makeId: number
-  ): Promise<{ success: boolean; message: string; data: { models: Model[] } }> {
+  // Get car models for a specific make
+  async getModels(makeId: number): Promise<{
+    success: boolean;
+    message: string;
+    data: Model[];
+  }> {
     const response = await apiClient.get("/data/models", {
       params: { make_id: makeId },
     });
@@ -376,7 +358,7 @@ export const carService = {
   // Get Ethiopian locations
   async getLocations(
     regionId?: number,
-    zoneId?: number
+    zoneId?: number,
   ): Promise<{ success: boolean; message: string; data: Location[] }> {
     const response = await apiClient.get("/data/locations", {
       params: { region_id: regionId, zone_id: zoneId },
@@ -448,7 +430,7 @@ export const carService = {
     if (cachedData) {
       console.log(
         "Cache timestamp:",
-        new Date(cachedData.timestamp).toLocaleTimeString()
+        new Date(cachedData.timestamp).toLocaleTimeString(),
       );
       console.log("Listings in cache:", cachedData.listings.length);
       console.log("Filters:", cachedData.filters);

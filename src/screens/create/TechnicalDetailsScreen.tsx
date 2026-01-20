@@ -31,17 +31,17 @@ export default function TechnicalDetailsScreen({
   const styles = getDynamicStyles(theme, width);
 
   const [selectedFuel, setSelectedFuel] = useState(
-    vehicleData?.fuel || "Gasoline"
+    vehicleData?.fuel || "Gasoline",
   );
   const [selectedTransmission, setSelectedTransmission] = useState(
-    vehicleData?.transmission || "Automatic"
+    vehicleData?.transmission || "Automatic",
   );
   const [selectedBodyType, setSelectedBodyType] = useState(
-    vehicleData?.body_type || "Sedan"
+    vehicleData?.body_type || "Sedan",
   );
   const [selectedEngine, setSelectedEngine] = useState("1.8L");
   const [selectedDrive, setSelectedDrive] = useState(
-    vehicleData?.drive_type || "FWD"
+    vehicleData?.drive_type || "FWD",
   );
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -363,7 +363,7 @@ export default function TechnicalDetailsScreen({
     }>,
     selected: string,
     onSelect: (value: string) => void,
-    type: "fuel" | "transmission" | "drive"
+    type: "fuel" | "transmission" | "drive",
   ) => {
     const isDriveType = type === "drive";
 
@@ -761,7 +761,7 @@ export default function TechnicalDetailsScreen({
             transmissionTypes,
             selectedTransmission,
             setSelectedTransmission,
-            "transmission"
+            "transmission",
           )}
         </View>
 
@@ -795,7 +795,7 @@ export default function TechnicalDetailsScreen({
             driveTypes,
             selectedDrive,
             setSelectedDrive,
-            "drive"
+            "drive",
           )}
         </View>
 
@@ -988,8 +988,8 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: isSmallScreen ? 16 : 20,
-      paddingTop: 60,
-      paddingBottom: 16,
+      paddingTop: 15,
+      paddingBottom: 8,
       backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.outline + "20",

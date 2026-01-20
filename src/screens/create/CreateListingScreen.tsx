@@ -1,7 +1,9 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { View } from "react-native";
-import { useTheme } from "react-native-paper";
+import { StyleSheet, View } from "react-native";
+import { Button, Text, useTheme } from "react-native-paper";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { VehicleData } from "../../types/vehicle";
 import AddPhotosScreen from "./AddPhotosScreen";
 import FeaturesAndExtrasScreen from "./FeaturesAndExtrasScreen";
@@ -14,11 +16,12 @@ import VehicleBasicsScreen from "./VehicleBasicsScreen";
 const CreateListingScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
 
-  // Step management
+  // Step management - move to top before any conditional returns
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Shared data state
+  // Shared data state - move to top before any conditional returns
   const [vehicleData, setVehicleData] = useState<VehicleData>({
     make: "Toyota",
     model: "Corolla",
@@ -46,6 +49,47 @@ const CreateListingScreen: React.FC = () => {
       "Well-maintained Toyota Corolla in excellent condition. Regular service history, clean interior, and great fuel economy.",
     features: [], // Initialize as empty number array
   });
+
+  // Early return if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={styles.signInPrompt}>
+          <MaterialCommunityIcons
+            name="account-circle-outline"
+            size={80}
+            color={theme.colors.onBackground}
+          />
+          <Text
+            style={[styles.signInTitle, { color: theme.colors.onBackground }]}
+          >
+            Please signup or login first
+          </Text>
+          <Text
+            style={[
+              styles.signInSubtitle,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            Sign in to post your car listing and reach thousands of buyers
+          </Text>
+          <Button
+            mode="contained"
+            style={[
+              styles.signInButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => router.push("/(auth)/login")}
+            textColor={theme.colors.onPrimary}
+          >
+            Sign In
+          </Button>
+        </View>
+      </View>
+    );
+  }
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -154,3 +198,33 @@ const CreateListingScreen: React.FC = () => {
 };
 
 export default CreateListingScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  signInPrompt: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  signInTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  signInSubtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  signInButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+});

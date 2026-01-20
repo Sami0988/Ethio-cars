@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button, Card, Text, useTheme } from "react-native-paper";
+import { Card, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
   CarListing,
@@ -16,12 +16,41 @@ import {
   getCarTitle,
 } from "../features/cars/car.types";
 
+// Function to abbreviate long region names
+const abbreviateRegion = (region?: string): string => {
+  if (!region) return "Ethiopia";
+
+  // First check if region already contains abbreviation in parentheses
+  const parentheticalMatch = region.match(/\(([^)]+)\)$/);
+  if (parentheticalMatch) {
+    return parentheticalMatch[1]; // Return the content inside parentheses
+  }
+
+  const abbreviations: { [key: string]: string } = {
+    "South West Ethiopia": "SWEPR",
+    "South West Ethiopia Peoples Region": "SWEPR",
+    "Southern Nations, Nationalities, and Peoples' Region": "SNNPR",
+    "Amhara Region": "AMHAR",
+    "Oromia Region": "OROMI",
+    "Tigray Region": "TIGRA",
+    "Somali Region": "SOMAL",
+    "Afar Region": "AFAR",
+    "Benishangul-Gumuz Region": "BENGU",
+    "Gambela Region": "GAMBE",
+    "Harari Region": "HARAR",
+    "Sidama Region": "SIDAM",
+    "Dire Dawa": "DDC",
+    "Addis Ababa": "ADDIS",
+  };
+
+  return abbreviations[region] || region;
+};
+
 interface CarCardProps {
   listing: CarListing;
   index: number;
   isLoading?: boolean;
   onPress?: () => void;
-  onSavePress?: () => void;
   onMessagePress?: () => void;
 }
 
@@ -30,7 +59,6 @@ const CarCard: React.FC<CarCardProps> = ({
   index,
   isLoading = false,
   onPress,
-  onSavePress,
   onMessagePress,
 }) => {
   const theme = useTheme();
@@ -225,22 +253,6 @@ const CarCard: React.FC<CarCardProps> = ({
               )}
             </View>
 
-            {/* Save Button */}
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                { backgroundColor: theme.colors.surface },
-              ]}
-              onPress={onSavePress}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons
-                name="heart-outline"
-                size={20}
-                color={theme.colors.primary}
-              />
-            </TouchableOpacity>
-
             {/* Condition Badge */}
             {listing.condition && (
               <View
@@ -316,7 +328,7 @@ const CarCard: React.FC<CarCardProps> = ({
                 <Text
                   style={[styles.detailText, { color: theme.colors.onSurface }]}
                 >
-                  {listing.region || "N/A"}
+                  {abbreviateRegion(listing.region)}
                 </Text>
               </View>
 
@@ -379,23 +391,7 @@ const CarCard: React.FC<CarCardProps> = ({
 
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
-              <Button
-                mode="contained"
-                style={[
-                  styles.callButton,
-                  { backgroundColor: theme.colors.primary },
-                ]}
-                onPress={onMessagePress}
-                icon="message"
-                compact
-                textColor={theme.colors.onPrimary}
-                labelStyle={{
-                  color: theme.colors.onPrimary,
-                  fontWeight: "600",
-                }}
-              >
-                Message
-              </Button>
+              {/* Message button removed */}
             </View>
           </View>
         </Card>
@@ -451,17 +447,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     opacity: 0.9,
     marginTop: 2,
-  },
-  saveButton: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 2,
   },
   conditionBadge: {
     position: "absolute",

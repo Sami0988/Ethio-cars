@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -40,7 +40,7 @@ export default function VehicleBasicsScreen({
   const user = useAuthStore((state: any) => state.user);
 
   const [formData, setFormData] = useState({
-    make_id: vehicleData?.make_id || undefined,
+    make_id: vehicleData?.make_id || (undefined as number | undefined),
     model_id: vehicleData?.model_id || "",
     make: vehicleData?.make || "",
     model: vehicleData?.model || "",
@@ -55,19 +55,37 @@ export default function VehicleBasicsScreen({
   });
 
   const [selectedMakeId, setSelectedMakeId] = useState<number | undefined>(
-    vehicleData?.make_id
-  );
-  const [selectedModelId, setSelectedModelId] = useState<string>(
-    vehicleData?.model_id || ""
+    vehicleData?.make_id,
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showMakeModal, setShowMakeModal] = useState(false);
-  const [showModelModal, setShowModelModal] = useState(false);
   const [showYearModal, setShowYearModal] = useState(false);
   const [showConditionModal, setShowConditionModal] = useState(false);
   const [showDoorsModal, setShowDoorsModal] = useState(false);
   const [showSeatsModal, setShowSeatsModal] = useState(false);
+
+  // Search functionality
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounce search term
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms delay
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchTerm]);
 
   // Animated value for spinner rotation
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -89,7 +107,7 @@ export default function VehicleBasicsScreen({
             text: "Cancel",
             style: "cancel",
           },
-        ]
+        ],
       );
     }
   }, [isAuthenticated, router]);
@@ -145,7 +163,7 @@ export default function VehicleBasicsScreen({
         toValue: 1,
         duration: 1000,
         useNativeDriver: true,
-      })
+      }),
     );
 
     Animated.timing(fadeAnim, {
@@ -171,56 +189,62 @@ export default function VehicleBasicsScreen({
     isLoading: isLoadingMakes,
     error: makesError,
     refetch: refetchMakes,
-  } = useCarMakes();
+  } = useCarMakes(
+    showMakeModal ? debouncedSearchTerm : undefined,
+    showMakeModal ? 50 : undefined,
+  );
 
   const handleOpenMakeModal = () => {
     setShowMakeModal(true);
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
     refetchMakes();
   };
 
-  const handleOpenModelModal = () => {
-    if (formData.make) {
-      setShowModelModal(true);
-    }
+  const handleSearchMakes = (term: string) => {
+    setSearchTerm(term);
   };
 
   // Extract makes from API response
-  const makes =
-    makesResponse?.success && Array.isArray(makesResponse.data)
-      ? makesResponse.data.map((make: any) => ({
-          id: make.make_id,
-          name: make.name,
-        }))
-      : [];
+  const makes = useMemo(() => {
+    if (!makesResponse?.success) {
+      return [];
+    }
 
-  const models = [
-    "Corolla",
-    "Camry",
-    "RAV4",
-    "Civic",
-    "Accord",
-    "CR-V",
-    "F-150",
-    "Mustang",
-    "3 Series",
-    "5 Series",
-    "C-Class",
-    "E-Class",
-    "Model 3",
-    "Model Y",
-  ];
+    // Try different possible data structures
+    let makesData: any[] = [];
 
-  const conditions = ["New", "Like New", "Excellent", "Good", "Fair", "Poor"];
+    if (Array.isArray(makesResponse.data)) {
+      makesData = makesResponse.data;
+    } else if (
+      (makesResponse.data as any)?.makes &&
+      Array.isArray((makesResponse.data as any).makes)
+    ) {
+      makesData = (makesResponse.data as any).makes;
+    } else if (
+      (makesResponse.data as any)?.data &&
+      Array.isArray((makesResponse.data as any).data)
+    ) {
+      makesData = (makesResponse.data as any).data;
+    } else {
+      return [];
+    }
+
+    return makesData.map((make: any) => ({
+      id: make.make_id,
+      name: make.name,
+    }));
+  }, [makesResponse]);
 
   // Generate years from 1886 to 2026
   const years = Array.from({ length: 2026 - 1886 + 1 }, (_, i) =>
-    (2026 - i).toString()
+    (2026 - i).toString(),
   );
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.make) newErrors.make = "Please select make";
-    if (!formData.model) newErrors.model = "Please select model";
+    if (!formData.model) newErrors.model = "Please enter model";
     if (!formData.year) newErrors.year = "Please select year";
     if (!formData.mileage || parseInt(formData.mileage) < 0)
       newErrors.mileage = "Valid mileage required";
@@ -231,13 +255,15 @@ export default function VehicleBasicsScreen({
     return Object.keys(newErrors).length === 0;
   };
 
+  const conditions = ["New", "Like New", "Excellent", "Good", "Fair", "Poor"];
+
   const handleSubmit = () => {
     if (!validateForm()) return;
 
     if (updateVehicleData) {
       updateVehicleData({
         make_id: selectedMakeId,
-        model_id: selectedModelId || formData.model,
+        model_id: formData.model,
         make: formData.make,
         model: formData.model,
         year: formData.year,
@@ -272,7 +298,7 @@ export default function VehicleBasicsScreen({
     onSelect: (value: string) => void,
     isLoading?: boolean,
     error?: any,
-    isMakeModal?: boolean
+    isMakeModal?: boolean,
   ) => (
     <Modal
       visible={visible}
@@ -323,6 +349,43 @@ export default function VehicleBasicsScreen({
             </TouchableOpacity>
           </View>
 
+          {/* Search Input - Only for Make Modal */}
+          {isMakeModal && (
+            <View style={styles.searchContainer}>
+              <TextInput
+                mode="outlined"
+                placeholder="Search makes..."
+                value={searchTerm}
+                onChangeText={handleSearchMakes}
+                style={styles.searchInput}
+                left={
+                  <TextInput.Icon
+                    icon="magnify"
+                    size={20}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                }
+                right={
+                  searchTerm ? (
+                    <TextInput.Icon
+                      icon="close"
+                      size={20}
+                      color={theme.colors.onSurfaceVariant}
+                      onPress={() => handleSearchMakes("")}
+                    />
+                  ) : undefined
+                }
+                theme={{
+                  colors: {
+                    background: theme.colors.surface,
+                    onSurface: theme.colors.onSurface,
+                    primary: theme.colors.primary,
+                  },
+                }}
+              />
+            </View>
+          )}
+
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <Animated.View
@@ -362,7 +425,7 @@ export default function VehicleBasicsScreen({
                   styles.retryButton,
                   { backgroundColor: theme.colors.primary },
                 ]}
-                onPress={() => isMakeModal && refetchMakes()}
+                onPress={() => refetchMakes()}
               >
                 <Ionicons
                   name="refresh"
@@ -425,12 +488,8 @@ export default function VehicleBasicsScreen({
                         updateFormData("make", item.name);
                         updateFormData("make_id", item.id);
                         // Reset model when make changes
-                        setSelectedModelId("");
                         updateFormData("model", "");
-                      } else if (!isMakeModal) {
-                        // For model modal, store model ID
-                        setSelectedModelId(itemValue);
-                        onSelect(itemValue);
+                        updateFormData("model_id", "");
                       } else {
                         onSelect(itemValue);
                       }
@@ -495,13 +554,6 @@ export default function VehicleBasicsScreen({
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <Ionicons
-            name="chevron-back"
-            size={28}
-            color={theme.colors.primary}
-          />
-        </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text
             style={[styles.headerTitle, { color: theme.colors.onBackground }]}
@@ -701,7 +753,7 @@ export default function VehicleBasicsScreen({
               >
                 Model <Text style={{ color: theme.colors.error }}>*</Text>
               </Text>
-              <TouchableOpacity
+              <View
                 style={[
                   styles.fieldInput,
                   {
@@ -709,47 +761,42 @@ export default function VehicleBasicsScreen({
                       ? theme.colors.error
                       : theme.colors.outline,
                     backgroundColor: theme.colors.surface,
+                    opacity: !formData.make ? 0.5 : 1,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: 16,
                   },
-                  !formData.make && styles.disabledInput,
                 ]}
-                onPress={() => formData.make && setShowModelModal(true)}
-                disabled={!formData.make}
               >
-                <View style={styles.inputContent}>
-                  <Ionicons
-                    name="car-outline"
-                    size={20}
-                    color={
-                      formData.model
-                        ? theme.colors.primary
-                        : theme.colors.onSurfaceVariant
-                    }
-                    style={styles.inputIcon}
-                  />
-                  <Text
-                    style={[
-                      styles.inputText,
-                      {
-                        color: formData.model
-                          ? theme.colors.onSurface
-                          : theme.colors.onSurfaceVariant,
-                        opacity: !formData.make ? 0.5 : 1,
-                      },
-                    ]}
-                  >
-                    {formData.model || "Select vehicle model"}
-                  </Text>
-                </View>
                 <Ionicons
-                  name="chevron-down"
-                  size={22}
+                  name="car-outline"
+                  size={20}
                   color={
-                    !formData.make
-                      ? theme.colors.onSurfaceVariant + "80"
+                    formData.model
+                      ? theme.colors.primary
                       : theme.colors.onSurfaceVariant
                   }
+                  style={styles.inputIcon}
                 />
-              </TouchableOpacity>
+                <TextInput
+                  mode="flat"
+                  placeholder="Enter vehicle model"
+                  value={formData.model}
+                  onChangeText={(value) => updateFormData("model", value)}
+                  style={[styles.textInput, { flex: 1 }]}
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
+                  underlineColor="transparent"
+                  theme={{
+                    colors: {
+                      primary: theme.colors.primary,
+                      background: "transparent",
+                      text: theme.colors.onSurface,
+                      placeholder: theme.colors.onSurfaceVariant,
+                    },
+                  }}
+                  disabled={!formData.make}
+                />
+              </View>
               {errors.model && (
                 <View style={styles.errorContainerInline}>
                   <Ionicons
@@ -1192,16 +1239,7 @@ export default function VehicleBasicsScreen({
         (value) => updateFormData("make", value),
         isLoadingMakes,
         makesError,
-        true
-      )}
-
-      {renderModal(
-        showModelModal,
-        () => setShowModelModal(false),
-        "Select Model",
-        models,
-        formData.model,
-        (value) => updateFormData("model", value)
+        true,
       )}
 
       {renderModal(
@@ -1210,7 +1248,7 @@ export default function VehicleBasicsScreen({
         "Select Year",
         years,
         formData.year,
-        (value) => updateFormData("year", value)
+        (value) => updateFormData("year", value),
       )}
 
       {renderModal(
@@ -1219,7 +1257,7 @@ export default function VehicleBasicsScreen({
         "Select Condition",
         conditions,
         formData.condition,
-        (value) => updateFormData("condition", value)
+        (value) => updateFormData("condition", value),
       )}
 
       {renderModal(
@@ -1228,7 +1266,7 @@ export default function VehicleBasicsScreen({
         "Select Doors",
         ["2", "3", "4", "5"],
         formData.doors,
-        (value) => updateFormData("doors", value)
+        (value) => updateFormData("doors", value),
       )}
 
       {renderModal(
@@ -1237,7 +1275,7 @@ export default function VehicleBasicsScreen({
         "Select Seats",
         ["2", "4", "5", "6", "7", "8"],
         formData.seats,
-        (value) => updateFormData("seats", value)
+        (value) => updateFormData("seats", value),
       )}
     </Animated.View>
   );
@@ -1257,8 +1295,8 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       alignItems: "center",
       justifyContent: "space-between",
       paddingHorizontal: isSmallScreen ? 16 : 24,
-      paddingTop: isSmallScreen ? 50 : 60,
-      paddingBottom: isSmallScreen ? 16 : 20,
+      paddingTop: isSmallScreen ? 20 : 24,
+      paddingBottom: isSmallScreen ? 8 : 10,
       backgroundColor: theme.colors.background,
     },
     backButton: {
@@ -1515,6 +1553,25 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
     modalContent: {
       maxHeight: 500,
       paddingVertical: 8,
+    },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.outline + "30",
+    },
+    searchIcon: {
+      marginRight: 12,
+    },
+    searchInput: {
+      flex: 1,
+      height: 40,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      fontSize: 16,
+      borderWidth: 1,
     },
     modalItem: {
       flexDirection: "row",

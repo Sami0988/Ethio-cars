@@ -91,7 +91,7 @@ export const carKeys = {
 // hooks/car.hook.ts - Update the infinite query hook
 export const useInfiniteCarListings = (
   limit: number = 20,
-  filters?: CarFilters
+  filters?: CarFilters,
 ) => {
   const queryClient = useQueryClient();
 
@@ -109,7 +109,7 @@ export const useInfiniteCarListings = (
       const response = await carService.getAllListings(
         pageParam,
         limit,
-        filters
+        filters,
       );
 
       return response;
@@ -158,7 +158,7 @@ export const useInfiniteCarListings = (
 export const useSearchCarListings = (
   searchTerm: string,
   limit: number = 20,
-  filters?: Filters
+  filters?: Filters,
 ) => {
   return useInfiniteQuery({
     queryKey: carKeys.infinite({ searchTerm, limit, ...filters }),
@@ -201,7 +201,7 @@ export const useAllCarListings = (
     maxPrice?: number;
     minYear?: number;
     location?: string;
-  }
+  },
 ) => {
   return useQuery({
     queryKey: carKeys.list({ page, limit, ...filters }),
@@ -224,7 +224,7 @@ export const useHomeListings = (limit: number = 5) => {
 export const useCarListings = (
   page: number = 1,
   limit: number = 20,
-  status?: string
+  status?: string,
 ) => {
   return useQuery({
     queryKey: carKeys.list({ page, limit, status, type: "user" }),
@@ -245,10 +245,10 @@ export const useCarDetail = (id: number) => {
   });
 };
 
-export const useCarMakes = () => {
+export const useCarMakes = (search?: string, limit?: number) => {
   return useQuery({
-    queryKey: carKeys.makes(),
-    queryFn: () => carService.getMakes(),
+    queryKey: [...carKeys.makes(), search, limit],
+    queryFn: () => carService.getMakes(search, limit),
     staleTime: 30 * 60 * 1000, // 30 minutes - rarely changes
     retry: 2,
   });
@@ -361,7 +361,7 @@ export const useUpdateCar = () => {
 
       // Snapshot previous value
       const previousCar = queryClient.getQueryData(
-        carKeys.detail(variables.id)
+        carKeys.detail(variables.id),
       );
 
       // Optimistically update the car
@@ -377,7 +377,7 @@ export const useUpdateCar = () => {
       if (context?.previousCar) {
         queryClient.setQueryData(
           carKeys.detail(variables.id),
-          context.previousCar
+          context.previousCar,
         );
       }
     },
@@ -410,7 +410,7 @@ export const useDeleteCar = () => {
       // Snapshot previous values
       const previousListings = queryClient.getQueryData(carKeys.lists());
       const previousUserListings = queryClient.getQueryData(
-        carKeys.list({ type: "user" })
+        carKeys.list({ type: "user" }),
       );
       const previousCar = queryClient.getQueryData(carKeys.detail(id));
 
@@ -422,7 +422,7 @@ export const useDeleteCar = () => {
           data: {
             ...old.data,
             listings: old.data.listings?.filter(
-              (car: CarListing) => car.listing_id !== id
+              (car: CarListing) => car.listing_id !== id,
             ),
           },
         };
@@ -436,7 +436,7 @@ export const useDeleteCar = () => {
           data: {
             ...old.data,
             listings: old.data.listings?.filter(
-              (car: CarListing) => car.listing_id !== id
+              (car: CarListing) => car.listing_id !== id,
             ),
           },
         };
@@ -455,7 +455,7 @@ export const useDeleteCar = () => {
       if (context?.previousUserListings) {
         queryClient.setQueryData(
           carKeys.list({ type: "user" }),
-          context.previousUserListings
+          context.previousUserListings,
         );
       }
       if (context?.previousCar) {
@@ -514,7 +514,7 @@ export const useClearCarCache = () => {
 // ========== HOOK COMPOSITION ==========
 export const useCarListingsWithStats = (
   limit: number = 20,
-  filters?: Filters
+  filters?: Filters,
 ) => {
   const listings = useInfiniteCarListings(limit, filters);
   const stats = useCarStats();

@@ -31,17 +31,15 @@ import Screen from "../../components/common/Screen";
 import { useLogout } from "../../features/auth/auth.hooks";
 import { useAuthStore } from "../../features/auth/auth.store";
 import { useCarListings } from "../../features/cars/car.hooks";
-import { useThemeStore } from "../../features/theme/theme.store";
 import { getDynamicHeight, screenHeight } from "../../utils/responsive";
 
 const ProfileScreen: React.FC = () => {
   const router = useRouter();
   const { user, isAuthenticated, updateUser } = useAuthStore() as any;
-  const { themeMode, setThemeMode } = useThemeStore();
   const theme = useTheme();
   const logoutMutation = useLogout();
 
-  // Use safe area wrapper for consistent spacing
+  // Use safe area wrapper for consistent spacing - move to top
   const insets = require("react-native-safe-area-context").useSafeAreaInsets();
 
   const { data: listingsData } = useCarListings(1, 20);
@@ -51,36 +49,69 @@ const ProfileScreen: React.FC = () => {
   const [showImagePickerSheet, setShowImagePickerSheet] = useState(false);
   const sheetAnimation = useRef(new Animated.Value(screenHeight)).current;
 
-  // Expandable sections state
+  // Expandable sections state - move to top (removed notifications, language, currency)
   const [expandedSections, setExpandedSections] = useState({
-    notifications: false,
-    theme: false,
-    language: false,
-    currency: false,
     phoneVisibility: false,
     profileVisibility: false,
     dataUsage: false,
     myPosts: false,
   } as {
-    notifications: boolean;
-    theme: boolean;
-    language: boolean;
-    currency: boolean;
     phoneVisibility: boolean;
     profileVisibility: boolean;
     dataUsage: boolean;
     myPosts: boolean;
   });
 
-  // Preference values
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [selectedLanguage, setSelectedLanguage] = useState("english");
-  const [selectedCurrency, setSelectedCurrency] = useState("ETB");
+  // Preference values - move to top (fixed values)
+  const [pushNotifications] = useState(false); // Always off
+  const [selectedLanguage] = useState("english"); // Always english
+  const [selectedCurrency] = useState("ETB"); // Always ETB
 
-  // Safety & privacy values
+  // Safety & privacy values - move to top
   const [showPhoneNumber, setShowPhoneNumber] = useState(true);
   const [profileVisibility, setProfileVisibility] = useState("public");
   const [dataUsage, setDataUsage] = useState("normal");
+
+  // Early return if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Screen
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={styles.signInPrompt}>
+          <MaterialCommunityIcons
+            name="account-circle-outline"
+            size={80}
+            color={theme.colors.onBackground}
+          />
+          <Text
+            style={[styles.signInTitle, { color: theme.colors.onBackground }]}
+          >
+            Please signup or login first
+          </Text>
+          <Text
+            style={[
+              styles.signInSubtitle,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            Sign in to manage your account and access all features
+          </Text>
+          <Button
+            mode="contained"
+            style={[
+              styles.signInButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => router.push("/(auth)/login")}
+            textColor={theme.colors.onPrimary}
+          >
+            Sign In
+          </Button>
+        </View>
+      </Screen>
+    );
+  }
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -671,46 +702,6 @@ const ProfileScreen: React.FC = () => {
     </View>
   );
 
-  if (!isAuthenticated) {
-    return (
-      <Screen
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
-      >
-        <View style={styles.signInPrompt}>
-          <MaterialCommunityIcons
-            name="account-circle-outline"
-            size={80}
-            color={theme.colors.onBackground}
-          />
-          <Text
-            style={[styles.signInTitle, { color: theme.colors.onBackground }]}
-          >
-            Please Sign In
-          </Text>
-          <Text
-            style={[
-              styles.signInSubtitle,
-              { color: theme.colors.onSurfaceVariant },
-            ]}
-          >
-            Sign in to manage your account and access all features
-          </Text>
-          <Button
-            mode="contained"
-            style={[
-              styles.signInButton,
-              { backgroundColor: theme.colors.primary },
-            ]}
-            labelStyle={{ color: theme.colors.onPrimary }}
-            onPress={() => router.push("/(auth)/login")}
-          >
-            Sign In
-          </Button>
-        </View>
-      </Screen>
-    );
-  }
-
   return (
     <Screen
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -969,161 +960,10 @@ const ProfileScreen: React.FC = () => {
             Preferences
           </Text>
 
-          {/* Push Notifications Section */}
-          <ExpandableSection
-            title="Push Notifications"
-            description={pushNotifications ? "On" : "Off"}
-            icon="bell-outline"
-            expanded={expandedSections.notifications}
-            onToggle={() => toggleSection("notifications")}
-          >
-            <View style={styles.switchOptionsContainer}>
-              <EnhancedSwitchOption
-                label="Enable Push Notifications"
-                description="Receive notifications for important updates"
-                value={pushNotifications}
-                onToggle={setPushNotifications}
-              />
-              <EnhancedSwitchOption
-                label="New Messages"
-                description="Get notified when you receive new messages"
-                value={pushNotifications}
-                onToggle={setPushNotifications}
-              />
-              <EnhancedSwitchOption
-                label="Listing Updates"
-                description="Notifications about your car listings"
-                value={pushNotifications}
-                onToggle={setPushNotifications}
-              />
-              <EnhancedSwitchOption
-                label="Promotional Offers"
-                description="Receive offers and discounts"
-                value={pushNotifications}
-                onToggle={setPushNotifications}
-              />
-            </View>
-          </ExpandableSection>
-
-          <Divider style={styles.sectionDivider} />
-
-          {/* Theme Section */}
-          <ExpandableSection
-            title="Theme"
-            description={
-              themeMode === "light"
-                ? "Light"
-                : themeMode === "dark"
-                  ? "Dark"
-                  : "System"
-            }
-            icon="theme-light-dark"
-            expanded={expandedSections.theme}
-            onToggle={() => toggleSection("theme")}
-          >
-            <View style={styles.radioOptionsContainer}>
-              <EnhancedRadioOption
-                value="light"
-                label="Light"
-                description="Bright theme optimized for daytime use"
-                selected={themeMode === "light"}
-                onSelect={() => setThemeMode("light")}
-              />
-              <EnhancedRadioOption
-                value="dark"
-                label="Dark"
-                description="Dark theme for better night viewing"
-                selected={themeMode === "dark"}
-                onSelect={() => setThemeMode("dark")}
-              />
-              <EnhancedRadioOption
-                value="system"
-                label="System Default"
-                description="Automatically match your device settings"
-                selected={themeMode === "system"}
-                onSelect={() => setThemeMode("system")}
-              />
-            </View>
-          </ExpandableSection>
-
-          <Divider style={styles.sectionDivider} />
-
-          {/* Language Section */}
-          <ExpandableSection
-            title="Language"
-            description={selectedLanguage === "english" ? "English" : "አማርኛ"}
-            icon="translate"
-            expanded={expandedSections.language}
-            onToggle={() => toggleSection("language")}
-          >
-            <View style={styles.radioOptionsContainer}>
-              <EnhancedRadioOption
-                value="english"
-                label="English"
-                description="English language interface"
-                selected={selectedLanguage === "english"}
-                onSelect={() => setSelectedLanguage("english")}
-              />
-              <EnhancedRadioOption
-                value="amharic"
-                label="አማርኛ (Amharic)"
-                description="አማርኛ ቋንቋ በይነገጽ"
-                selected={selectedLanguage === "amharic"}
-                onSelect={() => setSelectedLanguage("amharic")}
-              />
-            </View>
-          </ExpandableSection>
-
-          <Divider style={styles.sectionDivider} />
-
-          {/* Currency Section */}
-          <ExpandableSection
-            title="Currency"
-            description={selectedCurrency === "ETB" ? "ETB (Birr)" : "USD"}
-            icon="currency-usd"
-            expanded={expandedSections.currency}
-            onToggle={() => toggleSection("currency")}
-          >
-            <View style={styles.radioOptionsContainer}>
-              <EnhancedRadioOption
-                value="ETB"
-                label="ETB - Ethiopian Birr"
-                description="ብር - Local currency for Ethiopian market"
-                selected={selectedCurrency === "ETB"}
-                onSelect={() => setSelectedCurrency("ETB")}
-              />
-              <EnhancedRadioOption
-                value="USD"
-                label="USD - US Dollar"
-                description="$ - International currency for global transactions"
-                selected={selectedCurrency === "USD"}
-                onSelect={() => setSelectedCurrency("USD")}
-              />
-            </View>
-          </ExpandableSection>
-        </Surface>
-
-        {/* Safety & privacy */}
-        <Surface
-          style={[
-            styles.sectionCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-          elevation={theme.dark ? 0 : 1}
-        >
-          <Text
-            style={[
-              styles.sectionHeaderLabel,
-              { color: theme.colors.onSurfaceVariant },
-            ]}
-          >
-            Safety & Privacy
-          </Text>
-
-          {/* My Posts - navigate directly */}
+          {/* Push Notifications - Display Only Button */}
           <List.Item
-            title="My Posts"
-            description="View your car listings"
+            title="Push Notifications"
+            description="Off"
             titleStyle={{ color: theme.colors.onSurface }}
             descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
             left={() => (
@@ -1134,131 +974,61 @@ const ProfileScreen: React.FC = () => {
                 ]}
               >
                 <MaterialCommunityIcons
-                  name="car-multiple"
+                  name="bell-outline"
                   size={20}
                   color={theme.colors.onSurface}
                 />
               </View>
             )}
-            right={() => (
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={22}
-                color={theme.colors.outline}
-              />
-            )}
-            onPress={() => router.push("/my-posts")}
           />
 
-          <Divider style={styles.sectionDivider} />
+          <Divider />
 
-          {/* Phone Visibility Section */}
-          <ExpandableSection
-            title="Show Phone Number"
-            description={showPhoneNumber ? "Everyone" : "Only Contacts"}
-            icon="eye-outline"
-            expanded={expandedSections.phoneVisibility}
-            onToggle={() => toggleSection("phoneVisibility")}
-          >
-            <View style={styles.radioOptionsContainer}>
-              <EnhancedRadioOption
-                value="everyone"
-                label="Everyone"
-                description="All users can see your phone number for quick contact"
-                selected={showPhoneNumber}
-                onSelect={() => setShowPhoneNumber(true)}
-              />
-              <EnhancedRadioOption
-                value="contacts"
-                label="Only Contacts"
-                description="Only people you've connected with can see your number"
-                selected={!showPhoneNumber}
-                onSelect={() => setShowPhoneNumber(false)}
-              />
-            </View>
-          </ExpandableSection>
+          {/* Language - Display Only Button */}
+          <List.Item
+            title="Language"
+            description="English"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="translate"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+          />
 
-          <Divider style={styles.sectionDivider} />
+          <Divider />
 
-          {/* Profile Visibility Section */}
-          <ExpandableSection
-            title="Profile Visibility"
-            description={
-              profileVisibility === "public"
-                ? "Public"
-                : profileVisibility === "friends"
-                  ? "Friends Only"
-                  : "Private"
-            }
-            icon="shield-account-outline"
-            expanded={expandedSections.profileVisibility}
-            onToggle={() => toggleSection("profileVisibility")}
-          >
-            <View style={styles.radioOptionsContainer}>
-              <EnhancedRadioOption
-                value="public"
-                label="Public"
-                description="Anyone can find and view your profile"
-                selected={profileVisibility === "public"}
-                onSelect={() => setProfileVisibility("public")}
-              />
-              <EnhancedRadioOption
-                value="friends"
-                label="Friends Only"
-                description="Only your connections can view your profile"
-                selected={profileVisibility === "friends"}
-                onSelect={() => setProfileVisibility("friends")}
-              />
-              <EnhancedRadioOption
-                value="private"
-                label="Private"
-                description="Your profile is hidden from other users"
-                selected={profileVisibility === "private"}
-                onSelect={() => setProfileVisibility("private")}
-              />
-            </View>
-          </ExpandableSection>
-
-          <Divider style={styles.sectionDivider} />
-
-          {/* Data Usage Section */}
-          <ExpandableSection
-            title="Data Usage"
-            description={
-              dataUsage === "normal"
-                ? "Normal"
-                : dataUsage === "low"
-                  ? "Low"
-                  : "High"
-            }
-            icon="chart-bar"
-            expanded={expandedSections.dataUsage}
-            onToggle={() => toggleSection("dataUsage")}
-          >
-            <View style={styles.radioOptionsContainer}>
-              <EnhancedRadioOption
-                value="low"
-                label="Low (Save Data)"
-                description="Reduced image quality to minimize data usage"
-                selected={dataUsage === "low"}
-                onSelect={() => setDataUsage("low")}
-              />
-              <EnhancedRadioOption
-                value="normal"
-                label="Normal (Balanced)"
-                description="Standard quality for everyday use"
-                selected={dataUsage === "normal"}
-                onSelect={() => setDataUsage("normal")}
-              />
-              <EnhancedRadioOption
-                value="high"
-                label="High (Best Quality)"
-                description="High-resolution images for best viewing experience"
-                selected={dataUsage === "high"}
-                onSelect={() => setDataUsage("high")}
-              />
-            </View>
-          </ExpandableSection>
+          {/* Currency - Display Only Button */}
+          <List.Item
+            title="Currency"
+            description="ETB (Birr)"
+            titleStyle={{ color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={() => (
+              <View
+                style={[
+                  styles.itemIconWrap,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="currency-usd"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
+              </View>
+            )}
+          />
         </Surface>
 
         {/* Help & support */}
@@ -1981,6 +1751,16 @@ const styles = StyleSheet.create({
   switchOptionsContainer: {
     gap: 12,
     paddingVertical: 4,
+  },
+  displayOnlyContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  displayOnlyText: {
+    fontSize: 14,
+    fontStyle: "italic",
+    textAlign: "center",
   },
 });
 

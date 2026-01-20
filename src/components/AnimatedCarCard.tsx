@@ -271,7 +271,7 @@ export const AnimatedCarCard: React.FC<AnimatedCarCardProps> = ({
               <Text
                 style={[styles.detailText, { color: theme.colors.onSurface }]}
               >
-                {listing.region || "N/A"}
+                {listing.region || "Ethiopia"}
               </Text>
             </View>
             <View style={styles.detailItem}>
