@@ -97,6 +97,9 @@ export interface AppUser {
   phone: string;
   first_name: string;
   last_name: string;
+  bio?: string;
+  city?: string;
+  region?: string;
   is_dealer: boolean;
   dealer_company_name?: string;
   dealer_address?: string;
@@ -144,6 +147,7 @@ export const convertApiUserToAppUser = (apiUser: any): AppUser => ({
   phone: apiUser.phone || "",
   first_name: apiUser.first_name || "",
   last_name: apiUser.last_name || "",
+  bio: apiUser.bio || "",
   is_dealer: apiUser.is_dealer || false,
   dealer_company_name: apiUser.dealer_company_name || undefined,
   dealer_address: apiUser.dealer_address || undefined,

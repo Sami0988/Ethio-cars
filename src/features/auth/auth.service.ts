@@ -25,7 +25,7 @@ const setItemAsync = async (key: string, value: string): Promise<void> => {
       // Fallback to localStorage if SecureStore fails
       console.warn(
         "SecureStore not available, falling back to localStorage:",
-        secureStoreError
+        secureStoreError,
       );
     }
   }
@@ -41,7 +41,7 @@ const getItemAsync = async (key: string): Promise<string | null> => {
       // Fallback to localStorage if SecureStore fails
       console.warn(
         "SecureStore not available, falling back to localStorage:",
-        secureStoreError
+        secureStoreError,
       );
       return null;
     }
@@ -58,7 +58,7 @@ const deleteItemAsync = async (key: string): Promise<void> => {
       // Fallback to localStorage if SecureStore fails
       console.warn(
         "SecureStore not available, falling back to localStorage:",
-        secureStoreError
+        secureStoreError,
       );
     }
   }
@@ -77,7 +77,7 @@ const storage = {
         } catch (secureStoreError) {
           console.warn(
             "SecureStore not available on native:",
-            secureStoreError
+            secureStoreError,
           );
           return null;
         }
@@ -98,7 +98,7 @@ const storage = {
         } catch (secureStoreError) {
           console.warn(
             "SecureStore not available on native:",
-            secureStoreError
+            secureStoreError,
           );
         }
       }
@@ -116,7 +116,7 @@ const storage = {
         } catch (secureStoreError) {
           console.warn(
             "SecureStore not available on native:",
-            secureStoreError
+            secureStoreError,
           );
         }
       }
@@ -194,7 +194,7 @@ class AuthService {
 
       const response = await apiClient.post<ApiAuthResponse>(
         "/auth/register",
-        formattedData
+        formattedData,
       );
 
       const data = response.data;
@@ -234,7 +234,7 @@ class AuthService {
         errorMessage = error.response.data.error;
       } else if (error.response?.data?.errors?.missing_fields) {
         errorMessage = `Missing fields: ${error.response.data.errors.missing_fields.join(
-          ", "
+          ", ",
         )}`;
       } else if (error.message) {
         errorMessage = error.message;
@@ -317,12 +317,63 @@ class AuthService {
       if (!token) return false;
 
       const response = await apiClient.get("/user/profile", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      return response.data.success === true;
+      return response.status === 200;
     } catch (error) {
+      console.error("Token validation error:", error);
       return false;
+    }
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(profileData: any): Promise<any> {
+    try {
+      const token = await this.getStoredToken();
+      if (!token) throw new Error("No authentication token found");
+
+      // Create custom axios instance for this request
+      const axios = require("axios");
+      const customClient = axios.create({
+        baseURL:
+          process.env.EXPO_PUBLIC_API_URL ||
+          "http://10.156.76.164:3000/mobile-api/v1",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      // Convert camelCase to snake_case for backend compatibility
+      const backendData = {
+        first_name: profileData.firstName,
+        last_name: profileData.lastName,
+        email: profileData.email,
+        phone: profileData.phone,
+        bio: profileData.bio,
+        city: profileData.city,
+        region: profileData.region,
+        is_dealer: profileData.is_dealer,
+        profile_picture: profileData.profilePicture,
+        ...(profileData.is_dealer && {
+          dealer_company_name: profileData.dealer_company_name,
+          dealer_address: profileData.dealer_address,
+          dealer_city: profileData.dealer_city,
+          dealer_region: profileData.dealer_region,
+          dealer_license_number: profileData.dealer_license_number,
+        }),
+      };
+
+      const response = await customClient.put("/user/profile", backendData);
+      return response.data;
+    } catch (error) {
+      console.error("Update profile error:", error);
+      throw error;
     }
   }
 

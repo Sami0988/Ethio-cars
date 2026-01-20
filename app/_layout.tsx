@@ -45,25 +45,18 @@ export default function RootLayout() {
 
         // Only set initial route if it hasn't been set yet
         if (!initialRoute) {
-          console.log("🏠 Setting initial route...");
-          console.log("🔑 isAuthenticated:", isAuthenticated);
           if (isAuthenticated) {
             // User is authenticated, always go to home tabs (priority over onboarding)
-            console.log("🏠 Setting initial route to /(tabs)");
             setInitialRoute("/(tabs)");
           } else if (!onboardingFlag) {
-            console.log("🎯 Setting initial route to /onboarding");
             setInitialRoute("/onboarding");
           } else {
             // User not authenticated, go to home tabs (since messaging is free)
-            console.log("🏠 Setting initial route to /(tabs) (default)");
             setInitialRoute("/(tabs)");
           }
         } else {
-          console.log("⚠️ Initial route already set to:", initialRoute);
         }
       } catch (error) {
-        console.error("Auth initialization error:", error);
         setInitialRoute("/(tabs)"); // Default to home on error
       } finally {
         setLoading(false);
@@ -82,7 +75,6 @@ export default function RootLayout() {
   }
 
   // After decision, render app stack and perform a single redirect
-  console.log("🚀 About to render Redirect with href:", initialRoute);
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>

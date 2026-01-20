@@ -1,9 +1,9 @@
 // screens/EditCarScreen.tsx
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,7 +25,7 @@ import { getFontSize, getSpacing } from "../utils/responsive";
 
 interface EditCarScreenProps {}
 
-const EditCarScreen: React.FC<EditCarScreenProps> = () => {
+const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
   const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams();
@@ -77,7 +77,7 @@ const EditCarScreen: React.FC<EditCarScreenProps> = () => {
     try {
       setIsLoading(true);
       const response = await fetch(
-        `https://ethiocars.com/mobile-api/v1/cars/view/${id}`
+        `https://ethiocars.com/mobile-api/v1/cars/view/${id}`,
       );
       const data = await response.json();
 
@@ -161,7 +161,7 @@ const EditCarScreen: React.FC<EditCarScreenProps> = () => {
           } else {
             Alert.alert(
               "Error",
-              response.message || "Failed to update car listing"
+              response.message || "Failed to update car listing",
             );
           }
         },
@@ -171,10 +171,10 @@ const EditCarScreen: React.FC<EditCarScreenProps> = () => {
             "Error",
             error?.response?.data?.message ||
               error?.message ||
-              "Failed to update car listing"
+              "Failed to update car listing",
           );
         },
-      }
+      },
     );
   };
 
@@ -202,7 +202,7 @@ const EditCarScreen: React.FC<EditCarScreenProps> = () => {
           style: "cancel",
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 
@@ -543,7 +543,7 @@ const EditCarScreen: React.FC<EditCarScreenProps> = () => {
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -707,5 +707,3 @@ const styles = StyleSheet.create({
     height: 48,
   },
 });
-
-export default EditCarScreen;

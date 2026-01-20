@@ -18,7 +18,6 @@ import {
   Button,
   Chip,
   Divider,
-  IconButton,
   List,
   Portal,
   RadioButton,
@@ -713,22 +712,6 @@ const ProfileScreen: React.FC = () => {
         {/* Image Picker Bottom Sheet */}
         <ImagePickerBottomSheet />
 
-        {/* Header bar */}
-        <View style={styles.topBar}>
-          <IconButton
-            icon="chevron-left"
-            size={24}
-            iconColor={theme.colors.onBackground}
-            onPress={() => router.back()}
-          />
-          <Text
-            style={[styles.topBarTitle, { color: theme.colors.onBackground }]}
-          >
-            Profile
-          </Text>
-          <View style={{ width: 40 }} />
-        </View>
-
         {/* Profile card */}
         <Surface
           style={[
@@ -738,25 +721,9 @@ const ProfileScreen: React.FC = () => {
           elevation={theme.dark ? 0 : 2}
         >
           <View style={styles.profileHeader}>
-            <TouchableOpacity
-              style={styles.avatarContainer}
-              onPress={handleChangeProfilePhoto}
-            >
+            <View style={styles.avatarContainer}>
               <Avatar.Image size={72} source={avatarSource} />
-              {/* Edit overlay */}
-              <View
-                style={[
-                  styles.editAvatarOverlay,
-                  { backgroundColor: theme.colors.primary },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="camera"
-                  size={20}
-                  color={theme.colors.onPrimary}
-                />
-              </View>
-            </TouchableOpacity>
+            </View>
             <View style={styles.profileInfo}>
               <View style={styles.nameRow}>
                 <Text

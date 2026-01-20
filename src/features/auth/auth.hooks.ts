@@ -13,8 +13,6 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (credentials: LoginRequest) => authService.login(credentials),
     onSuccess: () => {
-      // Don't redirect automatically - let user stay on their intended tab
-      console.log("✅ Login successful - no automatic redirect");
     },
     onError: (error: any) => {
       Alert.alert("Login Error", error.message || "Failed to login");

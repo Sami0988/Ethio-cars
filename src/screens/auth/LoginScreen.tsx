@@ -3,8 +3,6 @@ import * as SecureStore from "expo-secure-store";
 import { useFormik } from "formik";
 import React, { useEffect, useState } from "react";
 import {
-  Animated,
-  Easing,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -32,35 +30,15 @@ import {
 } from "../../utils/responsive";
 import { LoginFormData, loginSchema } from "../../utils/validation";
 
-const LoginScreen: React.FC = () => {
+const LoginScreen: React.FC = React.memo(() => {
   const router = useRouter();
   const theme = useTheme();
   const { login, isLoading, error, clearError, isAuthenticated } =
     useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
-  const [slideAnim] = useState(new Animated.Value(0));
-  const [fadeAnim] = useState(new Animated.Value(0));
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
-  useEffect(() => {
-    // Staggered animations
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  // Handle navigation after successful login
+  // Handle successful login
   useEffect(() => {
     if (isAuthenticated) {
       // Show success message briefly before navigating
@@ -121,19 +99,16 @@ const LoginScreen: React.FC = () => {
     router.replace("/(tabs)");
   };
 
-  // Animation styles
+  // Animation styles (simplified - no complex animations)
   const fadeIn = {
-    opacity: fadeAnim,
+    opacity: 1,
   };
 
   const slideUp = {
-    opacity: slideAnim,
+    opacity: 1,
     transform: [
       {
-        translateY: slideAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [50, 0],
-        }),
+        translateY: 0,
       },
     ],
   };
@@ -159,13 +134,13 @@ const LoginScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Background Decorative Elements */}
-        <Animated.View style={[styles.backgroundCircle, fadeIn]} />
-        <Animated.View style={[styles.backgroundCircle2, fadeIn]} />
+        <View style={[styles.backgroundCircle, fadeIn]} />
+        <View style={[styles.backgroundCircle2, fadeIn]} />
 
-        <Animated.View style={[styles.content, slideUp]}>
+        <View style={[styles.content, slideUp]}>
           {/* Header Section */}
           <View style={styles.header}>
-            <Animated.View style={[styles.logoContainer, fadeIn]}>
+            <View style={[styles.logoContainer, fadeIn]}>
               <Avatar.Icon
                 size={100}
                 icon="car"
@@ -178,7 +153,7 @@ const LoginScreen: React.FC = () => {
                 color={theme.colors.onPrimary}
                 style={styles.carIcon}
               />
-            </Animated.View>
+            </View>
 
             <Text
               variant="headlineLarge"
@@ -305,7 +280,7 @@ const LoginScreen: React.FC = () => {
               </View>
             </Card.Content>
           </Card>
-        </Animated.View>
+        </View>
       </ScrollView>
 
       {/* Success Message */}
@@ -335,7 +310,9 @@ const LoginScreen: React.FC = () => {
       </Snackbar>
     </KeyboardAvoidingView>
   );
-};
+});
+
+export default React.memo(LoginScreen);
 
 const styles = StyleSheet.create({
   container: {
@@ -482,5 +459,3 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
 });
-
-export default LoginScreen;

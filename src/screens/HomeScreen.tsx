@@ -1,4 +1,5 @@
 // screens/HomeScreen.tsx
+import { useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, {
   useCallback,
@@ -39,7 +40,6 @@ import {
   useCarStats,
   useInfiniteCarListings,
 } from "../features/cars/car.hooks";
-import { carService } from "../features/cars/car.service";
 import {
   CarFilters,
   CarListing,
@@ -66,6 +66,7 @@ const HomeScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  const queryClient = useQueryClient();
 
   // States
   const [searchQuery, setSearchQuery] = useState("");
@@ -117,15 +118,18 @@ const HomeScreen: React.FC = () => {
   const { data: statsData, isLoading: statsLoading } = useCarStats();
   const { data: priceRangeData } = useCarPriceRange();
 
-  // Clear cache and refetch data when screen comes into focus
+  // Smart cache refresh - only refetch if data is stale
   useFocusEffect(
     useCallback(() => {
-      // Clear the service cache
-      carService.clearListingsCache();
+      const lastFetch = queryClient.getQueryData(["lastFetch"]);
+      const now = Date.now();
 
-      // Refetch all data
-      refetch();
-    }, [refetch]),
+      // Only refetch if data is older than 30 seconds
+      if (!lastFetch || now - (lastFetch as number) > 30000) {
+        refetch();
+        queryClient.setQueryData(["lastFetch"], now);
+      }
+    }, [refetch, queryClient]),
   );
 
   // Extract all listings - FIXED: Remove duplicates
@@ -355,7 +359,7 @@ const HomeScreen: React.FC = () => {
         {/* EthioCars Logo */}
         <View style={styles.logoContainer}>
           <Text style={[styles.logoText, { color: theme.colors.primary }]}>
-            EthioCars 
+            EthioCars
           </Text>
         </View>
 

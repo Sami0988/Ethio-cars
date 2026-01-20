@@ -1,12 +1,7 @@
 // components/CarCard.tsx
+import { Image } from "expo-image";
 import React, { useEffect, useRef } from "react";
-import {
-  Animated,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Card, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
@@ -54,351 +49,348 @@ interface CarCardProps {
   onMessagePress?: () => void;
 }
 
-const CarCard: React.FC<CarCardProps> = ({
-  listing,
-  index,
-  isLoading = false,
-  onPress,
-  onMessagePress,
-}) => {
-  const theme = useTheme();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const translateY = useRef(new Animated.Value(20)).current;
+const CarCard: React.FC<CarCardProps> = React.memo(
+  ({ listing, index, isLoading = false, onPress, onMessagePress }) => {
+    const theme = useTheme();
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
+    const translateY = useRef(new Animated.Value(20)).current;
 
-  useEffect(() => {
-    if (!isLoading) {
-      Animated.parallel([
+    useEffect(() => {
+      if (!isLoading) {
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 400,
-          delay: index * 80,
+          duration: 200, // Reduced from 400ms
           useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          delay: index * 80,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 400,
-          delay: index * 80,
-          useNativeDriver: true,
-        }),
-      ]).start();
+        }).start();
+      }
+    }, [isLoading, fadeAnim]);
+
+    const animatedStyle = {
+      opacity: fadeAnim,
+    };
+
+    if (isLoading) {
+      return (
+        <Animated.View style={animatedStyle}>
+          <Card
+            style={[
+              styles.listingCard,
+              { backgroundColor: theme.colors.surfaceVariant },
+            ]}
+          >
+            <View style={styles.imageContainer}>
+              <View
+                style={[
+                  styles.skeletonImage,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              />
+              <View
+                style={[
+                  styles.skeletonPriceTag,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              />
+            </View>
+
+            <View style={styles.listingContent}>
+              <View style={styles.carHeader}>
+                <View
+                  style={[
+                    styles.skeletonTitle,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.skeletonSubtitle,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                />
+              </View>
+
+              <View
+                style={[
+                  styles.carDetails,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.skeletonDetail,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.skeletonDetail,
+                    { backgroundColor: theme.colors.surfaceVariant, width: 80 },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.skeletonDetail,
+                    { backgroundColor: theme.colors.surfaceVariant, width: 60 },
+                  ]}
+                />
+              </View>
+
+              <View
+                style={[
+                  styles.sellerInfo,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.skeletonAvatar,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                />
+                <View style={styles.sellerText}>
+                  <View
+                    style={[
+                      styles.skeletonSeller,
+                      { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.skeletonType,
+                      { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
+                  />
+                </View>
+              </View>
+            </View>
+          </Card>
+        </Animated.View>
+      );
     }
-  }, [isLoading, index]);
 
-  const animatedStyle = {
-    opacity: fadeAnim,
-    transform: [{ scale: scaleAnim }, { translateY }],
-  };
-
-  if (isLoading) {
     return (
       <Animated.View style={animatedStyle}>
-        <Card
-          style={[
-            styles.listingCard,
-            { backgroundColor: theme.colors.surfaceVariant },
-          ]}
-        >
-          <View style={styles.imageContainer}>
-            <View
-              style={[
-                styles.skeletonImage,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            />
-            <View
-              style={[
-                styles.skeletonPriceTag,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            />
-          </View>
-
-          <View style={styles.listingContent}>
-            <View style={styles.carHeader}>
-              <View
-                style={[
-                  styles.skeletonTitle,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              />
-              <View
-                style={[
-                  styles.skeletonSubtitle,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              />
-            </View>
-
-            <View
-              style={[
-                styles.carDetails,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <View
-                style={[
-                  styles.skeletonDetail,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              />
-              <View
-                style={[
-                  styles.skeletonDetail,
-                  { backgroundColor: theme.colors.surfaceVariant, width: 80 },
-                ]}
-              />
-              <View
-                style={[
-                  styles.skeletonDetail,
-                  { backgroundColor: theme.colors.surfaceVariant, width: 60 },
-                ]}
-              />
-            </View>
-
-            <View
-              style={[
-                styles.sellerInfo,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <View
-                style={[
-                  styles.skeletonAvatar,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              />
-              <View style={styles.sellerText}>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
+          <Card
+            style={[
+              styles.listingCard,
+              { backgroundColor: theme.colors.surfaceVariant },
+            ]}
+            elevation={3}
+          >
+            {/* Image Section */}
+            <View style={styles.imageContainer}>
+              {listing.primary_image || listing.thumbnail ? (
+                <Image
+                  source={{ uri: listing.primary_image || listing.thumbnail }}
+                  style={styles.carImage}
+                  contentFit="cover"
+                  placeholder="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                  transition={200}
+                />
+              ) : (
                 <View
                   style={[
-                    styles.skeletonSeller,
+                    styles.imagePlaceholder,
                     { backgroundColor: theme.colors.surfaceVariant },
                   ]}
-                />
-                <View
-                  style={[
-                    styles.skeletonType,
-                    { backgroundColor: theme.colors.surfaceVariant },
-                  ]}
-                />
-              </View>
-            </View>
-          </View>
-        </Card>
-      </Animated.View>
-    );
-  }
+                >
+                  <MaterialCommunityIcons
+                    name="car"
+                    size={60}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                </View>
+              )}
 
-  return (
-    <Animated.View style={animatedStyle}>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
-        <Card
-          style={[
-            styles.listingCard,
-            { backgroundColor: theme.colors.surfaceVariant },
-          ]}
-          elevation={3}
-        >
-          {/* Image Section */}
-          <View style={styles.imageContainer}>
-            {listing.primary_image || listing.thumbnail ? (
-              <Image
-                source={{ uri: listing.primary_image || listing.thumbnail }}
-                style={styles.carImage}
-                resizeMode="cover"
-              />
-            ) : (
+              {/* Price Tag */}
               <View
                 style={[
-                  styles.imagePlaceholder,
-                  { backgroundColor: theme.colors.surfaceVariant },
+                  styles.priceTag,
+                  { backgroundColor: theme.colors.primary },
                 ]}
               >
-                <MaterialCommunityIcons
-                  name="car"
-                  size={60}
-                  color={theme.colors.onSurfaceVariant}
-                />
-              </View>
-            )}
-
-            {/* Price Tag */}
-            <View
-              style={[
-                styles.priceTag,
-                { backgroundColor: theme.colors.primary },
-              ]}
-            >
-              <Text
-                style={[styles.priceTagText, { color: theme.colors.onPrimary }]}
-              >
-                {formatPrice(listing.price)}
-              </Text>
-              {listing.negotiable && (
                 <Text
                   style={[
-                    styles.negotiableText,
+                    styles.priceTagText,
                     { color: theme.colors.onPrimary },
                   ]}
                 >
-                  Negotiable
+                  {formatPrice(listing.price)}
                 </Text>
+                {listing.negotiable && (
+                  <Text
+                    style={[
+                      styles.negotiableText,
+                      { color: theme.colors.onPrimary },
+                    ]}
+                  >
+                    Negotiable
+                  </Text>
+                )}
+              </View>
+
+              {/* Condition Badge */}
+              {listing.condition && (
+                <View
+                  style={[
+                    styles.conditionBadge,
+                    {
+                      backgroundColor:
+                        listing.condition === "New"
+                          ? "#10B981"
+                          : listing.condition === "Excellent"
+                            ? "#3B82F6"
+                            : listing.condition === "Good"
+                              ? "#F59E0B"
+                              : "#6B7280",
+                    },
+                  ]}
+                >
+                  <Text style={styles.conditionText}>{listing.condition}</Text>
+                </View>
               )}
             </View>
 
-            {/* Condition Badge */}
-            {listing.condition && (
-              <View
-                style={[
-                  styles.conditionBadge,
-                  {
-                    backgroundColor:
-                      listing.condition === "New"
-                        ? "#10B981"
-                        : listing.condition === "Excellent"
-                          ? "#3B82F6"
-                          : listing.condition === "Good"
-                            ? "#F59E0B"
-                            : "#6B7280",
-                  },
-                ]}
-              >
-                <Text style={styles.conditionText}>{listing.condition}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Content Section */}
-          <View style={styles.listingContent}>
-            {/* Car Title */}
-            <View style={styles.carHeader}>
-              <Text
-                style={[styles.carTitle, { color: theme.colors.onSurface }]}
-              >
-                {getCarTitle(listing)}
-              </Text>
-              <View style={styles.verifiedContainer}>
-                {listing.seller?.is_dealer && (
-                  <MaterialCommunityIcons
-                    name="check-decagram"
-                    size={16}
-                    color="#10B981"
-                  />
-                )}
-              </View>
-            </View>
-
-            <Text
-              style={[
-                styles.carSubtitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {listing.body_type} • {listing.transmission} • {listing.fuel_type}
-            </Text>
-
-            {/* Details */}
-            <View style={styles.carDetails}>
-              <View style={styles.detailItem}>
-                <MaterialCommunityIcons
-                  name="speedometer"
-                  size={16}
-                  color={theme.colors.primary}
-                />
+            {/* Content Section */}
+            <View style={styles.listingContent}>
+              {/* Car Title */}
+              <View style={styles.carHeader}>
                 <Text
-                  style={[styles.detailText, { color: theme.colors.onSurface }]}
+                  style={[styles.carTitle, { color: theme.colors.onSurface }]}
                 >
-                  {formatMileage(listing.mileage)}
+                  {getCarTitle(listing)}
                 </Text>
+                <View style={styles.verifiedContainer}>
+                  {listing.seller?.is_dealer && (
+                    <MaterialCommunityIcons
+                      name="check-decagram"
+                      size={16}
+                      color="#10B981"
+                    />
+                  )}
+                </View>
               </View>
 
-              <View style={styles.detailItem}>
-                <MaterialCommunityIcons
-                  name="map-marker"
-                  size={16}
-                  color={theme.colors.primary}
-                />
-                <Text
-                  style={[styles.detailText, { color: theme.colors.onSurface }]}
-                >
-                  {abbreviateRegion(listing.region)}
-                </Text>
-              </View>
-
-              <View style={styles.detailItem}>
-                <MaterialCommunityIcons
-                  name="eye"
-                  size={16}
-                  color={theme.colors.primary}
-                />
-                <Text
-                  style={[styles.detailText, { color: theme.colors.onSurface }]}
-                >
-                  {listing.views} views
-                </Text>
-              </View>
-            </View>
-
-            {/* Seller Info */}
-            <View style={styles.sellerInfo}>
-              <View
-                style={[
-                  styles.sellerAvatar,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name={listing.seller?.is_dealer ? "store" : "account"}
-                  size={20}
-                  color={theme.colors.primary}
-                />
-              </View>
-              <View style={styles.sellerDetails}>
-                <Text
-                  style={[styles.sellerName, { color: theme.colors.onSurface }]}
-                >
-                  {listing.seller?.company_name ||
-                    listing.seller?.username ||
-                    "Private Seller"}
-                </Text>
-                <Text
-                  style={[
-                    styles.sellerType,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  {listing.seller?.is_dealer
-                    ? "Verified Dealer"
-                    : "Private Seller"}
-                </Text>
-              </View>
               <Text
                 style={[
-                  styles.listedDate,
+                  styles.carSubtitle,
                   { color: theme.colors.onSurfaceVariant },
                 ]}
               >
-                {new Date(listing.created_at).toLocaleDateString()}
+                {listing.body_type} • {listing.transmission} •{" "}
+                {listing.fuel_type}
               </Text>
-            </View>
 
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              {/* Message button removed */}
+              {/* Details */}
+              <View style={styles.carDetails}>
+                <View style={styles.detailItem}>
+                  <MaterialCommunityIcons
+                    name="speedometer"
+                    size={16}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.detailText,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {formatMileage(listing.mileage)}
+                  </Text>
+                </View>
+
+                <View style={styles.detailItem}>
+                  <MaterialCommunityIcons
+                    name="map-marker"
+                    size={16}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.detailText,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {abbreviateRegion(listing.region)}
+                  </Text>
+                </View>
+
+                <View style={styles.detailItem}>
+                  <MaterialCommunityIcons
+                    name="eye"
+                    size={16}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.detailText,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {listing.views} views
+                  </Text>
+                </View>
+              </View>
+
+              {/* Seller Info */}
+              <View style={styles.sellerInfo}>
+                <View
+                  style={[
+                    styles.sellerAvatar,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={listing.seller?.is_dealer ? "store" : "account"}
+                    size={20}
+                    color={theme.colors.primary}
+                  />
+                </View>
+                <View style={styles.sellerDetails}>
+                  <Text
+                    style={[
+                      styles.sellerName,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {listing.seller?.company_name ||
+                      listing.seller?.username ||
+                      "Private Seller"}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.sellerType,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {listing.seller?.is_dealer
+                      ? "Verified Dealer"
+                      : "Private Seller"}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.listedDate,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  {new Date(listing.created_at).toLocaleDateString()}
+                </Text>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.actionButtons}>
+                {/* Message button removed */}
+              </View>
             </View>
-          </View>
-        </Card>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
+          </Card>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   listingCard: {

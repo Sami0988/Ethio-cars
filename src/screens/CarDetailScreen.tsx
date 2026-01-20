@@ -1,9 +1,9 @@
 // screens/CarDetailScreen.tsx
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Dimensions,
-  Image,
   Linking,
   ScrollView,
   Share,
@@ -285,7 +285,9 @@ const CarDetailScreen: React.FC = () => {
             <Image
               source={{ uri: carDetail.images[currentImageIndex].url }}
               style={styles.mainImage}
-              resizeMode="cover"
+              contentFit="cover"
+              placeholder="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+              transition={200}
             />
           ) : (
             <View

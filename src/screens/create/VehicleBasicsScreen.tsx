@@ -25,7 +25,7 @@ interface VehicleBasicsScreenProps {
   updateVehicleData?: (updates: Partial<VehicleData>) => void;
 }
 
-export default function VehicleBasicsScreen({
+export default React.memo(function VehicleBasicsScreen({
   onContinue,
   onBack,
   vehicleData,
@@ -1279,7 +1279,7 @@ export default function VehicleBasicsScreen({
       )}
     </Animated.View>
   );
-}
+});
 
 const getDynamicStyles = (theme: any, screenWidth: number) => {
   const isSmallScreen = screenWidth < 375;

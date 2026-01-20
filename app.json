@@ -4,7 +4,7 @@
     "slug": "EthioCarsApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "ethiocarsapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -19,7 +19,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ethiocars.app",
-      "icon": "./assets/icon.png"
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "package": "com.ethiocars.app",
