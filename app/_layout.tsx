@@ -79,13 +79,15 @@ export default function RootLayout() {
         setInitialRoute("/(tabs)");
       } else if (!isAuthenticated && initialRoute === "/(tabs)") {
         // User just logged out, check onboarding status
-        webStorage.getItem("seen_onboarding").then((onboardingFlag) => {
+        const checkOnboarding = async () => {
+          const onboardingFlag = await webStorage.getItem("seen_onboarding");
           if (onboardingFlag) {
             setInitialRoute("/(auth)/login");
           } else {
             setInitialRoute("/onboarding");
           }
-        });
+        };
+        checkOnboarding();
       }
     }
   }, [isAuthenticated, initialRoute, loading]);

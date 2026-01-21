@@ -277,7 +277,13 @@ const CarDetailScreen: React.FC = () => {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: !isOwner ? insets.bottom + 100 : 20 }, // Dynamic bottom padding
+        ]}
+      >
         {/* Image Gallery */}
         <View style={styles.imageGallery}>
           {carDetail.images.length > 0 &&
@@ -533,9 +539,6 @@ const CarDetailScreen: React.FC = () => {
             </Text>
           </View>
         </Card>
-
-        {/* Bottom padding - More padding for owners since no bottom actions */}
-        <View style={[styles.bottomPadding, { height: isOwner ? 20 : 100 }]} />
       </ScrollView>
 
       {/* Fixed Bottom Actions - Only show for non-owners */}
@@ -579,6 +582,9 @@ const CarDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: "row",
@@ -820,9 +826,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
     marginLeft: 8,
-  },
-  bottomPadding: {
-    height: 100,
   },
   bottomActions: {
     position: "absolute",
