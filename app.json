@@ -46,9 +46,7 @@
             "minifyEnabled": true,
             "usesCleartextTraffic": false,
             "packagingOptions": {
-              "pickFirst": [
-                "**/libc++_shared.so"
-              ]
+              "pickFirst": ["**/libc++_shared.so"]
             }
           }
         }
@@ -56,9 +54,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "9170f5a8-86dc-4f70-8e34-3a1e10cd5db1"
+        "projectId": "051f5f81-16e9-43ef-b4c2-cddb3865c7b3"
       }
     },
-    "owner": "zsami11"
+    "owner": "samiwork"
   }
 }
