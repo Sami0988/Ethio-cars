@@ -4,6 +4,7 @@ import {
   Alert,
   Animated,
   Dimensions,
+  Keyboard,
   Platform,
   ScrollView,
   StatusBar,
@@ -14,6 +15,10 @@ import {
   View,
 } from "react-native";
 import { Button, Switch, useTheme } from "react-native-paper";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { VehicleData } from "../../types/vehicle";
 
 interface PricingScreenProps {
@@ -30,15 +35,16 @@ export default function PricingScreen({
   updateVehicleData,
 }: PricingScreenProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { width, height } = Dimensions.get("window");
   const isSmallScreen = width < 375;
   const isTablet = width > 768;
 
-  const styles = getDynamicStyles(theme, width, height);
+  const styles = getDynamicStyles(theme, width, height, insets);
 
   const [price, setPrice] = useState(vehicleData?.price || "550000");
   const [isNegotiable, setIsNegotiable] = useState(
-    vehicleData?.negotiable ?? true
+    vehicleData?.negotiable ?? true,
   );
   const [isPriceInputFocused, setIsPriceInputFocused] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -48,6 +54,27 @@ export default function PricingScreen({
   const priceInputRef = useRef<TextInput>(null);
   const slideAnim = useRef(new Animated.Value(50)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Keyboard visibility state
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  // Listen for keyboard show/hide events
+  useEffect(() => {
+    const keyboardShowEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const keyboardHideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSubscription = Keyboard.addListener(keyboardShowEvent, () => {
+      setIsKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener(keyboardHideEvent, () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -80,15 +107,15 @@ export default function PricingScreen({
         setMarketTip("🎯 Competitive pricing. Well-positioned in the market.");
       } else if (numPrice < 1000000) {
         setMarketTip(
-          "⚡ Premium range. Highlight your vehicle's best features."
+          "⚡ Premium range. Highlight your vehicle's best features.",
         );
       } else if (numPrice < 5000000) {
         setMarketTip(
-          "🏆 Luxury pricing. Consider professional photos and certification."
+          "🏆 Luxury pricing. Consider professional photos and certification.",
         );
       } else {
         setMarketTip(
-          "💎 Exclusive range. Target specialized buyers with premium features."
+          "💎 Exclusive range. Target specialized buyers with premium features.",
         );
       }
       setIsCalculating(false);
@@ -198,7 +225,7 @@ export default function PricingScreen({
     Alert.alert(
       "Smart Suggestion",
       `Based on market data, we suggest ${formatPriceForDisplay(suggestedPrice)} ETB for optimal results.`,
-      [{ text: "OK" }]
+      [{ text: "OK" }],
     );
   };
 
@@ -250,10 +277,10 @@ export default function PricingScreen({
   ];
 
   return (
-    <View style={styles.fullScreen}>
+    <SafeAreaView style={styles.fullScreen} edges={["bottom", "left", "right"]}>
       <StatusBar
         barStyle={theme.dark ? "light-content" : "dark-content"}
-        backgroundColor={theme.colors.elevation.level1}
+        backgroundColor={theme.colors.background}
       />
 
       {/* Header */}
@@ -280,14 +307,7 @@ export default function PricingScreen({
             Step {currentStep} of {steps.length}
           </Text>
         </View>
-        <TouchableOpacity
-          onPress={handleSuggestPrice}
-          style={styles.suggestButton}
-        >
-          <Text style={[styles.suggestText, { color: theme.colors.primary }]}>
-            Suggest
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerPlaceholder} />
       </View>
 
       <ScrollView
@@ -746,80 +766,83 @@ export default function PricingScreen({
         <View style={styles.spacer} />
       </ScrollView>
 
-      {/* Next Button */}
-      <View style={styles.footer}>
-        <Button
-          mode="contained"
-          onPress={handleContinue}
-          style={[styles.nextButton, { backgroundColor: theme.colors.primary }]}
-          labelStyle={[styles.buttonLabel, { color: theme.colors.onPrimary }]}
-          contentStyle={styles.buttonContent}
-          disabled={!price || parseInt(price) === 0}
-        >
-          Continue to Details
-        </Button>
+      {/* Next Button - Hidden when keyboard is visible */}
+      {!isKeyboardVisible && (
+        <View style={styles.footer}>
+          <Button
+            mode="contained"
+            onPress={handleContinue}
+            style={[styles.nextButton, { backgroundColor: theme.colors.primary }]}
+            labelStyle={[styles.buttonLabel, { color: theme.colors.onPrimary }]}
+            contentStyle={styles.buttonContent}
+            disabled={!price || parseInt(price) === 0}
+          >
+            Continue to Details
+          </Button>
 
-        {/* Features below button */}
-        <View style={styles.buttonFeatures}>
-          <View style={styles.buttonFeatureItem}>
-            <Ionicons
-              name="shield-checkmark"
-              size={16}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[
-                styles.buttonFeatureText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Price protected
-            </Text>
+          {/* Features below button */}
+          <View style={styles.buttonFeatures}>
+            <View style={styles.buttonFeatureItem}>
+              <Ionicons
+                name="shield-checkmark"
+                size={16}
+                color={theme.colors.primary}
+              />
+              <Text
+                style={[
+                  styles.buttonFeatureText,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Price protected
+              </Text>
+            </View>
+            <View style={styles.buttonFeatureDivider} />
+            <View style={styles.buttonFeatureItem}>
+              <Ionicons name="refresh" size={16} color={theme.colors.primary} />
+              <Text
+                style={[
+                  styles.buttonFeatureText,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Editable anytime
+              </Text>
+            </View>
+            <View style={styles.buttonFeatureDivider} />
+            <View style={styles.buttonFeatureItem}>
+              <Ionicons
+                name="trending-up"
+                size={16}
+                color={theme.colors.primary}
+              />
+              <Text
+                style={[
+                  styles.buttonFeatureText,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Market insights
+              </Text>
+            </View>
           </View>
-          <View style={styles.buttonFeatureDivider} />
-          <View style={styles.buttonFeatureItem}>
-            <Ionicons name="refresh" size={16} color={theme.colors.primary} />
-            <Text
-              style={[
-                styles.buttonFeatureText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Editable anytime
-            </Text>
-          </View>
-          <View style={styles.buttonFeatureDivider} />
-          <View style={styles.buttonFeatureItem}>
-            <Ionicons
-              name="trending-up"
-              size={16}
-              color={theme.colors.primary}
-            />
-            <Text
-              style={[
-                styles.buttonFeatureText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Market insights
-            </Text>
-          </View>
+
+          <Text
+            style={[styles.footerNote, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Next: Add vehicle details, photos, and specifications
+          </Text>
         </View>
-
-        <Text
-          style={[styles.footerNote, { color: theme.colors.onSurfaceVariant }]}
-        >
-          Next: Add vehicle details, photos, and specifications
-        </Text>
-      </View>
-    </View>
+      )}
+    </SafeAreaView>
   );
 }
 
 const getDynamicStyles = (
   theme: any,
   screenWidth: number,
-  screenHeight: number
+  screenHeight: number,
+  insets: any,
 ) => {
   const isSmallScreen = screenWidth < 375;
   const isTablet = screenWidth > 768;
@@ -833,7 +856,7 @@ const getDynamicStyles = (
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: isSmallScreen ? 16 : 20,
-      paddingTop: Platform.OS === "ios" ? 50 : 30,
+      paddingTop: insets.top,
       paddingBottom: 16,
       backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
@@ -855,12 +878,8 @@ const getDynamicStyles = (
       color: theme.colors.onSurfaceVariant,
       marginTop: 2,
     },
-    suggestButton: {
-      padding: 8,
-    },
-    suggestText: {
-      fontSize: 14,
-      fontWeight: "600",
+    headerPlaceholder: {
+      width: 32,
     },
     container: {
       flex: 1,

@@ -11,6 +11,10 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useAuthStore } from "../../features/auth/auth.store";
 import { useCarListings, useDeleteCar } from "../../features/cars/car.hooks";
@@ -19,6 +23,7 @@ import { CarListing } from "../../features/cars/car.types";
 const MyPostsScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const deleteMutation = useDeleteCar();
   const { isAuthenticated } = useAuthStore();
 
@@ -33,7 +38,7 @@ const MyPostsScreen: React.FC = () => {
   // Unauthenticated UI
   if (!isAuthenticated) {
     return (
-      <View
+      <SafeAreaView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.signInPrompt}>
@@ -67,7 +72,7 @@ const MyPostsScreen: React.FC = () => {
             Sign In
           </Button>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -239,7 +244,7 @@ const MyPostsScreen: React.FC = () => {
       <Button
         mode="contained"
         style={styles.createButton}
-        onPress={() => router.push("/create")}
+        onPress={() => router.push("/(tabs)/add")}
         icon="plus"
       >
         Create Listing
@@ -248,14 +253,22 @@ const MyPostsScreen: React.FC = () => {
   );
 
   return (
-    <View
+    <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={["bottom", "left", "right"]}
     >
       {/* Header */}
       <Surface
-        style={[styles.header, { backgroundColor: theme.colors.surface }]}
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.colors.surface,
+            paddingTop: insets.top,
+          },
+        ]}
       >
         <View style={styles.headerContent}>
+          <View style={styles.headerSpacer} />
           <Text style={[styles.title, { color: theme.colors.onSurface }]}>
             My Posts
           </Text>
@@ -274,7 +287,7 @@ const MyPostsScreen: React.FC = () => {
         refreshing={isLoading}
         onRefresh={refetch}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

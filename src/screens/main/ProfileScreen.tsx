@@ -1,7 +1,7 @@
 // screens/profile/ProfileScreen.tsx
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -16,7 +16,6 @@ import {
 import {
   Avatar,
   Button,
-  Chip,
   Divider,
   List,
   Portal,
@@ -34,9 +33,52 @@ import { getDynamicHeight, screenHeight } from "../../utils/responsive";
 
 const ProfileScreen: React.FC = () => {
   const router = useRouter();
-  const { user, isAuthenticated, updateUser } = useAuthStore() as any;
+  const { user, isAuthenticated, updateUser, fetchProfile } =
+    useAuthStore() as any;
   const theme = useTheme();
   const logoutMutation = useLogout();
+
+  // Format date function
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "2023";
+
+    try {
+      const date = new Date(dateString);
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      const month = months[date.getMonth()];
+      const day = date.getDate();
+      const year = date.getFullYear();
+
+      return `${month} ${day}, ${year}`;
+    } catch (error) {
+      return "2023";
+    }
+  };
+
+  // Fetch complete profile data on component mount
+  useEffect(() => {
+    if (isAuthenticated && user && !user?.member_since) {
+      // Only fetch if member_since is missing, to avoid unnecessary API calls
+      fetchProfile().catch((error: any) => {
+        console.log("Profile data might be incomplete:", error);
+        // Don't let profile fetch failures affect auth state
+      });
+    }
+  }, [isAuthenticated, user, fetchProfile]);
 
   // Use safe area wrapper for consistent spacing - move to top
   const insets = require("react-native-safe-area-context").useSafeAreaInsets();
@@ -751,24 +793,6 @@ const ProfileScreen: React.FC = () => {
                 @{user?.username}
               </Text>
               <View style={styles.metaRow}>
-                <Chip
-                  mode="flat"
-                  style={[
-                    styles.ratingChip,
-                    {
-                      backgroundColor: theme.colors.surfaceVariant,
-                    },
-                  ]}
-                  textStyle={[
-                    styles.ratingText,
-                    {
-                      color: theme.colors.onSurfaceVariant,
-                    },
-                  ]}
-                  icon="star"
-                >
-                  4.8 (24 reviews)
-                </Chip>
                 <TouchableOpacity
                   onPress={() =>
                     Alert.alert(
@@ -777,6 +801,7 @@ const ProfileScreen: React.FC = () => {
                       [{ text: "OK", style: "cancel" }],
                     )
                   }
+                  style={styles.locationContainer}
                 >
                   <MaterialCommunityIcons
                     name="map-marker"
@@ -789,7 +814,7 @@ const ProfileScreen: React.FC = () => {
                       { color: theme.colors.onSurfaceVariant },
                     ]}
                   >
-                    Addis Ababa, Ethiopia
+                    {user?.region || "Addis Ababa"}, Ethiopia
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -799,7 +824,7 @@ const ProfileScreen: React.FC = () => {
                   { color: theme.colors.onSurfaceVariant },
                 ]}
               >
-                Member since {user?.member_since || "2023"}
+                Member since {formatDate(user?.member_since)}
               </Text>
             </View>
           </View>
@@ -1391,6 +1416,11 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
+  },
+  locationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   memberSince: {
     marginTop: 4,

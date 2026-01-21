@@ -20,7 +20,10 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { customColors } from "../constants/colors";
 import { useAuthStore } from "../features/auth/auth.store";
@@ -210,7 +213,7 @@ const CarDetailScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View
+      <SafeAreaView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.loadingContainer}>
@@ -219,13 +222,13 @@ const CarDetailScreen: React.FC = () => {
             Loading car details...
           </Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error || !carDetail) {
     return (
-      <View
+      <SafeAreaView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.errorContainer}>
@@ -254,21 +257,31 @@ const CarDetailScreen: React.FC = () => {
             Try Again
           </Button>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View
+    <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={["bottom"]}
     >
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.colors.surface,
+            paddingTop: insets.top,
+          },
+        ]}
+      >
         <IconButton
           icon="arrow-left"
-          size={24}
+          size={22}
           iconColor={theme.colors.onSurface}
           onPress={() => router.back()}
+          style={styles.backButton}
         />
         <View style={styles.headerTitle}>
           <Text style={[styles.title, { color: theme.colors.onSurface }]}>
@@ -281,11 +294,17 @@ const CarDetailScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: !isOwner ? insets.bottom + 100 : 20 }, // Dynamic bottom padding
+          {
+            paddingBottom: !isOwner ? insets.bottom + 100 : insets.bottom + 20,
+          },
         ]}
+        style={styles.scrollView}
+        nestedScrollEnabled={true}
+        bounces={true}
+        alwaysBounceVertical={false}
       >
         {/* Image Gallery */}
-        <View style={styles.imageGallery}>
+        <View style={styles.imageGallery} accessibilityLabel="Car image gallery">
           {carDetail.images.length > 0 &&
           carDetail.images[currentImageIndex]?.url ? (
             <Image
@@ -575,7 +594,7 @@ const CarDetailScreen: React.FC = () => {
           </Button>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -583,14 +602,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
+    paddingTop: 0,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: getSpacing(8, 12, 16),
+    paddingBottom: getSpacing(4, 6, 8),
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
@@ -599,20 +622,28 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    minHeight: 44,
   },
   headerTitle: {
     flex: 1,
     alignItems: "flex-start",
-    marginLeft: 8,
+    marginLeft: getSpacing(4, 8, 12),
   },
   title: {
-    fontSize: 18,
+    fontSize: getFontSize(16, 17, 18),
     fontWeight: "bold",
+  },
+  backButton: {
+    margin: 0,
+    marginLeft: -8,
   },
   imageGallery: {
     position: "relative",
-    height: 250,
+    height: isSmallScreen ? height * 0.3 : isMediumScreen ? height * 0.35 : height * 0.4,
+    maxHeight: 400,
+    minHeight: 200,
     backgroundColor: "#f8f9fa",
+    width: "100%",
   },
   mainImage: {
     width: "100%",
@@ -629,19 +660,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "50%",
     transform: [{ translateY: -20 }],
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: getSpacing(36, 40, 44),
+    height: getSpacing(36, 40, 44),
+    borderRadius: getSpacing(18, 20, 22),
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
   },
   prevButton: {
-    left: 16,
+    left: getSpacing(12, 16, 20),
     backgroundColor: "rgba(0,0,0,0.3)",
   },
   nextButton: {
-    right: 16,
+    right: getSpacing(12, 16, 20),
     backgroundColor: "rgba(0,0,0,0.3)",
   },
   loadingContainer: {
@@ -675,7 +706,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   card: {
-    margin: 16,
+    margin: getSpacing(12, 16, 20),
+    marginBottom: getSpacing(12, 16, 20),
     borderRadius: 12,
     overflow: "hidden",
     elevation: 2,
@@ -683,11 +715,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    padding: getSpacing(12, 16, 20),
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: getFontSize(16, 18, 20),
     fontWeight: "bold",
-    marginBottom: 16,
+    marginBottom: getSpacing(12, 16, 20),
   },
   priceContainer: {
     flexDirection: "row",
@@ -739,8 +772,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   description: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: getFontSize(13, 14, 15),
+    lineHeight: getFontSize(18, 20, 22),
     color: "#666",
   },
   featuresContainer: {
@@ -754,12 +787,14 @@ const styles = StyleSheet.create({
   featuresGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: getSpacing(4, 8, 12),
   },
   featureItem: {
-    width: "50%",
+    width: isSmallScreen ? "100%" : "48%",
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: getSpacing(6, 8, 10),
+    flexShrink: 1,
   },
   featureIcon: {
     width: 16,
@@ -823,9 +858,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   locationText: {
-    fontSize: 14,
+    fontSize: getFontSize(13, 14, 15),
     color: "#333",
-    marginLeft: 8,
+    marginLeft: getSpacing(6, 8, 10),
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
   bottomActions: {
     position: "absolute",
@@ -833,8 +870,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: "row",
-    padding: 16,
-    gap: 12,
+    padding: getSpacing(12, 16, 20),
+    gap: getSpacing(8, 12, 16),
     elevation: 8,
     borderTopWidth: 1,
     borderTopColor: "rgba(0,0,0,0.1)",
@@ -842,26 +879,26 @@ const styles = StyleSheet.create({
   callButton: {
     flex: 1,
     borderRadius: 12,
-    height: 48,
+    minHeight: getSpacing(44, 48, 52),
   },
   messageButton: {
     flex: 1,
     borderRadius: 12,
-    height: 48,
+    minHeight: getSpacing(44, 48, 52),
   },
   // Missing styles for image indicators
   imageIndicator: {
     position: "absolute",
-    bottom: 16,
-    left: 16,
+    bottom: getSpacing(12, 16, 20),
+    left: getSpacing(12, 16, 20),
     backgroundColor: "rgba(0,0,0,0.7)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: getSpacing(8, 10, 12),
+    paddingVertical: getSpacing(4, 6, 8),
     borderRadius: 12,
   },
   imageIndicatorText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: getFontSize(11, 12, 13),
     fontWeight: "bold",
   },
   // Missing styles for car header section
@@ -876,9 +913,10 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   carTitle: {
-    fontSize: 20,
+    fontSize: getFontSize(18, 20, 22),
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: getSpacing(6, 8, 10),
+    flexShrink: 1,
   },
   verifiedRow: {
     flexDirection: "row",
@@ -887,17 +925,17 @@ const styles = StyleSheet.create({
   },
   conditionBadge: {
     backgroundColor: "#e8f5e8",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: getSpacing(6, 8, 10),
+    paddingVertical: getSpacing(3, 4, 5),
     borderRadius: 6,
   },
   conditionText: {
-    fontSize: 12,
+    fontSize: getFontSize(11, 12, 13),
     fontWeight: "bold",
     color: "#2ecc71",
   },
   priceSection: {
-    marginBottom: 16,
+    marginBottom: getSpacing(12, 16, 20),
   },
   priceWithNegotiable: {
     flexDirection: "row",
@@ -912,16 +950,20 @@ const styles = StyleSheet.create({
   quickStats: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: getSpacing(12, 16, 20),
+    flexWrap: "wrap",
   },
   statItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: getSpacing(4, 6, 8),
     flex: 1,
+    minWidth: "30%",
+    marginBottom: getSpacing(4, 6, 8),
   },
   statText: {
-    fontSize: 14,
+    fontSize: getFontSize(12, 14, 16),
+    flexShrink: 1,
   },
   listingCount: {
     fontSize: 12,
@@ -930,7 +972,9 @@ const styles = StyleSheet.create({
   conditionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: getSpacing(8, 12, 16),
+    flexWrap: "wrap",
+    marginTop: getSpacing(4, 6, 8),
   },
 });
 

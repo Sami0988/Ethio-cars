@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,8 +19,17 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { useUpdateCar } from "../features/cars/car.hooks";
+import {
+  useCarFeatures,
+  useCarLocations,
+  useUpdateCar,
+} from "../features/cars/car.hooks";
+import { Feature } from "../features/cars/car.types";
 import { useImagePicker } from "../hooks/useImagePicker";
 import { getFontSize, getSpacing } from "../utils/responsive";
 
@@ -29,6 +39,7 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
   const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
 
   const updateCarMutation = useUpdateCar();
   const { takePhoto, pickFromLibrary, isPicking, error, pickedImage } =
@@ -40,11 +51,35 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
     mileage: "",
     description: "",
     status: "Active",
+    // Technical Details
+    fuel_type: "",
+    transmission: "",
+    body_type: "",
+    drive_type: "",
+    // Location
+    region_id: undefined as number | undefined,
+    // Features
+    features: [] as number[],
   });
 
   const [currentImages, setCurrentImages] = useState<any[]>([]);
   const [newImages, setNewImages] = useState<any[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
+
+  // Location state
+  const [selectedRegion, setSelectedRegion] = useState<string>("");
+  const [showRegionModal, setShowRegionModal] = useState(false);
+
+  // Features state
+  const [selectedFeatures, setSelectedFeatures] = useState<Set<number>>(
+    new Set(),
+  );
+  const [showFeaturesModal, setShowFeaturesModal] = useState(false);
+
+  // Fetch features and locations
+  const { data: featuresResponse } = useCarFeatures();
+  const { data: locationsResponse } = useCarLocations();
+
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -89,9 +124,21 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
           mileage: car.mileage?.toString() || "",
           description: car.description || "",
           status: car.status || "Active",
+          fuel_type: car.fuel_type || "",
+          transmission: car.transmission || "",
+          body_type: car.body_type || "",
+          drive_type: car.drive_type || "",
+          region_id: car.location?.region_id,
+          features: car.features?.map((f: any) => f.feature_id) || [],
         });
         // Load current images
         setCurrentImages(car.images || []);
+        // Set location display values
+        setSelectedRegion(car.location?.region || "");
+        // Set selected features
+        setSelectedFeatures(
+          new Set(car.features?.map((f: any) => f.feature_id) || []),
+        );
       } else {
         Alert.alert("Error", data.message || "Failed to load car details");
       }
@@ -130,6 +177,20 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
     if (formData.mileage) updateData.mileage = parseInt(formData.mileage);
     if (formData.description) updateData.description = formData.description;
     if (formData.status) updateData.status = formData.status;
+
+    // Add technical details
+    if (formData.fuel_type) updateData.fuel_type = formData.fuel_type;
+    if (formData.transmission) updateData.transmission = formData.transmission;
+    if (formData.body_type) updateData.body_type = formData.body_type;
+    if (formData.drive_type) updateData.drive_type = formData.drive_type;
+
+    // Add location
+    if (formData.region_id) updateData.region_id = formData.region_id;
+
+    // Add features (replace all features with new list)
+    if (formData.features.length > 0) {
+      updateData.features = formData.features;
+    }
 
     // Add image management
     if (imagesToDelete.length > 0) {
@@ -237,7 +298,7 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
 
   if (isLoading) {
     return (
-      <View
+      <SafeAreaView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.loadingContainer}>
@@ -246,19 +307,28 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
             Loading car details...
           </Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View
+    <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={["bottom"]}
     >
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.colors.surface,
+            paddingTop: insets.top,
+          },
+        ]}
+      >
         <IconButton
           icon="arrow-left"
-          size={24}
+          size={22}
           iconColor={theme.colors.onSurface}
           onPress={() => router.back()}
         />
@@ -272,8 +342,16 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingBottom: insets.bottom + getSpacing(100, 120, 140),
+          },
+        ]}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        bounces={true}
+        alwaysBounceVertical={false}
       >
         {/* Price Section */}
         <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -512,6 +590,284 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
           </View>
         </Card>
 
+        {/* Technical Details */}
+        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Text
+            style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
+          >
+            Technical Details
+          </Text>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>
+              Fuel Type
+            </Text>
+            <View style={styles.buttonRow}>
+              {[
+                "Gasoline",
+                "Diesel",
+                "Electric",
+                "Hybrid",
+                "Plug-in Hybrid",
+              ].map((fuel) => (
+                <Button
+                  key={fuel}
+                  mode={formData.fuel_type === fuel ? "contained" : "outlined"}
+                  onPress={() => updateFormData("fuel_type", fuel)}
+                  style={[
+                    styles.optionButton,
+                    {
+                      backgroundColor:
+                        formData.fuel_type === fuel
+                          ? theme.colors.primary
+                          : "transparent",
+                    },
+                  ]}
+                  textColor={
+                    formData.fuel_type === fuel
+                      ? theme.colors.onPrimary
+                      : theme.colors.primary
+                  }
+                >
+                  {fuel}
+                </Button>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>
+              Transmission
+            </Text>
+            <View style={styles.buttonRow}>
+              {[
+                "Automatic",
+                "Manual",
+                "CVT",
+                "Semi-Automatic",
+                "Dual-Clutch",
+              ].map((trans) => (
+                <Button
+                  key={trans}
+                  mode={
+                    formData.transmission === trans ? "contained" : "outlined"
+                  }
+                  onPress={() => updateFormData("transmission", trans)}
+                  style={[
+                    styles.optionButton,
+                    {
+                      backgroundColor:
+                        formData.transmission === trans
+                          ? theme.colors.primary
+                          : "transparent",
+                    },
+                  ]}
+                  textColor={
+                    formData.transmission === trans
+                      ? theme.colors.onPrimary
+                      : theme.colors.primary
+                  }
+                >
+                  {trans}
+                </Button>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>
+              Body Type
+            </Text>
+            <View style={styles.buttonRow}>
+              {[
+                "Sedan",
+                "SUV",
+                "Truck",
+                "Coupe",
+                "Hatchback",
+                "Van",
+                "Convertible",
+                "Wagon",
+              ].map((body) => (
+                <Button
+                  key={body}
+                  mode={formData.body_type === body ? "contained" : "outlined"}
+                  onPress={() => updateFormData("body_type", body)}
+                  style={[
+                    styles.optionButton,
+                    {
+                      backgroundColor:
+                        formData.body_type === body
+                          ? theme.colors.primary
+                          : "transparent",
+                    },
+                  ]}
+                  textColor={
+                    formData.body_type === body
+                      ? theme.colors.onPrimary
+                      : theme.colors.primary
+                  }
+                >
+                  {body}
+                </Button>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>
+              Drive Type
+            </Text>
+            <View style={styles.buttonRow}>
+              {["FWD", "RWD", "AWD", "4WD"].map((drive) => (
+                <Button
+                  key={drive}
+                  mode={
+                    formData.drive_type === drive ? "contained" : "outlined"
+                  }
+                  onPress={() => updateFormData("drive_type", drive)}
+                  style={[
+                    styles.optionButton,
+                    {
+                      backgroundColor:
+                        formData.drive_type === drive
+                          ? theme.colors.primary
+                          : "transparent",
+                    },
+                  ]}
+                  textColor={
+                    formData.drive_type === drive
+                      ? theme.colors.onPrimary
+                      : theme.colors.primary
+                  }
+                >
+                  {drive}
+                </Button>
+              ))}
+            </View>
+          </View>
+        </Card>
+
+        {/* Location */}
+        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Text
+            style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
+          >
+            Location
+          </Text>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>
+              Region
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowRegionModal(true)}
+              style={[
+                styles.locationButton,
+                { borderColor: theme.colors.outline },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.locationButtonText,
+                  {
+                    color: selectedRegion
+                      ? theme.colors.onSurface
+                      : theme.colors.onSurfaceVariant,
+                  },
+                ]}
+              >
+                {selectedRegion || "Select Region"}
+              </Text>
+              <MaterialCommunityIcons
+                name="chevron-down"
+                size={20}
+                color={theme.colors.onSurfaceVariant}
+              />
+            </TouchableOpacity>
+          </View>
+        </Card>
+
+        {/* Features */}
+        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Text
+            style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
+          >
+            Features & Extras
+          </Text>
+
+          <View style={styles.formGroup}>
+            <TouchableOpacity
+              onPress={() => setShowFeaturesModal(true)}
+              style={[
+                styles.locationButton,
+                { borderColor: theme.colors.outline },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.locationButtonText,
+                  { color: theme.colors.onSurface },
+                ]}
+              >
+                {selectedFeatures.size > 0
+                  ? `${selectedFeatures.size} features selected`
+                  : "Select Features"}
+              </Text>
+              <MaterialCommunityIcons
+                name="chevron-down"
+                size={20}
+                color={theme.colors.onSurfaceVariant}
+              />
+            </TouchableOpacity>
+
+            {selectedFeatures.size > 0 && (
+              <View style={styles.selectedFeaturesContainer}>
+                {Array.from(selectedFeatures).map((featureId) => {
+                  const allFeatures = Array.isArray(featuresResponse?.data)
+                    ? featuresResponse.data
+                    : featuresResponse?.data?.features || [];
+                  const feature = allFeatures.find(
+                    (f: Feature) => f.feature_id === featureId,
+                  );
+                  return feature ? (
+                    <View
+                      key={featureId}
+                      style={[
+                        styles.featureChip,
+                        { backgroundColor: theme.colors.primary + "20" },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.featureChipText,
+                          { color: theme.colors.primary },
+                        ]}
+                      >
+                        {feature.name}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const newSet = new Set(selectedFeatures);
+                          newSet.delete(featureId);
+                          setSelectedFeatures(newSet);
+                          updateFormData("features", Array.from(newSet));
+                        }}
+                      >
+                        <MaterialCommunityIcons
+                          name="close"
+                          size={16}
+                          color={theme.colors.primary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ) : null;
+                })}
+              </View>
+            )}
+          </View>
+        </Card>
+
         {/* Bottom padding */}
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -520,7 +876,10 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
       <View
         style={[
           styles.bottomActions,
-          { backgroundColor: theme.colors.surface },
+          {
+            backgroundColor: theme.colors.surface,
+            paddingBottom: insets.bottom + 16, // Add safe area padding
+          },
         ]}
       >
         <Button
@@ -541,9 +900,176 @@ const EditCarScreen: React.FC<EditCarScreenProps> = React.memo(() => {
           Save Changes
         </Button>
       </View>
-    </View>
+
+      {/* Region Selection Modal */}
+      <Modal
+        visible={showRegionModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowRegionModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text
+                style={[styles.modalTitle, { color: theme.colors.onSurface }]}
+              >
+                Select Region
+              </Text>
+              <TouchableOpacity onPress={() => setShowRegionModal(false)}>
+                <MaterialCommunityIcons
+                  name="close"
+                  size={24}
+                  color={theme.colors.onSurface}
+                />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScrollView}>
+              {(
+                (locationsResponse?.data as any)?.regions ||
+                (Array.isArray(locationsResponse?.data)
+                  ? locationsResponse.data
+                  : [])
+              )?.map((region: any) => (
+                <TouchableOpacity
+                  key={region.region_id}
+                  onPress={() => {
+                    updateFormData("region_id", region.region_id);
+                    setSelectedRegion(region.name);
+                    setShowRegionModal(false);
+                  }}
+                  style={[
+                    styles.modalItem,
+                    {
+                      backgroundColor:
+                        formData.region_id === region.region_id
+                          ? theme.colors.primary + "20"
+                          : "transparent",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.modalItemText,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {region.name}
+                  </Text>
+                  {formData.region_id === region.region_id && (
+                    <MaterialCommunityIcons
+                      name="check"
+                      size={20}
+                      color={theme.colors.primary}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Features Selection Modal */}
+      <Modal
+        visible={showFeaturesModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFeaturesModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text
+                style={[styles.modalTitle, { color: theme.colors.onSurface }]}
+              >
+                Select Features ({selectedFeatures.size} selected)
+              </Text>
+              <TouchableOpacity onPress={() => setShowFeaturesModal(false)}>
+                <MaterialCommunityIcons
+                  name="close"
+                  size={24}
+                  color={theme.colors.onSurface}
+                />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScrollView}>
+              {(Array.isArray(featuresResponse?.data)
+                ? featuresResponse.data
+                : featuresResponse?.data?.features || []
+              )?.map((feature: Feature) => {
+                const isSelected = selectedFeatures.has(feature.feature_id);
+                return (
+                  <TouchableOpacity
+                    key={feature.feature_id}
+                    onPress={() => {
+                      const newSet = new Set(selectedFeatures);
+                      if (isSelected) {
+                        newSet.delete(feature.feature_id);
+                      } else {
+                        newSet.add(feature.feature_id);
+                      }
+                      setSelectedFeatures(newSet);
+                      updateFormData("features", Array.from(newSet));
+                    }}
+                    style={[
+                      styles.modalItem,
+                      {
+                        backgroundColor: isSelected
+                          ? theme.colors.primary + "20"
+                          : "transparent",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.modalItemText,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {feature.name}
+                    </Text>
+                    {isSelected && (
+                      <MaterialCommunityIcons
+                        name="check"
+                        size={20}
+                        color={theme.colors.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <View style={styles.modalFooter}>
+              <Button
+                mode="contained"
+                onPress={() => setShowFeaturesModal(false)}
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+              >
+                Done
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 });
+
+export default EditCarScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -588,13 +1114,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: getSpacing(12, 16, 20),
+    paddingTop: getSpacing(8, 12, 16),
     paddingBottom: getSpacing(100, 120, 140),
   },
   card: {
     marginBottom: getSpacing(12, 16, 20),
-    padding: getSpacing(16, 20, 24),
+    padding: getSpacing(12, 16, 20),
     borderRadius: 16,
     elevation: 2,
+    overflow: "hidden",
   },
   sectionTitle: {
     fontSize: getFontSize(16, 18, 20),
@@ -603,29 +1131,29 @@ const styles = StyleSheet.create({
     fontFamily: "System",
   },
   formGroup: {
-    marginBottom: 16,
+    marginBottom: getSpacing(12, 16, 20),
   },
   label: {
-    fontSize: 16,
+    fontSize: getFontSize(14, 16, 18),
     fontWeight: "500",
-    marginBottom: 8,
+    marginBottom: getSpacing(6, 8, 10),
     fontFamily: "System",
   },
   input: {
-    fontSize: 16,
+    fontSize: getFontSize(14, 16, 18),
   },
   textArea: {
-    height: 120,
+    minHeight: getSpacing(100, 120, 140),
   },
   imageGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: getSpacing(8, 12, 16),
   },
   imageContainer: {
     position: "relative",
-    width: 100,
-    height: 100,
+    width: getSpacing(80, 100, 120),
+    height: getSpacing(80, 100, 120),
     borderRadius: 8,
     overflow: "hidden",
   },
@@ -652,34 +1180,38 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: "dashed",
     borderRadius: 8,
-    padding: 16,
-    gap: 8,
+    padding: getSpacing(12, 16, 20),
+    gap: getSpacing(6, 8, 10),
+    minHeight: getSpacing(50, 60, 70),
   },
   addImageText: {
-    fontSize: 16,
+    fontSize: getFontSize(14, 16, 18),
     fontWeight: "600",
   },
   switchGroup: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: getSpacing(12, 16, 20),
+    flexWrap: "wrap",
   },
   switchContainer: {
     flexDirection: "row",
   },
   switchButton: {
     borderRadius: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: getSpacing(12, 16, 20),
+    minHeight: getSpacing(36, 40, 44),
   },
   statusButtons: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: getSpacing(6, 8, 10),
   },
   statusButton: {
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: getSpacing(10, 12, 14),
+    minHeight: getSpacing(36, 40, 44),
   },
   bottomPadding: {
     height: 20,
@@ -690,8 +1222,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: "row",
-    padding: 16,
-    gap: 12,
+    padding: getSpacing(12, 16, 20),
+    gap: getSpacing(8, 12, 16),
     elevation: 8,
     borderTopWidth: 1,
     borderTopColor: "rgba(0,0,0,0.1)",
@@ -699,11 +1231,99 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     borderRadius: 12,
-    height: 48,
+    minHeight: getSpacing(44, 48, 52),
   },
   saveButton: {
     flex: 1,
     borderRadius: 12,
-    height: 48,
+    minHeight: getSpacing(44, 48, 52),
+  },
+  buttonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: getSpacing(6, 8, 10),
+    marginTop: getSpacing(4, 6, 8),
+  },
+  optionButton: {
+    borderRadius: 8,
+    paddingHorizontal: getSpacing(10, 12, 14),
+    minHeight: getSpacing(36, 40, 44),
+  },
+  locationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: getSpacing(12, 16, 20),
+    minHeight: getSpacing(44, 48, 52),
+  },
+  locationButtonText: {
+    fontSize: getFontSize(14, 16, 18),
+    flex: 1,
+  },
+  selectedFeaturesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: getSpacing(6, 8, 10),
+    marginTop: getSpacing(8, 12, 16),
+  },
+  featureChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: getSpacing(10, 12, 14),
+    paddingVertical: getSpacing(6, 8, 10),
+    borderRadius: 20,
+    gap: getSpacing(4, 6, 8),
+  },
+  featureChipText: {
+    fontSize: getFontSize(12, 14, 16),
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "80%",
+    paddingBottom: getSpacing(20, 24, 28),
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: getSpacing(16, 20, 24),
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.1)",
+  },
+  modalTitle: {
+    fontSize: getFontSize(18, 20, 22),
+    fontWeight: "bold",
+  },
+  modalScrollView: {
+    maxHeight: 400,
+  },
+  modalItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: getSpacing(12, 16, 20),
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.05)",
+  },
+  modalItemText: {
+    fontSize: getFontSize(14, 16, 18),
+    flex: 1,
+  },
+  modalFooter: {
+    padding: getSpacing(16, 20, 24),
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.1)",
+  },
+  modalButton: {
+    borderRadius: 12,
+    minHeight: getSpacing(44, 48, 52),
   },
 });

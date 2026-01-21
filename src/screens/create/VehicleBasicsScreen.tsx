@@ -5,7 +5,9 @@ import {
   Alert,
   Animated,
   Dimensions,
+  Keyboard,
   Modal,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,6 +16,10 @@ import {
   View,
 } from "react-native";
 import { Button, Card, TextInput, useTheme } from "react-native-paper";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useAuthStore } from "../../features/auth/auth.store";
 import { useCarMakes } from "../../features/cars/car.hooks";
 import { VehicleData } from "../../types/vehicle";
@@ -32,8 +38,9 @@ export default React.memo(function VehicleBasicsScreen({
   updateVehicleData,
 }: VehicleBasicsScreenProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { width } = Dimensions.get("window");
-  const styles = getDynamicStyles(theme, width);
+  const styles = getDynamicStyles(theme, width, insets);
 
   // Check authentication status
   const isAuthenticated = useAuthStore((state: any) => state.isAuthenticated);
@@ -69,6 +76,27 @@ export default React.memo(function VehicleBasicsScreen({
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keyboard visibility state
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  // Listen for keyboard show/hide events
+  useEffect(() => {
+    const keyboardShowEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const keyboardHideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSubscription = Keyboard.addListener(keyboardShowEvent, () => {
+      setIsKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener(keyboardHideEvent, () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   // Debounce search term
   useEffect(() => {
@@ -546,7 +574,7 @@ export default React.memo(function VehicleBasicsScreen({
   );
 
   return (
-    <Animated.View style={[styles.fullScreen, { opacity: fadeAnim }]}>
+    <SafeAreaView style={styles.fullScreen} edges={["bottom", "left", "right"]}>
       <StatusBar
         barStyle={theme.dark ? "light-content" : "dark-content"}
         backgroundColor={theme.colors.background}
@@ -1187,47 +1215,49 @@ export default React.memo(function VehicleBasicsScreen({
         </View>
       </ScrollView>
 
-      {/* Continue Button */}
-      <View style={styles.footer}>
-        <Button
-          mode="contained"
-          onPress={handleSubmit}
-          style={[
-            styles.continueButton,
-            {
-              backgroundColor: theme.colors.primary,
-              opacity:
-                !formData.make ||
-                !formData.model ||
-                !formData.year ||
-                !formData.mileage ||
-                !formData.condition ||
-                !formData.doors ||
-                !formData.seats
-                  ? 0.6
-                  : 1,
-            },
-          ]}
-          labelStyle={[styles.buttonLabel, { color: theme.colors.onPrimary }]}
-          contentStyle={styles.buttonContent}
-          disabled={
-            !formData.make ||
-            !formData.model ||
-            !formData.year ||
-            !formData.mileage ||
-            !formData.condition ||
-            !formData.doors ||
-            !formData.seats
-          }
-        >
-          <Ionicons
-            name="arrow-forward"
-            size={20}
-            color={theme.colors.onPrimary}
-          />
-          <Text style={styles.buttonText}>Continue</Text>
-        </Button>
-      </View>
+      {/* Continue Button - Hidden when keyboard is visible */}
+      {!isKeyboardVisible && (
+        <View style={styles.footer}>
+          <Button
+            mode="contained"
+            onPress={handleSubmit}
+            style={[
+              styles.continueButton,
+              {
+                backgroundColor: theme.colors.primary,
+                opacity:
+                  !formData.make ||
+                  !formData.model ||
+                  !formData.year ||
+                  !formData.mileage ||
+                  !formData.condition ||
+                  !formData.doors ||
+                  !formData.seats
+                    ? 0.6
+                    : 1,
+              },
+            ]}
+            labelStyle={[styles.buttonLabel, { color: theme.colors.onPrimary }]}
+            contentStyle={styles.buttonContent}
+            disabled={
+              !formData.make ||
+              !formData.model ||
+              !formData.year ||
+              !formData.mileage ||
+              !formData.condition ||
+              !formData.doors ||
+              !formData.seats
+            }
+          >
+            <Ionicons
+              name="arrow-forward"
+              size={20}
+              color={theme.colors.onPrimary}
+            />
+            <Text style={styles.buttonText}>Continue</Text>
+          </Button>
+        </View>
+      )}
 
       {/* Modals */}
       {renderModal(
@@ -1277,11 +1307,11 @@ export default React.memo(function VehicleBasicsScreen({
         formData.seats,
         (value) => updateFormData("seats", value),
       )}
-    </Animated.View>
+    </SafeAreaView>
   );
 });
 
-const getDynamicStyles = (theme: any, screenWidth: number) => {
+const getDynamicStyles = (theme: any, screenWidth: number, insets: any) => {
   const isSmallScreen = screenWidth < 375;
   const isLargeScreen = screenWidth > 414;
 
@@ -1295,7 +1325,7 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       alignItems: "center",
       justifyContent: "space-between",
       paddingHorizontal: isSmallScreen ? 16 : 24,
-      paddingTop: isSmallScreen ? 20 : 24,
+      paddingTop: insets.top, // Use safe area inset for status bar
       paddingBottom: isSmallScreen ? 8 : 10,
       backgroundColor: theme.colors.background,
     },

@@ -74,9 +74,11 @@ export default function RootLayout() {
   // Listen for auth state changes after initial load
   useEffect(() => {
     if (initialRoute && !loading) {
-      if (isAuthenticated && initialRoute !== "/(tabs)") {
-        // User just logged in, redirect to tabs
-        setInitialRoute("/(tabs)");
+      if (isAuthenticated) {
+        // User is authenticated, always go to home tabs (skip onboarding check)
+        if (initialRoute !== "/(tabs)") {
+          setInitialRoute("/(tabs)");
+        }
       } else if (!isAuthenticated && initialRoute === "/(tabs)") {
         // User just logged out, check onboarding status
         const checkOnboarding = async () => {
@@ -101,7 +103,8 @@ export default function RootLayout() {
     );
   }
 
-  // After decision, render app stack and perform a single redirect
+  // After decision, render app stack
+  // Only redirect on initial load - authenticated users should never see onboarding
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
@@ -114,7 +117,10 @@ export default function RootLayout() {
             edges={["top", "left", "right"]}
           >
             <Stack screenOptions={{ headerShown: false }} />
-            {initialRoute && <Redirect href={initialRoute} />}
+            {/* Only redirect if we have an initial route and it's not onboarding for authenticated users */}
+            {initialRoute && 
+             !(isAuthenticated && initialRoute === "/onboarding") && 
+             <Redirect href={initialRoute} />}
           </SafeAreaView>
         </ThemeProvider>
       </QueryClientProvider>

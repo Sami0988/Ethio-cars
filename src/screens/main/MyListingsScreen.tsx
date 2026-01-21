@@ -9,6 +9,10 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useCarListings } from "../../features/cars/car.hooks";
 import { CarListing } from "../../features/cars/car.types";
@@ -16,6 +20,7 @@ import { CarListing } from "../../features/cars/car.types";
 const MyListingsScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   const {
@@ -26,7 +31,7 @@ const MyListingsScreen: React.FC = () => {
   } = useCarListings(
     1,
     20,
-    selectedStatus === "all" ? undefined : selectedStatus
+    selectedStatus === "all" ? undefined : selectedStatus,
   );
   const listings = listingsData?.data?.listings || [];
 
@@ -160,11 +165,11 @@ const MyListingsScreen: React.FC = () => {
   );
 
   return (
-    <View
+    <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={[styles.title, { color: theme.colors.onSurface }]}>
           My Listings
         </Text>
@@ -208,7 +213,7 @@ const MyListingsScreen: React.FC = () => {
         refreshing={isLoading}
         onRefresh={refetch}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -220,7 +225,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    paddingHorizontal: 16,
     paddingBottom: 8,
   },
   title: {

@@ -255,6 +255,22 @@ export const useAuthStore = create<AuthStore>()(
         }));
       },
 
+      fetchProfile: async () => {
+        try {
+          const profileData = await authService.fetchProfile();
+          // Only update if we still have a valid user (not logged out)
+          const currentState = get();
+          if (currentState.isAuthenticated && currentState.user) {
+            set({ user: profileData });
+          }
+          return profileData;
+        } catch (error) {
+          console.error("Failed to fetch profile:", error);
+          // Don't throw error to prevent affecting auth state
+          return null;
+        }
+      },
+
       initializeAuth: async () => {
         try {
           const [storedUser, storedToken, isValid] = await Promise.all([

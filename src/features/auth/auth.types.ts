@@ -131,6 +131,7 @@ export interface AuthActions {
   setLoading: (loading: boolean) => void;
   initializeAuth: () => Promise<void>; // Add initialization
   updateUser: (userData: Partial<AppUser>) => void; // Update user data
+  fetchProfile: () => Promise<AppUser>; // Fetch complete profile data
 }
 
 export type AuthStore = AuthState & AuthActions;

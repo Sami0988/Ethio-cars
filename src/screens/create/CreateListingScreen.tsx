@@ -2,6 +2,10 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useAuthStore } from "../../features/auth/auth.store";
 import { VehicleData } from "../../types/vehicle";
@@ -17,6 +21,7 @@ const CreateListingScreen: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const insets = useSafeAreaInsets();
 
   // Step management - move to top before any conditional returns
   const [currentStep, setCurrentStep] = useState(1);
@@ -53,10 +58,10 @@ const CreateListingScreen: React.FC = () => {
   // Early return if not authenticated
   if (!isAuthenticated) {
     return (
-      <View
+      <SafeAreaView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        <View style={styles.signInPrompt}>
+        <View style={[styles.signInPrompt, { paddingTop: insets.top + 40 }]}>
           <MaterialCommunityIcons
             name="account-circle-outline"
             size={80}
@@ -87,7 +92,7 @@ const CreateListingScreen: React.FC = () => {
             Sign In
           </Button>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -108,6 +113,31 @@ const CreateListingScreen: React.FC = () => {
       const newData = { ...prev, ...updates };
       return newData;
     });
+  };
+
+  const resetVehicleData = () => {
+    setVehicleData({
+      make: "",
+      model: "",
+      year: "",
+      color: "",
+      condition: "",
+      price: "",
+      negotiable: false,
+      mileage: "",
+      transmission: "",
+      fuel: "",
+      photos: [],
+      location: {
+        region: "",
+        zone: "",
+        city: "",
+        address: "",
+      },
+      description: "",
+      features: [],
+    });
+    setCurrentStep(1);
   };
 
   const renderScreen = () => {
@@ -170,12 +200,14 @@ const CreateListingScreen: React.FC = () => {
         return (
           <ReviewAndSubmitScreen
             onContinue={() => {
-              // Navigate to home screen to see fresh data
+              // Reset all form data and navigate to home screen
+              resetVehicleData();
               router.replace("/(tabs)");
             }}
             onBack={handleBack}
             vehicleData={vehicleData}
             jumpToStep={jumpToStep}
+            resetVehicleData={resetVehicleData}
           />
         );
       default:

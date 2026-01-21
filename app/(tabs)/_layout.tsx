@@ -77,6 +77,7 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: `${theme.colors.onSurface}70`,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
           borderTopWidth: 0,

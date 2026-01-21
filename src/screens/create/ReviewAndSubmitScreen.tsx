@@ -16,6 +16,10 @@ import {
 import { Button, useTheme } from "react-native-paper";
 import { useCreateCar } from "../../features/cars/car.hooks";
 import { VehicleData } from "../../types/vehicle";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 // API Enum values for validation
 const VALID_FUEL_TYPES = [
@@ -74,6 +78,7 @@ interface ReviewAndSubmitScreenProps {
   onBack?: () => void;
   vehicleData?: VehicleData;
   jumpToStep?: (step: number) => void;
+  resetVehicleData?: () => void;
 }
 
 export default function ReviewAndSubmitScreen({
@@ -81,10 +86,12 @@ export default function ReviewAndSubmitScreen({
   onBack,
   vehicleData,
   jumpToStep,
+  resetVehicleData,
 }: ReviewAndSubmitScreenProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { width } = Dimensions.get("window");
-  const styles = getDynamicStyles(theme, width);
+  const styles = getDynamicStyles(theme, width, insets);
 
   // API mutation for creating car listing
   const createCarMutation = useCreateCar();
@@ -251,6 +258,11 @@ export default function ReviewAndSubmitScreen({
       // Animate success
       animateSuccess();
 
+      // Reset all form data after successful publish
+      if (resetVehicleData) {
+        resetVehicleData();
+      }
+
       Alert.alert(
         "🎉 Success!",
         "Your car listing has been published successfully.",
@@ -367,7 +379,7 @@ export default function ReviewAndSubmitScreen({
   );
 
   return (
-    <View style={styles.fullScreen}>
+    <SafeAreaView style={styles.fullScreen} edges={["bottom", "left", "right"]}>
       <StatusBar
         barStyle={theme.dark ? "light-content" : "dark-content"}
         backgroundColor={theme.colors.background}
@@ -1187,11 +1199,11 @@ export default function ReviewAndSubmitScreen({
           </View>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
-const getDynamicStyles = (theme: any, screenWidth: number) => {
+const getDynamicStyles = (theme: any, screenWidth: number, insets: any) => {
   const isSmallScreen = screenWidth < 375;
 
   return StyleSheet.create({
@@ -1203,7 +1215,7 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: isSmallScreen ? 16 : 20,
-      paddingTop: 15,
+      paddingTop: insets.top,
       paddingBottom: 8,
       backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
@@ -1244,10 +1256,11 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       alignItems: "center",
       justifyContent: "space-between",
       marginBottom: 12,
+      paddingHorizontal: 4,
     },
     stepItem: {
       alignItems: "center",
-      minWidth: 50,
+      minWidth: 44,
     },
     stepCircle: {
       width: 32,
@@ -1282,7 +1295,7 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
     stepConnector: {
       flex: 1,
       height: 2,
-      maxWidth: 40,
+      maxWidth: 32,
       marginHorizontal: 4,
       marginTop: -20,
     },

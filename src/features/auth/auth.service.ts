@@ -330,6 +330,37 @@ class AuthService {
   }
 
   /**
+   * Fetch complete user profile from /user/profile endpoint
+   */
+  async fetchProfile(): Promise<any> {
+    try {
+      const token = await this.getStoredToken();
+      if (!token) throw new Error("No authentication token found");
+
+      const response = await apiClient.get("/user/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data.success && response.data.data) {
+        const profileData = response.data.data;
+
+        // Update stored user data with complete profile
+        await setItemAsync(USER_DATA_KEY, JSON.stringify(profileData));
+
+        // Convert and return app user format
+        return convertApiUserToAppUser(profileData);
+      }
+
+      throw new Error("Failed to fetch profile");
+    } catch (error) {
+      console.error("Fetch profile error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Update user profile
    */
   async updateProfile(profileData: any): Promise<any> {

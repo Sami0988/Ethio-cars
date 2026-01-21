@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { Button, useTheme } from "react-native-paper";
 import { VehicleData } from "../../types/vehicle";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface Photo {
   id: string;
@@ -42,8 +43,9 @@ export default function AddPhotosScreen({
   updateVehicleData,
 }: AddPhotosScreenProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { width } = Dimensions.get("window");
-  const styles = getDynamicStyles(theme, width);
+  const styles = getDynamicStyles(theme, width, insets);
 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -478,7 +480,7 @@ export default function AddPhotosScreen({
   };
 
   return (
-    <View style={styles.fullScreen}>
+    <SafeAreaView style={styles.fullScreen} edges={["bottom", "left", "right"]}>
       <StatusBar
         barStyle={theme.dark ? "light-content" : "dark-content"}
         backgroundColor={theme.colors.background}
@@ -513,13 +515,13 @@ export default function AddPhotosScreen({
             Step {currentStepIndex} • Visual Showcase
           </Text>
         </View>
-        <TouchableOpacity style={styles.helpButton}>
+        <View style={styles.headerIcon}>
           <Ionicons
-            name="help-circle"
+            name="camera"
             size={24}
-            color={theme.colors.onSurfaceVariant}
+            color={theme.colors.primary}
           />
-        </TouchableOpacity>
+        </View>
       </Animated.View>
 
       <ScrollView
@@ -1221,11 +1223,11 @@ export default function AddPhotosScreen({
           </View>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
-const getDynamicStyles = (theme: any, screenWidth: number) => {
+const getDynamicStyles = (theme: any, screenWidth: number, insets: any) => {
   const isSmallScreen = screenWidth < 375;
 
   return StyleSheet.create({
@@ -1237,7 +1239,7 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: isSmallScreen ? 16 : 20,
-      paddingTop: 15,
+      paddingTop: insets.top,
       paddingBottom: 8,
       backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
@@ -1259,8 +1261,13 @@ const getDynamicStyles = (theme: any, screenWidth: number) => {
       color: theme.colors.onSurfaceVariant,
       marginTop: 2,
     },
-    helpButton: {
-      padding: 4,
+    headerIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.colors.primary + "10",
+      justifyContent: "center",
+      alignItems: "center",
     },
     container: {
       flex: 1,
