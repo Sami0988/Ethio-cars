@@ -18,6 +18,7 @@ import {
   Chip,
   Divider,
   HelperText,
+  Snackbar,
   Text,
   TextInput,
   useTheme,
@@ -36,6 +37,8 @@ const RegisterScreen: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [animation] = useState(new Animated.Value(0));
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
   React.useEffect(() => {
     Animated.timing(animation, {
@@ -79,8 +82,18 @@ const RegisterScreen: React.FC = () => {
           device_info: values.device_info || "EthioCars Mobile App",
         };
         const { confirm_password, ...submitData } = formattedValues;
-        await register(submitData);
-        // Success handled by store
+        const result = await register(submitData);
+
+        // Show success message and redirect to login
+        if (result?.success) {
+          setSnackbarMessage(result.message || "Registration successful!");
+          setSnackbarVisible(true);
+
+          // Redirect to login after showing success message
+          setTimeout(() => {
+            router.push("/(auth)/login");
+          }, 4000);
+        }
       } catch (err) {
         // Error handled by store
       }
@@ -180,7 +193,12 @@ const RegisterScreen: React.FC = () => {
                   error={
                     !!(formik.touched.first_name && formik.errors.first_name)
                   }
-                  style={styles.nameInput}
+                  style={[
+                    styles.nameInput,
+                    formik.touched.first_name &&
+                      formik.errors.first_name &&
+                      styles.inputError,
+                  ]}
                   left={<TextInput.Icon icon="account" />}
                   mode="outlined"
                 />
@@ -192,18 +210,23 @@ const RegisterScreen: React.FC = () => {
                   error={
                     !!(formik.touched.last_name && formik.errors.last_name)
                   }
-                  style={styles.nameInput}
+                  style={[
+                    styles.nameInput,
+                    formik.touched.last_name &&
+                      formik.errors.last_name &&
+                      styles.inputError,
+                  ]}
                   mode="outlined"
                 />
               </View>
               <View style={styles.errorRow}>
                 {formik.touched.first_name && formik.errors.first_name && (
-                  <HelperText type="error" visible>
+                  <HelperText type="error" visible style={styles.errorText}>
                     {formik.errors.first_name}
                   </HelperText>
                 )}
                 {formik.touched.last_name && formik.errors.last_name && (
-                  <HelperText type="error" visible>
+                  <HelperText type="error" visible style={styles.errorText}>
                     {formik.errors.last_name}
                   </HelperText>
                 )}
@@ -215,14 +238,20 @@ const RegisterScreen: React.FC = () => {
                 onChangeText={formik.handleChange("username")}
                 onBlur={formik.handleBlur("username")}
                 error={!!(formik.touched.username && formik.errors.username)}
+                style={[
+                  styles.inputSpacing,
+                  formik.touched.username &&
+                    formik.errors.username &&
+                    styles.inputError,
+                ]}
                 left={<TextInput.Icon icon="account-circle" />}
                 mode="outlined"
-                style={styles.inputSpacing}
                 autoCapitalize="none"
               />
               <HelperText
                 type="error"
                 visible={!!(formik.touched.username && formik.errors.username)}
+                style={styles.errorText}
               >
                 {formik.errors.username}
               </HelperText>
@@ -233,15 +262,21 @@ const RegisterScreen: React.FC = () => {
                 onChangeText={formik.handleChange("email")}
                 onBlur={formik.handleBlur("email")}
                 error={!!(formik.touched.email && formik.errors.email)}
+                style={[
+                  styles.inputSpacing,
+                  formik.touched.email &&
+                    formik.errors.email &&
+                    styles.inputError,
+                ]}
                 left={<TextInput.Icon icon="email" />}
                 mode="outlined"
-                style={styles.inputSpacing}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
               <HelperText
                 type="error"
                 visible={!!(formik.touched.email && formik.errors.email)}
+                style={styles.errorText}
               >
                 {formik.errors.email}
               </HelperText>
@@ -252,15 +287,21 @@ const RegisterScreen: React.FC = () => {
                 onChangeText={handlePhoneChange}
                 onBlur={formik.handleBlur("phone")}
                 error={!!(formik.touched.phone && formik.errors.phone)}
+                style={[
+                  styles.inputSpacing,
+                  formik.touched.phone &&
+                    formik.errors.phone &&
+                    styles.inputError,
+                ]}
                 left={<TextInput.Icon icon="phone" />}
-                right={<TextInput.Icon icon="ethiopia" />}
+                right={<TextInput.Icon icon="flag" />}
                 mode="outlined"
-                style={styles.inputSpacing}
                 keyboardType="phone-pad"
               />
               <HelperText
                 type="error"
                 visible={!!(formik.touched.phone && formik.errors.phone)}
+                style={styles.errorText}
               >
                 {formik.errors.phone}
               </HelperText>
@@ -279,6 +320,12 @@ const RegisterScreen: React.FC = () => {
                 onBlur={formik.handleBlur("password")}
                 error={!!(formik.touched.password && formik.errors.password)}
                 secureTextEntry={!showPassword}
+                style={[
+                  styles.inputSpacing,
+                  formik.touched.password &&
+                    formik.errors.password &&
+                    styles.inputError,
+                ]}
                 left={<TextInput.Icon icon="lock" />}
                 right={
                   <TextInput.Icon
@@ -287,14 +334,38 @@ const RegisterScreen: React.FC = () => {
                   />
                 }
                 mode="outlined"
-                style={styles.inputSpacing}
               />
               <HelperText
                 type="error"
                 visible={!!(formik.touched.password && formik.errors.password)}
+                style={styles.errorText}
               >
                 {formik.errors.password}
               </HelperText>
+
+              {/* Password Policy */}
+              <View style={styles.passwordPolicyContainer}>
+                <Text variant="bodySmall" style={styles.passwordPolicyTitle}>
+                  Password must contain:
+                </Text>
+                <View style={styles.passwordPolicyList}>
+                  <Text variant="bodySmall" style={styles.passwordPolicyItem}>
+                    • At least 8 characters
+                  </Text>
+                  <Text variant="bodySmall" style={styles.passwordPolicyItem}>
+                    • One uppercase letter (A-Z)
+                  </Text>
+                  <Text variant="bodySmall" style={styles.passwordPolicyItem}>
+                    • One lowercase letter (a-z)
+                  </Text>
+                  <Text variant="bodySmall" style={styles.passwordPolicyItem}>
+                    • One number (0-9)
+                  </Text>
+                  <Text variant="bodySmall" style={styles.passwordPolicyItem}>
+                    • One special character (@$!%*?&)
+                  </Text>
+                </View>
+              </View>
 
               <TextInput
                 label="Confirm Password"
@@ -307,6 +378,12 @@ const RegisterScreen: React.FC = () => {
                     formik.errors.confirm_password
                   )
                 }
+                style={[
+                  styles.inputSpacing,
+                  formik.touched.confirm_password &&
+                    formik.errors.confirm_password &&
+                    styles.inputError,
+                ]}
                 secureTextEntry={!showConfirmPassword}
                 left={<TextInput.Icon icon="lock-check" />}
                 right={
@@ -316,7 +393,6 @@ const RegisterScreen: React.FC = () => {
                   />
                 }
                 mode="outlined"
-                style={styles.inputSpacing}
               />
               <HelperText
                 type="error"
@@ -326,6 +402,7 @@ const RegisterScreen: React.FC = () => {
                     formik.errors.confirm_password
                   )
                 }
+                style={styles.errorText}
               >
                 {formik.errors.confirm_password}
               </HelperText>
@@ -492,6 +569,16 @@ const RegisterScreen: React.FC = () => {
           </Card>
         </Animated.View>
       </ScrollView>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={2000}
+        style={styles.snackbar}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </KeyboardAvoidingView>
   );
 };
@@ -612,6 +699,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 20,
     marginBottom: 16,
+  },
+  passwordPolicyContainer: {
+    backgroundColor: "#f8f9fa",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: "#007bff",
+  },
+  passwordPolicyTitle: {
+    fontWeight: "600",
+    marginBottom: 8,
+    color: "#333",
+  },
+  passwordPolicyList: {
+    paddingLeft: 8,
+  },
+  passwordPolicyItem: {
+    lineHeight: 18,
+    color: "#666",
+    marginBottom: 2,
+  },
+  inputError: {
+    borderColor: "#ff4444",
+    backgroundColor: "#fff5f5",
+  },
+  errorText: {
+    color: "#ff4444",
+  },
+  snackbar: {
+    backgroundColor: "#4CAF50",
   },
 });
 

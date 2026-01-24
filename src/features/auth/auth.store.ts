@@ -180,15 +180,19 @@ export const useAuthStore = create<AuthStore>()(
           const response = await authService.register(userData);
 
           if (response.success && response.data) {
+            // Don't auto-login after registration - redirect to login instead
             set({
-              user: response.data.user,
-              token: response.data.token,
-              isAuthenticated: true,
+              user: null,
+              token: null,
+              isAuthenticated: false,
               isLoading: false,
               error: null,
             });
 
-            return Promise.resolve();
+            return Promise.resolve({
+              success: true,
+              message: "Registration successful! Please login to continue.",
+            });
           } else {
             const errorMsg =
               response.error || response.message || "Registration failed";

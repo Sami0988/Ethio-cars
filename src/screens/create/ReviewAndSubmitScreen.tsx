@@ -14,12 +14,12 @@ import {
   View,
 } from "react-native";
 import { Button, useTheme } from "react-native-paper";
-import { useCreateCar } from "../../features/cars/car.hooks";
-import { VehicleData } from "../../types/vehicle";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { useCreateCar } from "../../features/cars/car.hooks";
+import { VehicleData } from "../../types/vehicle";
 
 // API Enum values for validation
 const VALID_FUEL_TYPES = [
@@ -329,18 +329,15 @@ export default function ReviewAndSubmitScreen({
     return "Needs Work";
   };
 
-  // Step indicator data
+  // Step indicator data - 4 page flow
   const steps = [
     { number: 1, label: "Basics", completed: true },
-    { number: 2, label: "Pricing", completed: true },
-    { number: 3, label: "Technical", completed: true },
-    { number: 4, label: "Features", completed: true },
-    { number: 5, label: "Photos", completed: true },
-    { number: 6, label: "Location", completed: true },
-    { number: 7, label: "Review", completed: false },
+    { number: 2, label: "Pricing & Photos", completed: true },
+    { number: 3, label: "Features & Location", completed: true },
+    { number: 4, label: "Review", completed: false },
   ];
 
-  const currentStepIndex = 7;
+  const currentStepIndex = 3; // 0-based index for step 4
   const photoCount = vehicleData?.photos?.length || 0;
 
   const renderSection = (
@@ -424,79 +421,40 @@ export default function ReviewAndSubmitScreen({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Step Indicator */}
-        <View style={styles.stepContainer}>
-          <View style={styles.stepProgress}>
-            {steps.map((step, index) => (
-              <React.Fragment key={step.number}>
-                <View style={styles.stepItem}>
-                  <View
-                    style={[
-                      styles.stepCircle,
-                      step.completed
-                        ? styles.completedCircle
-                        : currentStepIndex === step.number
-                          ? styles.activeCircle
-                          : styles.inactiveCircle,
-                    ]}
-                  >
-                    {step.completed ? (
-                      <Ionicons name="checkmark" size={16} color="white" />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.stepNumber,
-                          {
-                            color:
-                              currentStepIndex === step.number
-                                ? "white"
-                                : theme.colors.onSurfaceVariant,
-                          },
-                        ]}
-                      >
-                        {step.number}
-                      </Text>
-                    )}
-                  </View>
-                  <Text
-                    style={[
-                      styles.stepLabel,
-                      {
-                        color:
-                          step.completed || currentStepIndex === step.number
-                            ? theme.colors.primary
-                            : theme.colors.onSurfaceVariant,
-                      },
-                    ]}
-                  >
-                    {step.label}
-                  </Text>
-                </View>
-                {index < steps.length - 1 && (
-                  <View
-                    style={[
-                      styles.stepConnector,
-                      {
-                        backgroundColor: step.completed
-                          ? theme.colors.primary
-                          : theme.colors.surfaceVariant,
-                      },
-                    ]}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </View>
+        {/* Progress Bar - Linear like other steps */}
+        <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${((currentStepIndex - 1) / (steps.length - 1)) * 100}%`,
-                  backgroundColor: theme.colors.primary,
-                },
-              ]}
-            />
+            <View style={styles.progressBarBackground}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: `${((currentStepIndex + 1) / steps.length) * 100}%`,
+                    backgroundColor: theme.colors.primary,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+          <View style={styles.stepLabels}>
+            {steps.map((step, index) => (
+              <View key={step.number} style={styles.stepLabelItem}>
+                <Text
+                  style={[
+                    styles.stepLabelText,
+                    {
+                      color:
+                        step.completed || index <= currentStepIndex
+                          ? theme.colors.primary
+                          : theme.colors.onSurfaceVariant,
+                      fontWeight: index <= currentStepIndex ? "600" : "400",
+                    },
+                  ]}
+                >
+                  {step.label}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -530,105 +488,6 @@ export default function ReviewAndSubmitScreen({
             </View>
           </View>
         </Animated.View>
-
-        {/* Quality Score Card */}
-        <View
-          style={[styles.scoreCard, { backgroundColor: theme.colors.surface }]}
-        >
-          <View style={styles.scoreHeader}>
-            <View style={styles.scoreLeft}>
-              <Text
-                style={[
-                  styles.scoreTitle,
-                  { color: theme.colors.onBackground },
-                ]}
-              >
-                Listing Quality
-              </Text>
-              <Text
-                style={[
-                  styles.scoreLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                {getScoreLabel(listingScore)} • Ready to publish
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.scoreValue,
-                { backgroundColor: getScoreColor(listingScore) + "20" },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.scoreNumber,
-                  { color: getScoreColor(listingScore) },
-                ]}
-              >
-                {listingScore}%
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.progressContainer}>
-            <View
-              style={[
-                styles.progressBackground,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
-              <View
-                style={[
-                  styles.progressFillBar,
-                  {
-                    width: `${listingScore}%`,
-                    backgroundColor: getScoreColor(listingScore),
-                  },
-                ]}
-              />
-            </View>
-            <View style={styles.progressLabels}>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Needs Work
-              </Text>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Good
-              </Text>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Excellent
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.qualityTips}>
-            <Ionicons name="bulb" size={20} color="#F59E0B" />
-            <Text
-              style={[styles.qualityTipText, { color: theme.colors.onSurface }]}
-            >
-              {listingScore >= 90
-                ? "🎯 Perfect! Your listing is ready to attract buyers"
-                : listingScore >= 70
-                  ? "💡 Good job! Consider adding more photos to reach 90%"
-                  : "📝 Add more details and photos to improve listing quality"}
-            </Text>
-          </View>
-        </View>
 
         {/* Quick Stats */}
         <View style={styles.statsGrid}>
@@ -1206,6 +1065,17 @@ export default function ReviewAndSubmitScreen({
 const getDynamicStyles = (theme: any, screenWidth: number, insets: any) => {
   const isSmallScreen = screenWidth < 375;
 
+  // Responsive scaling
+  const scaleFactor = isSmallScreen ? 0.9 : 1;
+  const fontSizeXS = Math.round(12 * scaleFactor);
+  const fontSizeS = Math.round(14 * scaleFactor);
+  const fontSizeM = Math.round(16 * scaleFactor);
+  const spacingXS = 4;
+  const spacingS = 8;
+  const spacingM = 16;
+  const spacingL = 24;
+  const spacingXL = 32;
+
   return StyleSheet.create({
     fullScreen: {
       flex: 1,
@@ -1248,66 +1118,37 @@ const getDynamicStyles = (theme: any, screenWidth: number, insets: any) => {
       paddingTop: 16,
       paddingBottom: 180,
     },
-    stepContainer: {
-      marginBottom: 24,
-    },
-    stepProgress: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 12,
-      paddingHorizontal: 4,
-    },
-    stepItem: {
-      alignItems: "center",
-      minWidth: 44,
-    },
-    stepCircle: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      borderWidth: 2,
-      justifyContent: "center",
-      alignItems: "center",
-      marginBottom: 6,
-    },
-    inactiveCircle: {
-      borderColor: theme.colors.surfaceVariant,
-      backgroundColor: "transparent",
-    },
-    activeCircle: {
-      borderColor: theme.colors.primary,
-      backgroundColor: theme.colors.primary,
-    },
-    completedCircle: {
-      borderColor: theme.colors.primary,
-      backgroundColor: theme.colors.primary,
-    },
-    stepNumber: {
-      fontSize: 14,
-      fontWeight: "600",
-    },
-    stepLabel: {
-      fontSize: 11,
-      fontWeight: "500",
-      textAlign: "center",
-    },
-    stepConnector: {
-      flex: 1,
-      height: 2,
-      maxWidth: 32,
-      marginHorizontal: 4,
-      marginTop: -20,
+    progressContainer: {
+      marginBottom: spacingXL,
     },
     progressBar: {
       height: 4,
       backgroundColor: theme.colors.surfaceVariant,
       borderRadius: 2,
       overflow: "hidden",
+      marginBottom: spacingS,
     },
-    progressFill: {
+    progressBarBackground: {
+      height: "100%",
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: 2,
+    },
+    progressBarFill: {
       height: "100%",
       borderRadius: 2,
+    },
+    stepLabels: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    stepLabelItem: {
+      flex: 1,
+      alignItems: "center",
+    },
+    stepLabelText: {
+      fontSize: fontSizeXS,
+      fontWeight: "500",
+      textAlign: "center",
     },
     titleContainer: {
       marginBottom: 20,
@@ -1361,19 +1202,6 @@ const getDynamicStyles = (theme: any, screenWidth: number, insets: any) => {
     scoreNumber: {
       fontSize: 18,
       fontWeight: "800",
-    },
-    progressContainer: {
-      marginBottom: 16,
-    },
-    progressBackground: {
-      height: 8,
-      borderRadius: 4,
-      overflow: "hidden",
-      marginBottom: 8,
-    },
-    progressFillBar: {
-      height: "100%",
-      borderRadius: 4,
     },
     progressLabels: {
       flexDirection: "row",

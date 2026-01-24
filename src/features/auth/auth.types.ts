@@ -125,7 +125,9 @@ export interface AuthState {
 
 export interface AuthActions {
   login: (credentials: LoginRequest) => Promise<void>;
-  register: (userData: RegisterRequest) => Promise<void>;
+  register: (
+    userData: RegisterRequest,
+  ) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>; // Make async for EthioCars API call
   clearError: () => void;
   setLoading: (loading: boolean) => void;
@@ -149,6 +151,8 @@ export const convertApiUserToAppUser = (apiUser: any): AppUser => ({
   first_name: apiUser.first_name || "",
   last_name: apiUser.last_name || "",
   bio: apiUser.bio || "",
+  city: apiUser.city || "",
+  region: apiUser.region || "",
   is_dealer: apiUser.is_dealer || false,
   dealer_company_name: apiUser.dealer_company_name || undefined,
   dealer_address: apiUser.dealer_address || undefined,

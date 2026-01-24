@@ -47,7 +47,7 @@ export const loginSchema = Yup.object().shape({
     .email("Please enter a valid email address")
     .required("Email is required"),
   password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
+    .min(8, "Password must be at least 8 characters")
     .required("Password is required"),
 });
 
@@ -62,7 +62,7 @@ export const registrationSchema = Yup.object().shape({
     .max(20, "Username cannot exceed 20 characters")
     .matches(
       /^[a-zA-Z0-9_-]+$/,
-      "Username can only contain letters, numbers, underscores, and hyphens"
+      "Username can only contain letters, numbers, underscores, and hyphens",
     )
     .required("Username is required"),
 
@@ -71,7 +71,11 @@ export const registrationSchema = Yup.object().shape({
     .required("Email is required"),
 
   password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
+    .min(8, "Password must be at least 8 characters")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number, and one special character",
+    )
     .required("Password is required"),
 
   confirm_password: Yup.string()
@@ -86,11 +90,13 @@ export const registrationSchema = Yup.object().shape({
     .required("Phone number is required"),
 
   first_name: Yup.string()
-    .min(2, "First name must be at least 2 characters")
+    .min(3, "First name must be at least 3 characters")
+    .matches(/^[a-zA-Z\s'-]+$/, "First name can only contain letters")
     .required("First name is required"),
 
   last_name: Yup.string()
-    .min(2, "Last name must be at least 2 characters")
+    .min(3, "Last name must be at least 3 characters")
+    .matches(/^[a-zA-Z\s'-]+$/, "Last name can only contain letters")
     .required("Last name is required"),
 
   device_info: Yup.string().optional(),
@@ -99,19 +105,48 @@ export const registrationSchema = Yup.object().shape({
 
   dealer_company_name: Yup.string().when("is_dealer", {
     is: true,
-    then: (schema) => schema.required("Company name is required for dealers"),
+    then: (schema) =>
+      schema
+        .min(3, "Company name must be at least 3 characters")
+        .required("Company name is required for dealers"),
     otherwise: (schema) => schema.optional(),
   }),
 
   dealer_license_number: Yup.string().when("is_dealer", {
     is: true,
-    then: (schema) => schema.required("License number is required for dealers"),
+    then: (schema) =>
+      schema
+        .min(3, "License number must be at least 3 characters")
+        .required("License number is required for dealers"),
     otherwise: (schema) => schema.optional(),
   }),
 
-  dealer_address: Yup.string().optional(),
-  dealer_city: Yup.string().optional(),
-  dealer_region: Yup.string().optional(),
+  dealer_address: Yup.string().when("is_dealer", {
+    is: true,
+    then: (schema) =>
+      schema
+        .min(3, "Business address must be at least 3 characters")
+        .required("Business address is required for dealers"),
+    otherwise: (schema) => schema.optional(),
+  }),
+
+  dealer_city: Yup.string().when("is_dealer", {
+    is: true,
+    then: (schema) =>
+      schema
+        .min(3, "Business city must be at least 3 characters")
+        .required("Business city is required for dealers"),
+    otherwise: (schema) => schema.optional(),
+  }),
+
+  dealer_region: Yup.string().when("is_dealer", {
+    is: true,
+    then: (schema) =>
+      schema
+        .min(3, "Business region must be at least 3 characters")
+        .required("Business region is required for dealers"),
+    otherwise: (schema) => schema.optional(),
+  }),
 });
 
 export type FullRegistrationFormData = Yup.InferType<typeof registrationSchema>;
@@ -142,7 +177,7 @@ export interface RegisterRequest {
 
 // Helper to convert form data to API request
 export const prepareRegisterRequest = (
-  formData: FullRegistrationFormData
+  formData: FullRegistrationFormData,
 ): RegisterRequest => {
   const {
     confirm_password,

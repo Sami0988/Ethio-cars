@@ -1,7 +1,7 @@
 // screens/profile/ProfileScreen.tsx
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -69,16 +69,25 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
-  // Fetch complete profile data on component mount
-  useEffect(() => {
-    if (isAuthenticated && user && !user?.member_since) {
-      // Only fetch if member_since is missing, to avoid unnecessary API calls
-      fetchProfile().catch((error: any) => {
-        console.log("Profile data might be incomplete:", error);
-        // Don't let profile fetch failures affect auth state
-      });
-    }
-  }, [isAuthenticated, user, fetchProfile]);
+  // Fetch complete profile data on component mount - only if data is incomplete
+  // DISABLED: This is causing redirects due to auth state updates
+  // useEffect(() => {
+  //   if (isAuthenticated && user) {
+  //     // Check if user data is incomplete (missing key fields)
+  //     const isIncomplete =
+  //       !user.city || !user.region || !user.bio || !user.member_since;
+
+  //     if (isIncomplete) {
+  //       console.log(
+  //         "ProfileScreen: User data incomplete, fetching fresh data...",
+  //       );
+  //       fetchProfile().catch((error: any) => {
+  //         console.log("Profile data might be incomplete:", error);
+  //         // Don't let profile fetch failures affect auth state
+  //       });
+  //     }
+  //   }
+  // }, [isAuthenticated, user, fetchProfile]);
 
   // Use safe area wrapper for consistent spacing - move to top
   const insets = require("react-native-safe-area-context").useSafeAreaInsets();
@@ -814,7 +823,14 @@ const ProfileScreen: React.FC = () => {
                       { color: theme.colors.onSurfaceVariant },
                     ]}
                   >
-                    {user?.region || "Addis Ababa"}, Ethiopia
+                    {user?.city && user?.region
+                      ? `${user?.city}, ${user?.region}`
+                      : user?.region
+                        ? `${user?.region}`
+                        : user?.city
+                          ? `${user?.city}`
+                          : "Addis Ababa"}
+                    , Ethiopia
                   </Text>
                 </TouchableOpacity>
               </View>

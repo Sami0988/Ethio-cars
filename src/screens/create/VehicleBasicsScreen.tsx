@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button, Card, TextInput, useTheme } from "react-native-paper";
+import { Button, TextInput, useTheme } from "react-native-paper";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -47,18 +47,35 @@ export default React.memo(function VehicleBasicsScreen({
   const user = useAuthStore((state: any) => state.user);
 
   const [formData, setFormData] = useState({
-    make_id: vehicleData?.make_id || (undefined as number | undefined),
+    make_id: vehicleData?.make_id || undefined,
     model_id: vehicleData?.model_id || "",
     make: vehicleData?.make || "",
     model: vehicleData?.model || "",
     year: vehicleData?.year || "",
     mileage: vehicleData?.mileage || "",
     condition:
-      vehicleData?.condition ||
-      ("Good" as "New" | "Like New" | "Excellent" | "Good" | "Fair" | "Poor"),
+      (vehicleData?.condition as any) ||
+      ("" as "New" | "Like New" | "Excellent" | "Good" | "Fair" | "Poor"),
     color: vehicleData?.color || "",
     doors: vehicleData?.doors?.toString() || "",
     seats: vehicleData?.seats?.toString() || "",
+    transmission: vehicleData?.transmission || "",
+    fuel: vehicleData?.fuel || "",
+    body_type:
+      (vehicleData?.body_type as any) ||
+      ("" as
+        | "Sedan"
+        | "SUV"
+        | "Truck"
+        | "Coupe"
+        | "Hatchback"
+        | "Van"
+        | "Convertible"
+        | "Wagon"
+        | "Minivan"
+        | "Crossover"),
+    drive_type:
+      (vehicleData?.drive_type as any) || ("" as "FWD" | "RWD" | "AWD" | "4WD"),
   });
 
   const [selectedMakeId, setSelectedMakeId] = useState<number | undefined>(
@@ -71,6 +88,10 @@ export default React.memo(function VehicleBasicsScreen({
   const [showConditionModal, setShowConditionModal] = useState(false);
   const [showDoorsModal, setShowDoorsModal] = useState(false);
   const [showSeatsModal, setShowSeatsModal] = useState(false);
+  const [showTransmissionModal, setShowTransmissionModal] = useState(false);
+  const [showFuelModal, setShowFuelModal] = useState(false);
+  const [showBodyTypeModal, setShowBodyTypeModal] = useState(false);
+  const [showDriveTypeModal, setShowDriveTypeModal] = useState(false);
 
   // Search functionality
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,8 +103,10 @@ export default React.memo(function VehicleBasicsScreen({
 
   // Listen for keyboard show/hide events
   useEffect(() => {
-    const keyboardShowEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const keyboardHideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const keyboardShowEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const keyboardHideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
     const showSubscription = Keyboard.addListener(keyboardShowEvent, () => {
       setIsKeyboardVisible(true);
@@ -233,6 +256,11 @@ export default React.memo(function VehicleBasicsScreen({
     setSearchTerm(term);
   };
 
+  // Generate years from 1886 to 2026
+  const years = Array.from({ length: 2026 - 1886 + 1 }, (_, i) =>
+    (2026 - i).toString(),
+  );
+
   // Extract makes from API response
   const makes = useMemo(() => {
     if (!makesResponse?.success) {
@@ -264,29 +292,153 @@ export default React.memo(function VehicleBasicsScreen({
     }));
   }, [makesResponse]);
 
-  // Generate years from 1886 to 2026
-  const years = Array.from({ length: 2026 - 1886 + 1 }, (_, i) =>
-    (2026 - i).toString(),
-  );
+  const conditions = ["New", "Like New", "Excellent", "Good", "Fair", "Poor"];
+  const transmissions = ["Manual", "Automatic", "CVT", "Semi-Automatic"];
+  const fuelTypes = ["Petrol", "Diesel", "Hybrid", "Electric", "LPG"];
+  const bodyTypes = [
+    "Sedan",
+    "SUV",
+    "Truck",
+    "Coupe",
+    "Hatchback",
+    "Van",
+    "Convertible",
+    "Wagon",
+    "Minivan",
+    "Crossover",
+  ];
+  const driveTypes = ["FWD", "RWD", "AWD", "4WD"];
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.make) newErrors.make = "Please select make";
-    if (!formData.model) newErrors.model = "Please enter model";
-    if (!formData.year) newErrors.year = "Please select year";
+    if (!formData.make) newErrors.make = "This field is required";
+    if (!formData.model) newErrors.model = "This field is required";
+    if (!formData.year) newErrors.year = "This field is required";
     if (!formData.mileage || parseInt(formData.mileage) < 0)
-      newErrors.mileage = "Valid mileage required";
-    if (!formData.condition) newErrors.condition = "Please select condition";
-    if (!formData.doors) newErrors.doors = "Please select number of doors";
-    if (!formData.seats) newErrors.seats = "Please select number of seats";
+      newErrors.mileage = "This field is required";
+    if (!formData.condition) newErrors.condition = "This field is required";
+    if (!formData.doors) newErrors.doors = "This field is required";
+    if (!formData.seats) newErrors.seats = "This field is required";
+    if (!formData.transmission)
+      newErrors.transmission = "This field is required";
+    if (!formData.fuel) newErrors.fuel = "This field is required";
+    if (!formData.body_type) newErrors.body_type = "This field is required";
+    if (!formData.drive_type) newErrors.drive_type = "This field is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const conditions = ["New", "Like New", "Excellent", "Good", "Fair", "Poor"];
+  // Validate individual field on blur
+  const validateField = (fieldName: string) => {
+    const newErrors = { ...errors };
+
+    switch (fieldName) {
+      case "make":
+        if (!formData.make) {
+          newErrors.make = "This field is required";
+        } else {
+          delete newErrors.make;
+        }
+        break;
+      case "model":
+        if (!formData.model) {
+          newErrors.model = "This field is required";
+        } else {
+          delete newErrors.model;
+        }
+        break;
+      case "year":
+        if (!formData.year) {
+          newErrors.year = "This field is required";
+        } else {
+          delete newErrors.year;
+        }
+        break;
+      case "mileage":
+        if (!formData.mileage || parseInt(formData.mileage) < 0) {
+          newErrors.mileage = "This field is required";
+        } else {
+          delete newErrors.mileage;
+        }
+        break;
+      case "condition":
+        if (!formData.condition) {
+          newErrors.condition = "This field is required";
+        } else {
+          delete newErrors.condition;
+        }
+        break;
+      case "doors":
+        if (!formData.doors) {
+          newErrors.doors = "This field is required";
+        } else {
+          delete newErrors.doors;
+        }
+        break;
+      case "seats":
+        if (!formData.seats) {
+          newErrors.seats = "This field is required";
+        } else {
+          delete newErrors.seats;
+        }
+        break;
+      case "transmission":
+        if (!formData.transmission) {
+          newErrors.transmission = "This field is required";
+        } else {
+          delete newErrors.transmission;
+        }
+        break;
+      case "fuel":
+        if (!formData.fuel) {
+          newErrors.fuel = "This field is required";
+        } else {
+          delete newErrors.fuel;
+        }
+        break;
+      case "body_type":
+        if (!formData.body_type) {
+          newErrors.body_type = "This field is required";
+        } else {
+          delete newErrors.body_type;
+        }
+        break;
+      case "drive_type":
+        if (!formData.drive_type) {
+          newErrors.drive_type = "This field is required";
+        } else {
+          delete newErrors.drive_type;
+        }
+        break;
+    }
+
+    setErrors(newErrors);
+  };
 
   const handleSubmit = () => {
-    if (!validateForm()) return;
+    // Validate all fields and show errors
+    const newErrors: Record<string, string> = {};
+    if (!formData.make) newErrors.make = "This field is required";
+    if (!formData.model) newErrors.model = "This field is required";
+    if (!formData.year) newErrors.year = "This field is required";
+    if (!formData.mileage || parseInt(formData.mileage) < 0)
+      newErrors.mileage = "This field is required";
+    if (!formData.condition) newErrors.condition = "This field is required";
+    if (!formData.doors) newErrors.doors = "This field is required";
+    if (!formData.seats) newErrors.seats = "This field is required";
+    if (!formData.transmission)
+      newErrors.transmission = "This field is required";
+    if (!formData.fuel) newErrors.fuel = "This field is required";
+    if (!formData.body_type) newErrors.body_type = "This field is required";
+    if (!formData.drive_type) newErrors.drive_type = "This field is required";
+
+    setErrors(newErrors);
+
+    // Check if there are any errors
+    const hasErrors = Object.keys(newErrors).length > 0;
+    if (hasErrors) {
+      return; // Don't continue if there are errors
+    }
 
     if (updateVehicleData) {
       updateVehicleData({
@@ -300,6 +452,10 @@ export default React.memo(function VehicleBasicsScreen({
         color: formData.color,
         doors: parseInt(formData.doors) || undefined,
         seats: parseInt(formData.seats) || undefined,
+        transmission: formData.transmission,
+        fuel: formData.fuel,
+        body_type: formData.body_type,
+        drive_type: formData.drive_type,
       });
     }
 
@@ -437,7 +593,7 @@ export default React.memo(function VehicleBasicsScreen({
           ) : error ? (
             <View style={styles.errorContainer}>
               <Ionicons name="warning" size={48} color={theme.colors.error} />
-              <Text style={[styles.errorText, { color: theme.colors.error }]}>
+              <Text style={[styles.errorText, { color: "#ff4444" }]}>
                 Failed to load data
               </Text>
               <Text
@@ -627,51 +783,9 @@ export default React.memo(function VehicleBasicsScreen({
               { color: theme.colors.onSurfaceVariant },
             ]}
           >
-            Step 1 of 7
+            Step 1 of 4
           </Text>
         </View>
-
-        {/* Tip Card */}
-        <Card
-          style={[
-            styles.tipCard,
-            {
-              backgroundColor: theme.colors.surfaceVariant,
-              borderLeftWidth: 4,
-              borderLeftColor: theme.colors.primary,
-            },
-          ]}
-        >
-          <Card.Content style={styles.tipContent}>
-            <View
-              style={[
-                styles.tipIconContainer,
-                { backgroundColor: theme.colors.primary + "20" },
-              ]}
-            >
-              <Ionicons
-                name="information-circle"
-                size={24}
-                color={theme.colors.primary}
-              />
-            </View>
-            <View style={styles.tipTextContainer}>
-              <Text
-                style={[styles.tipTitle, { color: theme.colors.onSurface }]}
-              >
-                Complete Details = Better Results
-              </Text>
-              <Text
-                style={[
-                  styles.tipText,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Accurate information increases buyer trust and speeds up sales
-              </Text>
-            </View>
-          </Card.Content>
-        </Card>
 
         {/* Main Section */}
         <View style={styles.mainSection}>
@@ -707,7 +821,7 @@ export default React.memo(function VehicleBasicsScreen({
                   { color: theme.colors.onSurfaceVariant },
                 ]}
               >
-                Make <Text style={{ color: theme.colors.error }}>*</Text>
+                Make <Text style={{ color: "#ff4444" }}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -759,12 +873,7 @@ export default React.memo(function VehicleBasicsScreen({
                     size={16}
                     color={theme.colors.error}
                   />
-                  <Text
-                    style={[
-                      styles.errorTextInline,
-                      { color: theme.colors.error },
-                    ]}
-                  >
+                  <Text style={[styles.errorTextInline, { color: "#ff4444" }]}>
                     {errors.make}
                   </Text>
                 </View>
@@ -779,7 +888,7 @@ export default React.memo(function VehicleBasicsScreen({
                   { color: theme.colors.onSurfaceVariant },
                 ]}
               >
-                Model <Text style={{ color: theme.colors.error }}>*</Text>
+                Model <Text style={{ color: "#ff4444" }}>*</Text>
               </Text>
               <View
                 style={[
@@ -832,12 +941,7 @@ export default React.memo(function VehicleBasicsScreen({
                     size={16}
                     color={theme.colors.error}
                   />
-                  <Text
-                    style={[
-                      styles.errorTextInline,
-                      { color: theme.colors.error },
-                    ]}
-                  >
+                  <Text style={[styles.errorTextInline, { color: "#ff4444" }]}>
                     {errors.model}
                   </Text>
                 </View>
@@ -853,7 +957,7 @@ export default React.memo(function VehicleBasicsScreen({
                     { color: theme.colors.onSurfaceVariant },
                   ]}
                 >
-                  Year <Text style={{ color: theme.colors.error }}>*</Text>
+                  Year <Text style={{ color: "#ff4444" }}>*</Text>
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -905,10 +1009,7 @@ export default React.memo(function VehicleBasicsScreen({
                       color={theme.colors.error}
                     />
                     <Text
-                      style={[
-                        styles.errorTextInline,
-                        { color: theme.colors.error },
-                      ]}
+                      style={[styles.errorTextInline, { color: "#ff4444" }]}
                     >
                       {errors.year}
                     </Text>
@@ -923,7 +1024,7 @@ export default React.memo(function VehicleBasicsScreen({
                     { color: theme.colors.onSurfaceVariant },
                   ]}
                 >
-                  Mileage <Text style={{ color: theme.colors.error }}>*</Text>
+                  Mileage <Text style={{ color: "#ff4444" }}>*</Text>
                 </Text>
                 <View
                   style={[
@@ -964,7 +1065,7 @@ export default React.memo(function VehicleBasicsScreen({
                         primary: theme.colors.primary,
                         background: "transparent",
                         text: theme.colors.onSurface,
-                        placeholder: theme.colors.onSurfaceVariant + "80",
+                        placeholder: theme.colors.onSurfaceVariant,
                         error: theme.colors.error,
                       },
                     }}
@@ -986,10 +1087,7 @@ export default React.memo(function VehicleBasicsScreen({
                       color={theme.colors.error}
                     />
                     <Text
-                      style={[
-                        styles.errorTextInline,
-                        { color: theme.colors.error },
-                      ]}
+                      style={[styles.errorTextInline, { color: "#ff4444" }]}
                     >
                       {errors.mileage}
                     </Text>
@@ -1006,7 +1104,7 @@ export default React.memo(function VehicleBasicsScreen({
                   { color: theme.colors.onSurfaceVariant },
                 ]}
               >
-                Condition <Text style={{ color: theme.colors.error }}>*</Text>
+                Condition <Text style={{ color: "#ff4444" }}>*</Text>
               </Text>
               <TouchableOpacity
                 style={[
@@ -1057,12 +1155,7 @@ export default React.memo(function VehicleBasicsScreen({
                     size={16}
                     color={theme.colors.error}
                   />
-                  <Text
-                    style={[
-                      styles.errorTextInline,
-                      { color: theme.colors.error },
-                    ]}
-                  >
+                  <Text style={[styles.errorTextInline, { color: "#ff4444" }]}>
                     {errors.condition}
                   </Text>
                 </View>
@@ -1078,7 +1171,7 @@ export default React.memo(function VehicleBasicsScreen({
                     { color: theme.colors.onSurfaceVariant },
                   ]}
                 >
-                  Doors <Text style={{ color: theme.colors.error }}>*</Text>
+                  Doors <Text style={{ color: "#ff4444" }}>*</Text>
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -1130,17 +1223,13 @@ export default React.memo(function VehicleBasicsScreen({
                       color={theme.colors.error}
                     />
                     <Text
-                      style={[
-                        styles.errorTextInline,
-                        { color: theme.colors.error },
-                      ]}
+                      style={[styles.errorTextInline, { color: "#ff4444" }]}
                     >
                       {errors.doors}
                     </Text>
                   </View>
                 )}
               </View>
-
               <View style={[styles.formField, styles.halfField]}>
                 <Text
                   style={[
@@ -1148,7 +1237,7 @@ export default React.memo(function VehicleBasicsScreen({
                     { color: theme.colors.onSurfaceVariant },
                   ]}
                 >
-                  Seats <Text style={{ color: theme.colors.error }}>*</Text>
+                  Seats <Text style={{ color: "#ff4444" }}>*</Text>
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -1200,12 +1289,282 @@ export default React.memo(function VehicleBasicsScreen({
                       color={theme.colors.error}
                     />
                     <Text
-                      style={[
-                        styles.errorTextInline,
-                        { color: theme.colors.error },
-                      ]}
+                      style={[styles.errorTextInline, { color: "#ff4444" }]}
                     >
                       {errors.seats}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Transmission & Fuel Row */}
+            <View style={styles.formRow}>
+              <View style={[styles.formField, styles.halfField]}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Transmission <Text style={{ color: "#ff4444" }}>*</Text>
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.fieldInput,
+                    {
+                      borderColor: errors.transmission
+                        ? theme.colors.error
+                        : theme.colors.outline,
+                      backgroundColor: theme.colors.surface,
+                    },
+                  ]}
+                  onPress={() => setShowTransmissionModal(true)}
+                >
+                  <View style={styles.inputContent}>
+                    <Ionicons
+                      name="settings"
+                      size={20}
+                      color={
+                        formData.transmission
+                          ? theme.colors.primary
+                          : theme.colors.onSurfaceVariant
+                      }
+                      style={styles.inputIcon}
+                    />
+                    <Text
+                      style={[
+                        styles.inputText,
+                        {
+                          color: formData.transmission
+                            ? theme.colors.onSurface
+                            : theme.colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      {formData.transmission || "Select transmission"}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-down"
+                    size={22}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+                {errors.transmission && (
+                  <View style={styles.errorContainerInline}>
+                    <Ionicons
+                      name="alert-circle"
+                      size={16}
+                      color={theme.colors.error}
+                    />
+                    <Text
+                      style={[styles.errorTextInline, { color: "#ff4444" }]}
+                    >
+                      {errors.transmission}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={[styles.formField, styles.halfField]}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Fuel Type <Text style={{ color: "#ff4444" }}>*</Text>
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.fieldInput,
+                    {
+                      borderColor: errors.fuel
+                        ? theme.colors.error
+                        : theme.colors.outline,
+                      backgroundColor: theme.colors.surface,
+                    },
+                  ]}
+                  onPress={() => setShowFuelModal(true)}
+                >
+                  <View style={styles.inputContent}>
+                    <Ionicons
+                      name="flame"
+                      size={20}
+                      color={
+                        formData.fuel
+                          ? theme.colors.primary
+                          : theme.colors.onSurfaceVariant
+                      }
+                      style={styles.inputIcon}
+                    />
+                    <Text
+                      style={[
+                        styles.inputText,
+                        {
+                          color: formData.fuel
+                            ? theme.colors.onSurface
+                            : theme.colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      {formData.fuel || "Select fuel type"}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-down"
+                    size={22}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+                {errors.fuel && (
+                  <View style={styles.errorContainerInline}>
+                    <Ionicons
+                      name="alert-circle"
+                      size={16}
+                      color={theme.colors.error}
+                    />
+                    <Text
+                      style={[styles.errorTextInline, { color: "#ff4444" }]}
+                    >
+                      {errors.fuel}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Body Type & Drive Type Row */}
+            <View style={styles.formRow}>
+              <View style={[styles.formField, styles.halfField]}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Body Type <Text style={{ color: "#ff4444" }}>*</Text>
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.fieldInput,
+                    {
+                      borderColor: errors.body_type
+                        ? theme.colors.error
+                        : theme.colors.outline,
+                      backgroundColor: theme.colors.surface,
+                    },
+                  ]}
+                  onPress={() => setShowBodyTypeModal(true)}
+                >
+                  <View style={styles.inputContent}>
+                    <Ionicons
+                      name="car"
+                      size={20}
+                      color={
+                        formData.body_type
+                          ? theme.colors.primary
+                          : theme.colors.onSurfaceVariant
+                      }
+                      style={styles.inputIcon}
+                    />
+                    <Text
+                      style={[
+                        styles.inputText,
+                        {
+                          color: formData.body_type
+                            ? theme.colors.onSurface
+                            : theme.colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      {formData.body_type || "Select body type"}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+                {errors.body_type && (
+                  <View style={styles.errorContainerInline}>
+                    <Ionicons
+                      name="alert-circle"
+                      size={16}
+                      color={theme.colors.error}
+                    />
+                    <Text
+                      style={[styles.errorTextInline, { color: "#ff4444" }]}
+                    >
+                      {errors.body_type}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={[styles.formField, styles.halfField]}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Drive Type <Text style={{ color: "#ff4444" }}>*</Text>
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.fieldInput,
+                    {
+                      borderColor: errors.drive_type
+                        ? theme.colors.error
+                        : theme.colors.outline,
+                      backgroundColor: theme.colors.surface,
+                    },
+                  ]}
+                  onPress={() => setShowDriveTypeModal(true)}
+                >
+                  <View style={styles.inputContent}>
+                    <Ionicons
+                      name="speedometer"
+                      size={20}
+                      color={
+                        formData.drive_type
+                          ? theme.colors.primary
+                          : theme.colors.onSurfaceVariant
+                      }
+                      style={styles.inputIcon}
+                    />
+                    <Text
+                      style={[
+                        styles.inputText,
+                        {
+                          color: formData.drive_type
+                            ? theme.colors.onSurface
+                            : theme.colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      {formData.drive_type || "Select drive type"}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+                {errors.drive_type && (
+                  <View style={styles.errorContainerInline}>
+                    <Ionicons
+                      name="alert-circle"
+                      size={16}
+                      color={theme.colors.error}
+                    />
+                    <Text
+                      style={[styles.errorTextInline, { color: "#ff4444" }]}
+                    >
+                      {errors.drive_type}
                     </Text>
                   </View>
                 )}
@@ -1223,31 +1582,10 @@ export default React.memo(function VehicleBasicsScreen({
             onPress={handleSubmit}
             style={[
               styles.continueButton,
-              {
-                backgroundColor: theme.colors.primary,
-                opacity:
-                  !formData.make ||
-                  !formData.model ||
-                  !formData.year ||
-                  !formData.mileage ||
-                  !formData.condition ||
-                  !formData.doors ||
-                  !formData.seats
-                    ? 0.6
-                    : 1,
-              },
+              { backgroundColor: theme.colors.primary },
             ]}
             labelStyle={[styles.buttonLabel, { color: theme.colors.onPrimary }]}
             contentStyle={styles.buttonContent}
-            disabled={
-              !formData.make ||
-              !formData.model ||
-              !formData.year ||
-              !formData.mileage ||
-              !formData.condition ||
-              !formData.doors ||
-              !formData.seats
-            }
           >
             <Ionicons
               name="arrow-forward"
@@ -1306,6 +1644,42 @@ export default React.memo(function VehicleBasicsScreen({
         ["2", "4", "5", "6", "7", "8"],
         formData.seats,
         (value) => updateFormData("seats", value),
+      )}
+
+      {renderModal(
+        showTransmissionModal,
+        () => setShowTransmissionModal(false),
+        "Select Transmission",
+        transmissions,
+        formData.transmission,
+        (value) => updateFormData("transmission", value),
+      )}
+
+      {renderModal(
+        showFuelModal,
+        () => setShowFuelModal(false),
+        "Select Fuel Type",
+        fuelTypes,
+        formData.fuel,
+        (value) => updateFormData("fuel", value),
+      )}
+
+      {renderModal(
+        showBodyTypeModal,
+        () => setShowBodyTypeModal(false),
+        "Select Body Type",
+        bodyTypes,
+        formData.body_type,
+        (value) => updateFormData("body_type", value),
+      )}
+
+      {renderModal(
+        showDriveTypeModal,
+        () => setShowDriveTypeModal(false),
+        "Select Drive Type",
+        driveTypes,
+        formData.drive_type,
+        (value) => updateFormData("drive_type", value),
       )}
     </SafeAreaView>
   );

@@ -37,6 +37,8 @@ const LoginScreen: React.FC = React.memo(() => {
     useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
   // Handle successful login
   useEffect(() => {
@@ -69,8 +71,9 @@ const LoginScreen: React.FC = React.memo(() => {
   // Handle error messages
   useEffect(() => {
     if (error) {
-      // Error is now properly normalized in the auth store
-      // No additional handling needed here
+      // Show error in snackbar instead of alert
+      setSnackbarMessage(error);
+      setSnackbarVisible(true);
     }
   }, [error]);
 
@@ -252,7 +255,6 @@ const LoginScreen: React.FC = React.memo(() => {
                   styles.loginButton,
                   { backgroundColor: theme.colors.primary },
                 ]}
-                icon="login"
                 contentStyle={styles.buttonContent}
                 buttonColor={theme.colors.primary}
                 textColor={theme.colors.onPrimary}
@@ -297,15 +299,13 @@ const LoginScreen: React.FC = React.memo(() => {
 
       {/* Error Message */}
       <Snackbar
-        visible={!!error}
-        onDismiss={clearError}
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
         duration={4000}
-        style={{ backgroundColor: "#EF4444" }}
+        style={{ backgroundColor: "#ff4444" }}
       >
         <Text style={{ color: "#fff", fontWeight: "600" }}>
-          {error === "Login failed" || error === "Invalid credentials"
-            ? "Invalid Credentials"
-            : error}
+          {snackbarMessage || "Invalid credentials"}
         </Text>
       </Snackbar>
     </KeyboardAvoidingView>
