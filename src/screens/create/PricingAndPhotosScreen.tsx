@@ -326,16 +326,6 @@ export default function PricingAndPhotosScreen({
     // Clear previous errors
     setPriceError("");
 
-    // Debug logs
-    console.log("=== Continue Button Clicked ===");
-    console.log("Current price:", price);
-    console.log("Price as number:", parseInt(price.replace(/,/g, "")) || 0);
-    console.log("Photos count:", photos.length);
-    console.log(
-      "Photos:",
-      photos.map((p) => ({ id: p.id, uri: p.uri, isCover: p.isCover })),
-    );
-
     let hasError = false;
 
     // Validate price - simple and direct check
@@ -344,7 +334,6 @@ export default function PricingAndPhotosScreen({
     if (numericPrice <= 0) {
       setPriceError("Price is required");
       hasError = true;
-      console.log("❌ Price validation failed");
     } else {
       console.log("✅ Price validation passed");
     }
@@ -356,14 +345,9 @@ export default function PricingAndPhotosScreen({
         "Please add at least 3 photos of your vehicle.",
       );
       hasError = true;
-      console.log("❌ Photo validation failed");
     } else {
       console.log("✅ Photo validation passed");
     }
-
-    console.log("Has error:", hasError);
-    console.log("=== End Validation ===");
-
     // Don't continue if there are errors
     if (hasError) {
       return;

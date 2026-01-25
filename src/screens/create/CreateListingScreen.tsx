@@ -9,10 +9,10 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useAuthStore } from "../../features/auth/auth.store";
 import { VehicleData } from "../../types/vehicle";
+import FeaturesAndLocationScreen from "./FeaturesAndLocationScreen";
 import PricingAndPhotosScreen from "./PricingAndPhotosScreen";
 import ReviewAndSubmitScreen from "./ReviewAndSubmitScreen";
 import VehicleBasicsScreen from "./VehicleBasicsScreen";
-import FeaturesAndLocationScreen from "./FeaturesAndLocationScreen";
 
 const CreateListingScreen: React.FC = () => {
   const theme = useTheme();
@@ -25,25 +25,24 @@ const CreateListingScreen: React.FC = () => {
 
   // Shared data state - move to top before any conditional returns
   const [vehicleData, setVehicleData] = useState<VehicleData>({
-    make: "Toyota",
-    model: "Corolla",
-    year: "2018",
-    color: "Silver",
-    condition: "Excellent",
-    price: "1,500,000",
-    negotiable: true,
-    mileage: "45000",
-    transmission: "Automatic",
-    fuel: "Petrol",
+    make: "",
+    model: "",
+    year: "",
+    color: "",
+    condition: "",
+    price: "",
+    negotiable: false,
+    mileage: "",
+    transmission: "",
+    fuel: "",
     photos: [],
     location: {
-      region: "Addis Ababa",
-      zone: "Bole Sub-city",
-      city: "Woreda 03",
-      address: "Bole Sub-city, Woreda 03, Addis Ababa, Ethiopia",
+      region: "",
+      zone: "",
+      city: "",
+      address: "",
     },
-    description:
-      "Well-maintained Toyota Corolla in excellent condition. Regular service history, clean interior, and great fuel economy.",
+    description: "",
     features: [], // Initialize as empty number array
   });
 

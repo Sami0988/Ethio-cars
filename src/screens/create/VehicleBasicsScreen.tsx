@@ -293,8 +293,23 @@ export default React.memo(function VehicleBasicsScreen({
   }, [makesResponse]);
 
   const conditions = ["New", "Like New", "Excellent", "Good", "Fair", "Poor"];
-  const transmissions = ["Manual", "Automatic", "CVT", "Semi-Automatic"];
-  const fuelTypes = ["Petrol", "Diesel", "Hybrid", "Electric", "LPG"];
+  const transmissions = [
+    "Automatic",
+    "Manual",
+    "CVT",
+    "Semi-Automatic",
+    "Dual-Clutch",
+  ];
+  const fuelTypes = [
+    "Gasoline",
+    "Diesel",
+    "Hybrid",
+    "Electric",
+    "Plug-in Hybrid",
+    "Hydrogen",
+    "Natural Gas",
+    "Flex Fuel",
+  ];
   const bodyTypes = [
     "Sedan",
     "SUV",
@@ -857,7 +872,7 @@ export default React.memo(function VehicleBasicsScreen({
                       },
                     ]}
                   >
-                    {formData.make || "Select vehicle make"}
+                    {formData.make || "Please select make"}
                   </Text>
                 </View>
                 <Ionicons
@@ -917,7 +932,7 @@ export default React.memo(function VehicleBasicsScreen({
                 />
                 <TextInput
                   mode="flat"
-                  placeholder="Enter vehicle model"
+                  placeholder="Add model"
                   value={formData.model}
                   onChangeText={(value) => updateFormData("model", value)}
                   style={[styles.textInput, { flex: 1 }]}
@@ -1139,7 +1154,7 @@ export default React.memo(function VehicleBasicsScreen({
                       },
                     ]}
                   >
-                    {formData.condition || "Select condition"}
+                    {formData.condition || "Please select condition"}
                   </Text>
                 </View>
                 <Ionicons
@@ -1342,7 +1357,7 @@ export default React.memo(function VehicleBasicsScreen({
                         },
                       ]}
                     >
-                      {formData.transmission || "Select transmission"}
+                      {formData.transmission || "select transmission"}
                     </Text>
                   </View>
                   <Ionicons
@@ -1408,7 +1423,7 @@ export default React.memo(function VehicleBasicsScreen({
                         },
                       ]}
                     >
-                      {formData.fuel || "Select fuel type"}
+                      {formData.fuel || "select fuel type"}
                     </Text>
                   </View>
                   <Ionicons

@@ -41,23 +41,30 @@ export default function RootLayout() {
         // Initialize auth state first
         await initializeAuth();
 
+        // Wait a bit more to ensure auth state is fully loaded
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         const onboardingFlag = await webStorage.getItem("seen_onboarding");
 
         // Increased delay to ensure splash screen is visible
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
 
         // Check current auth state after initialization
         const currentState = useAuthStore.getState();
 
         // Only set initial route if it hasn't been set yet
         if (!initialRoute) {
+          // AUTHENTICATED USERS GET ABSOLUTE PRIORITY - NEVER SHOW ONBOARDING
           if (currentState.isAuthenticated) {
-            // User is authenticated, always go to home tabs (priority over onboarding)
+            console.log("User is authenticated, going to home tabs");
             setInitialRoute("/(tabs)");
           } else if (!onboardingFlag) {
+            console.log("User not authenticated and hasn't seen onboarding");
             setInitialRoute("/onboarding");
           } else {
-            // User not authenticated, go to login
+            console.log(
+              "User not authenticated but has seen onboarding, going to login",
+            );
             setInitialRoute("/(auth)/login");
           }
         }
@@ -118,9 +125,10 @@ export default function RootLayout() {
           >
             <Stack screenOptions={{ headerShown: false }} />
             {/* Only redirect if we have an initial route and it's not onboarding for authenticated users */}
-            {initialRoute && 
-             !(isAuthenticated && initialRoute === "/onboarding") && 
-             <Redirect href={initialRoute} />}
+            {initialRoute &&
+              !(isAuthenticated && initialRoute === "/onboarding") && (
+                <Redirect href={initialRoute} />
+              )}
           </SafeAreaView>
         </ThemeProvider>
       </QueryClientProvider>

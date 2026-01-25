@@ -746,19 +746,16 @@ const HomeScreen: React.FC = () => {
   };
 
   // Render car item
-  const renderCarItem = ({
-    item,
-    index,
-  }: {
-    item: CarListing;
-    index: number;
-  }) => (
-    <CarCard
-      listing={item}
-      index={index}
-      onPress={() => router.push(`/car/${item.listing_id}`)}
-      onMessagePress={() => handleMessagePress(item)}
-    />
+  const renderCarItem = useCallback(
+    ({ item, index }: { item: CarListing; index: number }) => (
+      <CarCard
+        listing={item}
+        index={index}
+        onPress={() => router.push(`/car/${item.listing_id}`)}
+        onMessagePress={() => handleMessagePress(item)}
+      />
+    ),
+    [router],
   );
 
   return (
@@ -776,6 +773,11 @@ const HomeScreen: React.FC = () => {
         data={allListings}
         renderItem={renderCarItem}
         keyExtractor={(item) => item.listing_id.toString()}
+        getItemLayout={(data, index) => ({
+          length: getResponsiveValue(280, 320, 360), // Approximate card height
+          offset: getResponsiveValue(280, 320, 360) * index,
+          index,
+        })}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.listContainer,

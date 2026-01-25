@@ -7,6 +7,8 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -275,362 +277,382 @@ export default function EditProfilePage() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Update your personal information</Text>
-
-      {/* Profile Photo Section */}
-      <View style={styles.photoSection}>
-        <TouchableOpacity onPress={handleChoosePhoto}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={
-                profileImage
-                  ? { uri: profileImage }
-                  : require("../assets/images/profile.jpg")
-              }
-              style={styles.avatar}
-            />
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.changePhotoButton}
-          onPress={handleChoosePhoto}
-        >
-          <Text style={styles.changePhotoText}>Change Profile Photo</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* User Info Display */}
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>
-          {firstName} {lastName}
-        </Text>
-        <Text style={styles.userEmail}>{email}</Text>
-      </View>
-
-      {/* Personal Details Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Personal Details</Text>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>First Name</Text>
-          <TextInput
-            style={[styles.input, errors.firstName ? styles.inputError : null]}
-            value={firstName}
-            onChangeText={(value) =>
-              handleFieldChange("firstName", value, setFirstName)
-            }
-            placeholder="First name"
-            onBlur={() =>
-              setErrors((prev) => ({
-                ...prev,
-                firstName: validateField("firstName", firstName),
-              }))
-            }
-          />
-          {errors.firstName ? (
-            <Text style={styles.errorText}>{errors.firstName}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Last Name</Text>
-          <TextInput
-            style={[styles.input, errors.lastName ? styles.inputError : null]}
-            value={lastName}
-            onChangeText={(value) =>
-              handleFieldChange("lastName", value, setLastName)
-            }
-            placeholder="Last name"
-            onBlur={() =>
-              setErrors((prev) => ({
-                ...prev,
-                lastName: validateField("lastName", lastName),
-              }))
-            }
-          />
-          {errors.lastName ? (
-            <Text style={styles.errorText}>{errors.lastName}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={[styles.input, errors.email ? styles.inputError : null]}
-            value={email}
-            onChangeText={(value) =>
-              handleFieldChange("email", value, setEmail)
-            }
-            placeholder="Email"
-            keyboardType="email-address"
-            editable={false}
-          />
-          {errors.email ? (
-            <Text style={styles.errorText}>{errors.email}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Phone</Text>
-          <TextInput
-            style={[styles.input, errors.phone ? styles.inputError : null]}
-            value={phone}
-            onChangeText={(value) =>
-              handleFieldChange("phone", value, setPhone)
-            }
-            placeholder="Phone number"
-            keyboardType="phone-pad"
-            onBlur={() =>
-              setErrors((prev) => ({
-                ...prev,
-                phone: validateField("phone", phone),
-              }))
-            }
-          />
-          {errors.phone ? (
-            <Text style={styles.errorText}>{errors.phone}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Bio</Text>
-          <TextInput
-            style={[
-              styles.input,
-              styles.textArea,
-              errors.bio ? styles.inputError : null,
-            ]}
-            value={bio}
-            onChangeText={(value) => handleFieldChange("bio", value, setBio)}
-            placeholder="Tell us about yourself"
-            multiline
-            numberOfLines={4}
-            onBlur={() =>
-              setErrors((prev) => ({ ...prev, bio: validateField("bio", bio) }))
-            }
-          />
-          {errors.bio ? (
-            <Text style={styles.errorText}>{errors.bio}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>City</Text>
-          <TextInput
-            style={[styles.input, errors.city ? styles.inputError : null]}
-            value={city}
-            onChangeText={(value) => handleFieldChange("city", value, setCity)}
-            placeholder="City"
-            onBlur={() =>
-              setErrors((prev) => ({
-                ...prev,
-                city: validateField("city", city),
-              }))
-            }
-          />
-          {errors.city ? (
-            <Text style={styles.errorText}>{errors.city}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Region</Text>
-          <TextInput
-            style={[styles.input, errors.region ? styles.inputError : null]}
-            value={region}
-            onChangeText={(value) =>
-              handleFieldChange("region", value, setRegion)
-            }
-            placeholder="Region/State"
-            onBlur={() =>
-              setErrors((prev) => ({
-                ...prev,
-                region: validateField("region", region),
-              }))
-            }
-          />
-          {errors.region ? (
-            <Text style={styles.errorText}>{errors.region}</Text>
-          ) : null}
-        </View>
-
-        {/* Dealer Toggle */}
-        <View style={styles.inputContainer}>
-          <View style={styles.toggleContainer}>
-            <Text style={styles.label}>Convert to dealer account</Text>
-            <TouchableOpacity
-              style={[styles.toggle, isDealer && styles.toggleActive]}
-              onPress={() => setIsDealer(!isDealer)}
-            >
-              <View
-                style={[
-                  styles.toggleButton,
-                  isDealer && styles.toggleButtonActive,
-                ]}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Dealer Information - Only show if user is a dealer */}
-        {isDealer && (
-          <View style={styles.dealerSection}>
-            <Text style={styles.sectionTitle}>Dealer Information</Text>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Company Name</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.dealerCompanyName ? styles.inputError : null,
-                ]}
-                value={dealerCompanyName}
-                onChangeText={(value) =>
-                  handleFieldChange(
-                    "dealerCompanyName",
-                    value,
-                    setDealerCompanyName,
-                  )
-                }
-                placeholder="Company name"
-                onBlur={() =>
-                  setErrors((prev) => ({
-                    ...prev,
-                    dealerCompanyName: validateField(
-                      "dealerCompanyName",
-                      dealerCompanyName,
-                    ),
-                  }))
-                }
-              />
-              {errors.dealerCompanyName ? (
-                <Text style={styles.errorText}>{errors.dealerCompanyName}</Text>
-              ) : null}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Business Address</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.dealerAddress ? styles.inputError : null,
-                ]}
-                value={dealerAddress}
-                onChangeText={(value) =>
-                  handleFieldChange("dealerAddress", value, setDealerAddress)
-                }
-                placeholder="Business address"
-                onBlur={() =>
-                  setErrors((prev) => ({
-                    ...prev,
-                    dealerAddress: validateField(
-                      "dealerAddress",
-                      dealerAddress,
-                    ),
-                  }))
-                }
-              />
-              {errors.dealerAddress ? (
-                <Text style={styles.errorText}>{errors.dealerAddress}</Text>
-              ) : null}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Business City</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.dealerCity ? styles.inputError : null,
-                ]}
-                value={dealerCity}
-                onChangeText={(value) =>
-                  handleFieldChange("dealerCity", value, setDealerCity)
-                }
-                placeholder="Business city"
-                onBlur={() =>
-                  setErrors((prev) => ({
-                    ...prev,
-                    dealerCity: validateField("dealerCity", dealerCity),
-                  }))
-                }
-              />
-              {errors.dealerCity ? (
-                <Text style={styles.errorText}>{errors.dealerCity}</Text>
-              ) : null}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Business Region</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.dealerRegion ? styles.inputError : null,
-                ]}
-                value={dealerRegion}
-                onChangeText={(value) =>
-                  handleFieldChange("dealerRegion", value, setDealerRegion)
-                }
-                placeholder="Business region"
-                onBlur={() =>
-                  setErrors((prev) => ({
-                    ...prev,
-                    dealerRegion: validateField("dealerRegion", dealerRegion),
-                  }))
-                }
-              />
-              {errors.dealerRegion ? (
-                <Text style={styles.errorText}>{errors.dealerRegion}</Text>
-              ) : null}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>License Number</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.dealerLicenseNumber ? styles.inputError : null,
-                ]}
-                value={dealerLicenseNumber}
-                onChangeText={(value) =>
-                  handleFieldChange(
-                    "dealerLicenseNumber",
-                    value,
-                    setDealerLicenseNumber,
-                  )
-                }
-                placeholder="License number"
-                onBlur={() =>
-                  setErrors((prev) => ({
-                    ...prev,
-                    dealerLicenseNumber: validateField(
-                      "dealerLicenseNumber",
-                      dealerLicenseNumber,
-                    ),
-                  }))
-                }
-              />
-              {errors.dealerLicenseNumber ? (
-                <Text style={styles.errorText}>
-                  {errors.dealerLicenseNumber}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Save Button */}
-      <TouchableOpacity
-        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-        onPress={handleSaveChanges}
-        disabled={saving}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.saveButtonText}>
-          {saving ? "Saving..." : "Save Changes"}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <Text style={styles.title}>Update your personal information</Text>
+
+        {/* Profile Photo Section */}
+        <View style={styles.photoSection}>
+          <TouchableOpacity onPress={handleChoosePhoto}>
+            <View style={styles.avatarContainer}>
+              <Image
+                source={
+                  profileImage
+                    ? { uri: profileImage }
+                    : require("../assets/images/profile.jpg")
+                }
+                style={styles.avatar}
+              />
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.changePhotoButton}
+            onPress={handleChoosePhoto}
+          >
+            <Text style={styles.changePhotoText}>Change Profile Photo</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* User Info Display */}
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>
+            {firstName} {lastName}
+          </Text>
+          <Text style={styles.userEmail}>{email}</Text>
+        </View>
+
+        {/* Personal Details Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Personal Details</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>First Name</Text>
+            <TextInput
+              style={[
+                styles.input,
+                errors.firstName ? styles.inputError : null,
+              ]}
+              value={firstName}
+              onChangeText={(value) =>
+                handleFieldChange("firstName", value, setFirstName)
+              }
+              placeholder="First name"
+              onBlur={() =>
+                setErrors((prev) => ({
+                  ...prev,
+                  firstName: validateField("firstName", firstName),
+                }))
+              }
+            />
+            {errors.firstName ? (
+              <Text style={styles.errorText}>{errors.firstName}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Last Name</Text>
+            <TextInput
+              style={[styles.input, errors.lastName ? styles.inputError : null]}
+              value={lastName}
+              onChangeText={(value) =>
+                handleFieldChange("lastName", value, setLastName)
+              }
+              placeholder="Last name"
+              onBlur={() =>
+                setErrors((prev) => ({
+                  ...prev,
+                  lastName: validateField("lastName", lastName),
+                }))
+              }
+            />
+            {errors.lastName ? (
+              <Text style={styles.errorText}>{errors.lastName}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={[styles.input, errors.email ? styles.inputError : null]}
+              value={email}
+              onChangeText={(value) =>
+                handleFieldChange("email", value, setEmail)
+              }
+              placeholder="Email"
+              keyboardType="email-address"
+              editable={false}
+            />
+            {errors.email ? (
+              <Text style={styles.errorText}>{errors.email}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Phone</Text>
+            <TextInput
+              style={[styles.input, errors.phone ? styles.inputError : null]}
+              value={phone}
+              onChangeText={(value) =>
+                handleFieldChange("phone", value, setPhone)
+              }
+              placeholder="Phone number"
+              keyboardType="phone-pad"
+              onBlur={() =>
+                setErrors((prev) => ({
+                  ...prev,
+                  phone: validateField("phone", phone),
+                }))
+              }
+            />
+            {errors.phone ? (
+              <Text style={styles.errorText}>{errors.phone}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Bio</Text>
+            <TextInput
+              style={[
+                styles.input,
+                styles.textArea,
+                errors.bio ? styles.inputError : null,
+              ]}
+              value={bio}
+              onChangeText={(value) => handleFieldChange("bio", value, setBio)}
+              placeholder="Tell us about yourself"
+              multiline
+              numberOfLines={4}
+              onBlur={() =>
+                setErrors((prev) => ({
+                  ...prev,
+                  bio: validateField("bio", bio),
+                }))
+              }
+            />
+            {errors.bio ? (
+              <Text style={styles.errorText}>{errors.bio}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>City</Text>
+            <TextInput
+              style={[styles.input, errors.city ? styles.inputError : null]}
+              value={city}
+              onChangeText={(value) =>
+                handleFieldChange("city", value, setCity)
+              }
+              placeholder="City"
+              onBlur={() =>
+                setErrors((prev) => ({
+                  ...prev,
+                  city: validateField("city", city),
+                }))
+              }
+            />
+            {errors.city ? (
+              <Text style={styles.errorText}>{errors.city}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Region</Text>
+            <TextInput
+              style={[styles.input, errors.region ? styles.inputError : null]}
+              value={region}
+              onChangeText={(value) =>
+                handleFieldChange("region", value, setRegion)
+              }
+              placeholder="Region/State"
+              onBlur={() =>
+                setErrors((prev) => ({
+                  ...prev,
+                  region: validateField("region", region),
+                }))
+              }
+            />
+            {errors.region ? (
+              <Text style={styles.errorText}>{errors.region}</Text>
+            ) : null}
+          </View>
+
+          {/* Dealer Toggle */}
+          <View style={styles.inputContainer}>
+            <View style={styles.toggleContainer}>
+              <Text style={styles.label}>Convert to dealer account</Text>
+              <TouchableOpacity
+                style={[styles.toggle, isDealer && styles.toggleActive]}
+                onPress={() => setIsDealer(!isDealer)}
+              >
+                <View
+                  style={[
+                    styles.toggleButton,
+                    isDealer && styles.toggleButtonActive,
+                  ]}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Dealer Information - Only show if user is a dealer */}
+          {isDealer && (
+            <View style={styles.dealerSection}>
+              <Text style={styles.sectionTitle}>Dealer Information</Text>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Company Name</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    errors.dealerCompanyName ? styles.inputError : null,
+                  ]}
+                  value={dealerCompanyName}
+                  onChangeText={(value) =>
+                    handleFieldChange(
+                      "dealerCompanyName",
+                      value,
+                      setDealerCompanyName,
+                    )
+                  }
+                  placeholder="Company name"
+                  onBlur={() =>
+                    setErrors((prev) => ({
+                      ...prev,
+                      dealerCompanyName: validateField(
+                        "dealerCompanyName",
+                        dealerCompanyName,
+                      ),
+                    }))
+                  }
+                />
+                {errors.dealerCompanyName ? (
+                  <Text style={styles.errorText}>
+                    {errors.dealerCompanyName}
+                  </Text>
+                ) : null}
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Business Address</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    errors.dealerAddress ? styles.inputError : null,
+                  ]}
+                  value={dealerAddress}
+                  onChangeText={(value) =>
+                    handleFieldChange("dealerAddress", value, setDealerAddress)
+                  }
+                  placeholder="Business address"
+                  onBlur={() =>
+                    setErrors((prev) => ({
+                      ...prev,
+                      dealerAddress: validateField(
+                        "dealerAddress",
+                        dealerAddress,
+                      ),
+                    }))
+                  }
+                />
+                {errors.dealerAddress ? (
+                  <Text style={styles.errorText}>{errors.dealerAddress}</Text>
+                ) : null}
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Business City</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    errors.dealerCity ? styles.inputError : null,
+                  ]}
+                  value={dealerCity}
+                  onChangeText={(value) =>
+                    handleFieldChange("dealerCity", value, setDealerCity)
+                  }
+                  placeholder="Business city"
+                  onBlur={() =>
+                    setErrors((prev) => ({
+                      ...prev,
+                      dealerCity: validateField("dealerCity", dealerCity),
+                    }))
+                  }
+                />
+                {errors.dealerCity ? (
+                  <Text style={styles.errorText}>{errors.dealerCity}</Text>
+                ) : null}
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Business Region</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    errors.dealerRegion ? styles.inputError : null,
+                  ]}
+                  value={dealerRegion}
+                  onChangeText={(value) =>
+                    handleFieldChange("dealerRegion", value, setDealerRegion)
+                  }
+                  placeholder="Business region"
+                  onBlur={() =>
+                    setErrors((prev) => ({
+                      ...prev,
+                      dealerRegion: validateField("dealerRegion", dealerRegion),
+                    }))
+                  }
+                />
+                {errors.dealerRegion ? (
+                  <Text style={styles.errorText}>{errors.dealerRegion}</Text>
+                ) : null}
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>License Number</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    errors.dealerLicenseNumber ? styles.inputError : null,
+                  ]}
+                  value={dealerLicenseNumber}
+                  onChangeText={(value) =>
+                    handleFieldChange(
+                      "dealerLicenseNumber",
+                      value,
+                      setDealerLicenseNumber,
+                    )
+                  }
+                  placeholder="License number"
+                  onBlur={() =>
+                    setErrors((prev) => ({
+                      ...prev,
+                      dealerLicenseNumber: validateField(
+                        "dealerLicenseNumber",
+                        dealerLicenseNumber,
+                      ),
+                    }))
+                  }
+                />
+                {errors.dealerLicenseNumber ? (
+                  <Text style={styles.errorText}>
+                    {errors.dealerLicenseNumber}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Save Button */}
+        <TouchableOpacity
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          onPress={handleSaveChanges}
+          disabled={saving}
+        >
+          <Text style={styles.saveButtonText}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -638,6 +660,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f9fa",
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 100, // Extra padding for keyboard
   },
   title: {
     fontSize: 24,
